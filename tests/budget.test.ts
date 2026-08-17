@@ -11,6 +11,8 @@ import {
   readProjectConstitution,
 } from "../src/doctrine.ts";
 import { readMap } from "../src/map.ts";
+import { allocate } from "../src/allocator.ts";
+import { registry } from "../src/registry.ts";
 
 const ROOT = join(import.meta.dirname, "..");
 
@@ -40,12 +42,36 @@ test("the budget stays under the ceiling the agent will accept", () => {
   );
 });
 
-test("every branch firing at once still fits the budget", () => {
-  const total = worstCase();
+test("any one kind of work is served in full, constitution and its branch together", () => {
+  const constant = alwaysOn();
+  for (const name of everyBranchName()) {
+    const branch = assembleBranch(ROOT, name);
+    if (branch.kind !== "found") continue;
+    const total = constant + branch.text.length + 2;
+    assert.ok(
+      total <= INJECTION_BUDGET,
+      `the constitution plus ${name} is ${total} characters against a budget of ${INJECTION_BUDGET}. A single kind of work must arrive whole: if one branch alone cannot fit beside the constitution, it is too big for what it earns, or it is two branches.`,
+    );
+  }
+});
+
+test("a turn that touches everything drops the least urgent set, and says which", () => {
+  const run = allocate(registry(), { root: ROOT, budget: 400 });
+
   assert.ok(
-    total <= INJECTION_BUDGET,
-    `doctrine at its widest is ${total} characters against a budget of ${INJECTION_BUDGET}. Something falls off silently on the turn every branch matches. Either a branch has grown past what it earns, or it is too broad to be selective and is two branches, or the budget is wrong — decide which, and write the number down.`,
+    run.allocation.dropped.length > 0,
+    "a 400-character budget held every rule set, which means this test is no longer exercising the thing it was written for",
   );
+  assert.ok(
+    run.allocation.text.includes("dropped for budget"),
+    "a rule set was left out and the agent was not told. A doctrine that quietly shrinks is worse than a short one, because nothing downstream can tell which rules were in force.",
+  );
+  for (const name of run.allocation.dropped) {
+    assert.ok(
+      run.allocation.text.includes(name),
+      `${name} was dropped and not named, so nobody can tell what was missing`,
+    );
+  }
 });
 
 test("the always-on tier is the smaller half", () => {

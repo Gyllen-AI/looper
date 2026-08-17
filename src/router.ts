@@ -6,7 +6,8 @@ import {
   readProjectConstitution,
 } from "./doctrine.ts";
 import { changedPaths } from "./git.ts";
-import { branchesFor, readMap } from "./map.ts";
+import { branchesFor, readMap, withCanonDefaults } from "./map.ts";
+import { canonGoverns } from "./canon.ts";
 import { freshnessOf, saidAbout } from "./freshness.ts";
 import {
   SILENT,
@@ -23,6 +24,8 @@ import {
 const FRESHNESS_EVENTS: readonly HookEvent[] = ["CommitMessage"];
 
 const NO_BRANCHES: readonly string[] = [];
+
+const EMPTY_MAP: ReadonlyMap<string, readonly string[]> = new Map();
 
 export class Router implements Capability {
   readonly name = "router";
@@ -52,10 +55,10 @@ export class Router implements Capability {
 
   signalled(root: string): readonly string[] {
     const map = readMap(root);
-    if (map.kind === "absent") return NO_BRANCHES;
+    const project = map.kind === "absent" ? EMPTY_MAP : map.governs;
     const changed = changedPaths(root);
     if (changed.kind === "unavailable") return NO_BRANCHES;
-    return branchesFor(map.governs, changed.paths);
+    return branchesFor(withCanonDefaults(project, canonGoverns()), changed.paths);
   }
 
   hooks(): readonly HookEvent[] {

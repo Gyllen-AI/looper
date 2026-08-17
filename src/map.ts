@@ -20,6 +20,15 @@ function governsIn(source: string, section: string): Governs {
   return governs;
 }
 
+export function withCanonDefaults(project: Governs, canon: Governs): Governs {
+  const merged = new Map<string, readonly string[]>(project);
+  for (const [branch, paths] of canon) {
+    if (merged.has(branch)) continue;
+    merged.set(branch, paths);
+  }
+  return merged;
+}
+
 export function parseMap(source: string): Governs {
   return governsIn(source, GOVERNS_SECTION);
 }

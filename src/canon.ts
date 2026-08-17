@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 
-import { CANON_DIR } from "./config.ts";
+import { CANON_DIR, DOCTRINE_DIR } from "./config.ts";
 
 export type CanonBranch = {
   readonly name: string;
@@ -9,8 +9,29 @@ export type CanonBranch = {
 };
 
 const BRANCH_NAMES: readonly string[] = ["law", "process",
-  "architecture",
+  "architecture", "rust", "doctrine",
 ];
+
+const TYPESCRIPT: readonly string[] = [
+  "**/*.ts",
+  "**/*.tsx",
+  "**/*.mts",
+  "**/*.cts",
+  "**/*.js",
+  "**/*.jsx",
+  "**/*.mjs",
+  "**/*.cjs",
+];
+
+const RUST: readonly string[] = ["**/*.rs"];
+
+export function canonGoverns(): ReadonlyMap<string, readonly string[]> {
+  return new Map([
+    ["law", TYPESCRIPT],
+    ["rust", RUST],
+    ["doctrine", [`${DOCTRINE_DIR}/**`]],
+  ]);
+}
 
 function read(name: string): string {
   return readFileSync(join(import.meta.dirname, CANON_DIR, `${name}.md`), "utf8").trim();

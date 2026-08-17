@@ -52,6 +52,11 @@ export const MAP_STUB = `# Ties each doctrine branch to the code it governs. A b
 # The name on the left is the branch: a file called <name>.md beside this one.
 # The canon ships its own half under the same names, and yours is added to it.
 #
+# looper already knows its own: the TypeScript law arrives when you touch a .ts
+# file, the Rust law when you touch a .rs file, and these doctrine rules when you
+# edit this folder. Naming a branch here replaces what looper knows for that one
+# branch, and leaves the rest alone.
+#
 # [governs]
 # law = ["src/**/*.ts"]
 # frontend = ["ui/**", "components/**"]
@@ -80,8 +85,10 @@ It starts empty on purpose, and empty costs nothing. looper already carries the
 rules that are true for any project, so this file is only for what is true for
 *yours*.
 
-A line earns its place if the model would not already do it. Good lines sound
-like:
+looper ships rules about writing rules, and they arrive whenever you edit this
+folder — read them before adding a line here. The shortest of them: **a new line
+has to say what it replaces.** A line earns its place if the model would not
+already do it. Good lines sound like:
 
     Money amounts are integers of the smallest unit. Never a float.
     Ask before changing anything a customer can see.

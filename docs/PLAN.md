@@ -2012,6 +2012,48 @@ fixtures, and that lesson applies here before a line is written: **the Rust pack
 is not done until it has met a stranger's code.** Naming a corpus is a
 precondition of chunk 8d, not a step inside it.
 
+### The canon's branches reached nobody. Fixed 2026-08-18, from adopter issue #13
+
+A branch was injected only when the project's own `map.toml` tied it to the files
+being touched, and `init` writes that map empty. So every canon branch — the
+TypeScript law above all — waited on a file the adopter had never written.
+Measured before the fix: a fresh project editing a `.ts` file received **2216
+characters, the constitution and nothing else.** The law this whole tool is
+built around never arrived, and nothing said so.
+
+**The canon now carries its own map.** `law` for TypeScript and JavaScript
+extensions, `rust` for `.rs`, `doctrine` for `.looper/doctrine/**`. A project's
+own entry replaces the default for that one branch and leaves the others alone,
+so anyone who has written a map keeps exactly what they wrote. Same fresh project
+after: **5900 characters — law, rust and doctrine — with nothing dropped.**
+
+**`architecture` deliberately gets no default, and that is a trade rather than an
+oversight.** It is the one branch whose subject is design rather than editing, so
+firing it on every code edit would be the always-on tier wearing a disguise. It
+arrives through the `doctrine` tool, which the tool's own description tells the
+agent to pull from before starting a task.
+
+**Two new canon branches, and what they replace.** `doctrine.md` carries the
+rules for writing rules — including *a new line has to say what it replaces*,
+which was looper's own project doctrine and therefore the one sentence an adopter
+porting a doctrine in could never see. Those lines came out of
+`.looper/doctrine/doctrine.md` in the same commit, because the project half
+instantiates the canon and never repeats it. `rust.md` closes the gap where the
+engine enforced 28 Rust rules and the canon said nothing about writing Rust.
+
+**What the budget guard now asserts, changed 2026-08-18 with both halves kept.**
+It used to require every rule set that exists to fit in one turn together, on the
+grounds that anything over the budget "falls off silently". That premise stopped
+being true when the allocator started appending
+`[looper: N contribution(s) dropped for budget — …]`: a drop is named, in the
+same text the agent reads. Measured today, every set at once is 11,324
+characters against a 9,800 budget, so on a turn touching TypeScript, Rust,
+doctrine and the plan at once, the lowest-priority set is dropped and said. What
+is guarded instead is what has to hold: **the constitution plus any single branch
+fits**, so one kind of work is always served whole, and **a drop is always
+named**. The old guard's value — that the tree cannot grow quietly — is kept by
+the bullet cap on the always-on tier, which is untouched.
+
 ## Freshness: the gate that stops a rule set describing something else
 
 Carried from the Rust predecessor on 2026-08-17, after checking what that

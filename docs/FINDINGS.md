@@ -22,7 +22,7 @@ is a suspicion and belongs in the notes at the bottom, not in the list.
 
 ## Open
 
-_Empty. Every pass of both audits is closed, and findings 41 to 51 with them._
+_Empty. Every pass of both audits is closed, and findings 41 to 52 with them._
 
 ## The second audit — what it covered and what it found
 
@@ -68,6 +68,38 @@ tested, and every one was tested the way it was built rather than the way it
 will be used.
 
 ## Cleared
+
+### 52 · `missing` — the canon's own branches reached nobody — cleared
+
+Filed by an adopting agent as issue #13, which reported the symptom: the one
+sentence about writing doctrine lives where an adopter never receives it. The
+cause underneath it is larger. A branch was injected only when the project's own
+`map.toml` tied it to the files being touched, and `init` writes that map empty,
+so **every** canon branch waited on a file the adopter had never written.
+
+Measured on a fresh project editing a `.ts` file, before and after:
+
+```
+before:  2216 characters, branches: []
+after:   5900 characters, branches: ['doctrine', 'law', 'rust']
+```
+
+The TypeScript law — the thing looper is built around — was never delivered to
+anyone who had not written a map by hand. Cleared by giving the canon its own
+default mapping, which a project's own entry overrides one branch at a time.
+
+Two branches were added with it: `doctrine.md`, so the rules for writing rules
+arrive when somebody edits their doctrine, and `rust.md`, because the engine
+enforced 28 Rust rules while the canon said nothing about writing Rust. The lines
+moved into `doctrine.md` were deleted from looper's own project half in the same
+commit — the rule they state is the rule they had to obey.
+
+The budget guard was changed in the same pass, and both halves are in
+`docs/PLAN.md`: it asserted that every set together fits in one turn, on the
+grounds that anything else drops in silence, which stopped being true when the
+allocator began naming what it dropped. It now asserts that the constitution plus
+any one branch fits, and that a drop is always named. Every set at once is 11,324
+characters against a 9,800 budget, measured 2026-08-18.
 
 ### 51 · `blunt` — one TypeScript section took the whole Rust half down — cleared
 
