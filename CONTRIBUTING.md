@@ -69,6 +69,18 @@ Fork it. Then, in this order, because the order is the whole discipline:
 Then open a pull request that says what you found in step 3. A rule with
 evidence behind it will be taken; a rule that only sounds right will not.
 
+## Why it is built under its own rules
+
+looper is written for a person with an idea and no way to read the code that
+comes back. They cannot check the work and have no engineer to ask, so the rules
+are the reviewer who is not in the room. Every choice in here answers to that.
+
+Building it under its own law is the only evidence the rules are livable rather
+than merely defensible. Every scar in `docs/FINDINGS.md` was earned here first:
+forty findings, and the ones that hurt most were the tool catching its own
+author. If a rule is painful to obey while changing looper, that is the finding,
+not the obstacle.
+
 ## Changing looper itself
 
 Same three steps, and one more: looper is governed by its own law. Your change
