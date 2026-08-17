@@ -22,7 +22,7 @@ is a suspicion and belongs in the notes at the bottom, not in the list.
 
 ## Open
 
-_Empty. Every pass of both audits is closed, and finding 41 with them._
+_Empty. Every pass of both audits is closed, and findings 41 and 42 with them._
 
 ## The second audit — what it covered and what it found
 
@@ -68,6 +68,34 @@ tested, and every one was tested the way it was built rather than the way it
 will be used.
 
 ## Cleared
+
+### 42 · `blunt` — the commit gate reading the harness's own ids as the project's secrets — cleared
+
+Filed by an adopting agent as issue #1, 2026-08-18, and it was the one that
+stopped work. On `PreToolUse` the secrets gate scanned the whole hook payload
+rather than the command inside it. The payload carries a session id, a tool-use
+id and a transcript path, all random by construction, so a share of them read as
+high-entropy secrets:
+
+```
+whole payload, the old behaviour: [{"file":"the commit message","line":1,
+  "kind":"a 30-character random-looking string","excerpt":"toolu_01LC8wVMbR…"}]
+command only, the new behaviour : []
+```
+
+Three failures at once, and the third is the expensive one. It refused a clean
+commit; the value was different on every call, so the remedy the message offered
+— add it to `.looper/secrets.allow` — could never work; and it named the commit
+message for a string that was never in the commit message or the diff. A refusal
+with no compliant path is the exact shape this repo calls broken, and it is why
+the agent went looking for a way round and settled on asking its human to type
+the command.
+
+Cleared by reading the command out of the payload and scanning only that, named
+as the command rather than the message. The staged-file scan beside it was always
+correct and is untouched. `tests/secrets.test.ts` holds both halves: a payload
+whose ids are random and whose command is clean passes, and a key typed into the
+command is caught and labelled as the command.
 
 ### 41 · `missing` — the advertised install was dead on every machine but this one — cleared
 

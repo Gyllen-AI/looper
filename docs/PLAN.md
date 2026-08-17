@@ -1195,6 +1195,19 @@ get past the gate, and the answer is not a better sentence — it is that
 `.claude/settings.json` is committed, so the agent-side gate arrives with the
 clone even when `.git/hooks` does not.
 
+**The return path ran on its own, 2026-08-18.** An agent adopting looper filed
+twelve issues against this repository in one sitting, unasked: each naming the
+file and the line, most proposing the fix, one having measured it. Nothing in
+looper collected them and nothing was built to — the agent hit the rules, could
+not discharge them, and reported. That is this section working before the
+machinery for it exists, which is the strongest evidence it is the right shape.
+
+The first of them is finding 42, and it is the one that explains the handover
+above: the commit gate was refusing clean commits on a value the agent could not
+remove, because the value was not the agent's. A refusal with no compliant path
+is what sends an agent looking for a way round, and the way round it found was a
+person.
+
 **looper does not send it. The agent does.** This is not a compromise around the
 no-network invariant, it is the only correct shape. looper stays incapable of
 opening a socket — that is the first line of its own constitution and the reason

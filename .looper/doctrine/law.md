@@ -8,7 +8,8 @@ Writing looper's own code, and writing the rules looper enforces.
   pass.
 - **Ask what a file is before asking what is wrong with it.** Two languages
   means two laws, and a gate that forgets is worse than one that is missing: it
-  reported every Rust file as unreadable TypeScript.
+  reported every Rust file as unreadable TypeScript. A hook payload too: judge
+  what the person wrote, not the envelope, whose random ids read as secrets.
 - **Judge a rule on precision, never severity.** The agent pays severity in the
   same turn from the repair prompt; only imprecision burns turns. A rule ships
   when it is decidable with no false positives and hands back a legal spelling.

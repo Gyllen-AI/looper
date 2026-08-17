@@ -107,10 +107,20 @@ export function targetOf(root: string, payload: string): Target {
   return { kind: "judge", path: full, relative: inside };
 }
 
-export function aboutToCommit(payload: string): boolean {
+export type Typed =
+  | { readonly kind: "none"; readonly why: string }
+  | { readonly kind: "command"; readonly text: string };
+
+export function commandFrom(payload: string): Typed {
   const held = fromToolInput(payload, "command", "command");
-  if (held.kind === "none") return false;
-  return intentOf(held.value).kind === "commit";
+  if (held.kind === "none") return { kind: "none", why: held.why };
+  return { kind: "command", text: held.value };
+}
+
+export function aboutToCommit(payload: string): boolean {
+  const typed = commandFrom(payload);
+  if (typed.kind === "none") return false;
+  return intentOf(typed.text).kind === "commit";
 }
 
 type Split = {

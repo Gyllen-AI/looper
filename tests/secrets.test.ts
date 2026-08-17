@@ -97,6 +97,55 @@ test("a git hash and a uuid are not secrets", () => {
   assert.ok(!looksRandom("3f2504e0-4f89-11d3-9a0c-0305e82c3301"));
 });
 
+const HARNESS_PAYLOAD = JSON.stringify({
+  session_id: "d41f9a2c7b6e4f08a1c35d9e0b7f2a64",
+  tool_use_id: "toolu_01LC8wVMbRqZ3nT7yFhKpXwA",
+  transcript_path: "/home/someone/.claude/projects/8f3a1c/2b7d9e4a.jsonl",
+  tool_name: "Bash",
+  tool_input: { command: "git commit -m 'add the reader'" },
+});
+
+test("the ids the harness puts in its own payload are not the user's secrets", () => {
+  const root = repo();
+  try {
+    const outcome = new Secrets().onHook({
+      root,
+      event: "PreToolUse",
+      payload: { kind: "text", text: HARNESS_PAYLOAD },
+    });
+
+    assert.equal(
+      outcome.kind,
+      "pass",
+      "the session id, the tool-use id and the transcript path are random by construction and are in every payload. Reading them as the user's secrets refuses a clean commit, differently each time, and names a commit message that never contained them.",
+    );
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test("a key typed into the command itself is caught, and named as the command", () => {
+  const root = repo();
+  const payload = JSON.stringify({
+    tool_use_id: "toolu_01LC8wVMbRqZ3nT7yFhKpXwA",
+    tool_name: "Bash",
+    tool_input: { command: 'git commit -m "token ghp_zzzz1111zzzz1111zzzz1111zzzz1111zzzz"' },
+  });
+  try {
+    const outcome = new Secrets().onHook({
+      root,
+      event: "PreToolUse",
+      payload: { kind: "text", text: payload },
+    });
+
+    assert.equal(outcome.kind, "block");
+    if (outcome.kind !== "block") return;
+    assert.ok(outcome.reason.includes("the command you typed"));
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
 test("a commit carrying a key is refused, and says nothing was committed", () => {
   const root = repo();
   try {

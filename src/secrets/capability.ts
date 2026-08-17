@@ -14,7 +14,8 @@ import type {
   ToolResult,
 } from "../capability.ts";
 import { stagedAdditions } from "../git.ts";
-import { aboutToCommit } from "../law/capability.ts";
+import { commandFrom } from "../law/capability.ts";
+import { intentOf } from "../law/commit-command.ts";
 import { findingsIn } from "./detect.ts";
 
 const COMMIT_EVENTS: readonly HookEvent[] = [
@@ -24,6 +25,10 @@ const COMMIT_EVENTS: readonly HookEvent[] = [
 ];
 
 const NO_TOOLS: readonly ToolDef[] = [];
+
+const IN_THE_MESSAGE = "the commit message";
+
+const AS_TYPED = "the command you typed";
 
 export type Caught = {
   readonly file: string;
@@ -63,20 +68,24 @@ export function scanStaged(root: string): readonly Caught[] {
   return caught;
 }
 
-export function scanMessage(root: string, message: string): readonly Caught[] {
+export function scanText(root: string, text: string, called: string): readonly Caught[] {
   const allowed = allowedValues(root);
   const caught: Caught[] = [];
   let at = 0;
 
-  for (const line of message.split("\n")) {
+  for (const line of text.split("\n")) {
     at += 1;
     if (line.startsWith("#")) continue;
     if (line.includes(ALLOW_MARKER)) continue;
     for (const finding of findingsIn(line, allowed)) {
-      caught.push({ file: "the commit message", line: at, ...finding });
+      caught.push({ file: called, line: at, ...finding });
     }
   }
   return caught;
+}
+
+export function scanMessage(root: string, message: string): readonly Caught[] {
+  return scanText(root, message, IN_THE_MESSAGE);
 }
 
 export function reportOn(caught: readonly Caught[]): string {
@@ -129,8 +138,10 @@ export class Secrets implements Capability {
     const alsoTyped: Caught[] = [];
     if (context.event === "PreToolUse") {
       if (context.payload.kind === "none") return { kind: "pass" };
-      if (!aboutToCommit(context.payload.text)) return { kind: "pass" };
-      alsoTyped.push(...scanMessage(context.root, context.payload.text));
+      const typed = commandFrom(context.payload.text);
+      if (typed.kind === "none") return { kind: "pass" };
+      if (intentOf(typed.text).kind !== "commit") return { kind: "pass" };
+      alsoTyped.push(...scanText(context.root, typed.text, AS_TYPED));
     }
     const caught = [...alsoTyped, ...scanStaged(context.root)];
     if (caught.length === 0) return { kind: "pass" };
