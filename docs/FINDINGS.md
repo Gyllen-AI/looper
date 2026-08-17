@@ -97,10 +97,16 @@ millisecond on the heaviest path.
 The control is `tests/installed.test.ts`, which copies the package into a real
 `node_modules` directory and runs `init` there. It fails on the old entry point.
 
-A project adopting looper hit this on a newer Node than the one it was written
-on, so the fix was run on more than one: the suite passes on Node 22.23.2, 24.19.0
-and 26.7.0, and a packed install wires a project and refuses a bad commit on both
-22.23.2 and 26.7.0. Below Node 22.18 there is nothing to strip types with, and
+A project adopting looper hit exactly this, on its own machine and a different
+Node build — the same error, at a different line of Node's own source. It was
+never version-specific: any Node refuses, and the entry point was dead
+everywhere. The fix is confirmed working there.
+
+It was first read here as a version problem, and that reading is kept because
+what it bought is worth keeping: the fix is now run across versions rather than
+one. The suite passes on Node 22.23.2, 24.19.0 and 26.7.0, and a packed install
+wires a project and refuses a bad commit on both 22.23.2 and 26.7.0. Below Node
+22.18 there is nothing to strip types with, and
 that used to be a stack trace about a missing export; it now names the version it
 is on and the version it needs, verified on Node 22.10.0, and exits 1 — which the
 commit hook reads as "could not check", so it fails open.
