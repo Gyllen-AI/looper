@@ -59,6 +59,12 @@ const TOOLS: readonly string[] = [
   "Turborepo",
   "Biome",
   "Expo",
+  "Axum",
+  "Tokio",
+  "SQLx",
+  "thiserror",
+  "secrecy",
+  "reqwest",
 ];
 
 function namesAList(line: string): boolean {

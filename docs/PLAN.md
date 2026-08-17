@@ -1473,8 +1473,9 @@ reverse of what was meant. The constitution's first rule is that everything
 written here reads to someone who cannot read code, and a term that inverts its
 own meaning fails that. It is **language reader** everywhere below and above.
 
-This section is about the **backend**: Axum, Tokio, SQLx, and the crate
-configuration around them. Nothing in it proposes writing a user interface in
+This section is about the **backend** — the web framework, the async runtime,
+the database layer and the crate configuration around them, all named in
+STACK.md. Nothing in it proposes writing a user interface in
 Rust.
 
 ### This reverses a decision, and the old half is kept
@@ -1486,8 +1487,8 @@ language reader, which is to say behind the languages an adopter actually
 ships."*
 
 That reasoning was right and is not withdrawn. What changed is the condition it
-named: **an adopter ships Rust.** A backend on Axum and SQLx, a TypeScript front
-end, and Tauri 2 joining them in one repository. The queue position argued for
+named: **an adopter ships Rust.** A Rust backend, a TypeScript front end, and
+Tauri joining them in one repository. The queue position argued for
 was "behind the languages an adopter actually ships", and Rust has moved to the
 front of that queue by satisfying it rather than by being argued for again.
 
@@ -1750,7 +1751,7 @@ small, because the reading is done.
 
 Nothing crosses from the Rust predecessor. Reading it to learn **what** is worth
 enforcing is authorised; its code is not, and none of it will appear here. The
-rules above were derived from this stack — Axum, Tokio, SQLx, Tauri — rather
+rules above were derived from the prescribed Rust stack rather
 than from anything already written.
 
 There is no foreign Rust corpus on this machine. Pass 1 of the audit found a
