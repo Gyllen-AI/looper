@@ -15,3 +15,9 @@ doctrine = [".looper/doctrine/**", "src/canon/**"]
 [freshness]
 law = ["src/law/**"]
 doctrine = ["src/canon/**", "src/router.ts", "src/map.ts", "src/allocator.ts"]
+# A key ending in .md is watched as itself rather than as a rule set, so a
+# reference document rots as loudly as doctrine does. STACK.md said looper read
+# one language for a day after it read two, and nothing noticed.
+"STACK.md" = ["package.json", "vendor/rust-law/Cargo.toml", "src/law/rust/**"]
+"README.md" = ["src/main.ts", "src/init.ts", "src/registry.ts"]
+"CONTRIBUTING.md" = ["audit/**", "src/law/rule.ts"]

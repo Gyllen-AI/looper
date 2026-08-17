@@ -38,6 +38,7 @@ export function bypassIn(message: string): string {
 }
 
 export function documentFor(branch: string): string {
+  if (branch.endsWith(".md")) return branch;
   return `${DOCTRINE_DIR}/${branch}.md`;
 }
 

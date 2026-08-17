@@ -1784,6 +1784,14 @@ touch what this describes" is an argument someone can disagree with later; a
 will strip as a comment, or one below the scissors, is not a reason, and a
 `Doctrine-freshness:` with nothing after it is not one either.
 
+**A reference rots the same way doctrine does.** A key in `[freshness]` ending
+in `.md` names a document directly rather than a rule set, so anything can be
+watched. `STACK.md` claimed looper read one language for a day after it read
+two, and nothing noticed — the gate only ever looked at `.looper/doctrine/`,
+because that was the only kind of document it knew about. `STACK.md`,
+`README.md` and `CONTRIBUTING.md` are watched now, each against the code that
+would make it untrue.
+
 **One map, two purposes, and they want opposite things.** Discovered by the gate
 firing on its own author's next commit, two days after it was built. `[governs]`
 exists for *injection*, where broad is right: pull the law branch whenever any

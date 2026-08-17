@@ -114,3 +114,26 @@ test("a map with no freshness section keeps using the one it has", () => {
   const held = required(parseFreshnessMap(only).get("law"), "the law branch");
   assert.deepEqual([...held], ["src/**"]);
 });
+
+test("a document that is not a rule set can be watched too", () => {
+  assert.equal(documentFor("law"), ".looper/doctrine/law.md");
+  assert.equal(documentFor("STACK.md"), "STACK.md");
+  assert.equal(documentFor("docs/PLAN.md"), "docs/PLAN.md");
+});
+
+test("changing what a reference describes, without touching it, is stale", () => {
+  const root = mkdtempSync(join(tmpdir(), "looper-ref-"));
+  try {
+    mkdirSync(join(root, ".looper", "doctrine"), { recursive: true });
+    writeFileSync(join(root, "STACK.md"), "# the stack\n");
+    const map = parseFreshnessMap('[freshness]\n"STACK.md" = ["package.json"]\n');
+
+    const stale = assess(root, map, ["package.json"]);
+    assert.equal(stale.length, 1, "a dependency changed and the stack reference did not");
+    assert.equal(stale[0]?.document, "STACK.md");
+
+    assert.deepEqual([...assess(root, map, ["package.json", "STACK.md"])], []);
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});
