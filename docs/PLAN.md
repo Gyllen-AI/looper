@@ -2096,6 +2096,14 @@ work survives and a set that matched one file out of six is the one that goes.
 Alphabetical order was a coin toss dressed as a rule, and it only became visible
 once the budget could actually be reached. `tests/map.test.ts` holds it.
 
+**The line that reports a drop is paid for out of the budget.** It was appended
+after the accounting, so an answer could land over the budget while `overflowed`
+said no — and the marker names every dropped set, so the case that reports the
+problem was the case that made it worse. Room is now taken for it before the
+answer is assembled, dropping one more set if that is what it costs, and
+`overflowed` means what it says: the text handed over is larger than the budget,
+which now happens only when the constitution alone is.
+
 ## Freshness: the gate that stops a rule set describing something else
 
 Carried from the Rust predecessor on 2026-08-17, after checking what that

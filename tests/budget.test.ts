@@ -108,3 +108,21 @@ test("the always-on tier cannot grow quietly", () => {
     `${total} rules are read on every single turn, against a cap of ${MOST_RULES_READ_EVERY_TURN}. This cap does not find a rule said twice — prose cannot be checked for that, and five duplicates here shared no phrase at all. What it does is make adding one cost a deletion, so every new line has to answer what it replaces.`,
   );
 });
+
+test("the line that reports a drop is paid for out of the budget, not added to it", () => {
+  for (const budget of [400, 1200, 3000, 6000, 9000]) {
+    const run = allocate(registry(), { root: ROOT, budget });
+    const allocation = run.allocation;
+    if (allocation.dropped.length === 0) continue;
+
+    if (allocation.chars > budget) {
+      assert.ok(
+        allocation.overflowed,
+        `at a budget of ${budget} the answer is ${allocation.chars} characters and nothing says it went over. The marker naming what was dropped grows with the number dropped, so the case that reports the problem is the case that makes it worse.`,
+      );
+    }
+    for (const name of allocation.dropped) {
+      assert.ok(allocation.text.includes(name), `${name} was dropped without being named`);
+    }
+  }
+});

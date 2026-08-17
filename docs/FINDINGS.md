@@ -22,7 +22,7 @@ is a suspicion and belongs in the notes at the bottom, not in the list.
 
 ## Open
 
-_Empty. Every pass of both audits is closed, and findings 41 to 53 with them._
+_Empty. Every pass of both audits is closed, and findings 41 to 54 with them._
 
 ## The second audit — what it covered and what it found
 
@@ -68,6 +68,24 @@ tested, and every one was tested the way it was built rather than the way it
 will be used.
 
 ## Cleared
+
+### 54 · `wrong` — the line reporting a drop was not paid for — cleared
+
+Filed by an adopting agent as issue #14, measured on their own project against
+the commit that introduced it. The marker naming what was dropped was appended
+after the budget was enforced, so their turn came to 9,831 characters against a
+9,800 budget with `overflowed` reporting false. The marker names every dropped
+set, so it grows with exactly the case it fires on.
+
+Room is taken for it before the answer is assembled now, dropping one more set if
+that is the cost, and `overflowed` means the text handed over is larger than the
+budget — which happens only when the constitution alone is. Measured here across
+five budgets afterwards: at 9,800 the answer is 8,861 characters; at 3,000 it is
+3,298 and says so, because the constitution alone is 3,179.
+
+This one was filed within an hour of the change that caused it, by an agent
+reading `looper status` on its own project. That is the return path doing the
+thing it was built for.
 
 ### 53 · `missing` — four subjects the canon judged and never taught — cleared
 

@@ -78,6 +78,16 @@ export function allocate(
     dropped.push(injection.source);
   }
 
+  while (dropped.length > 0 && parts.length > 1) {
+    const projected = used + INJECTION_SEPARATOR.length + droppedMarker(dropped).length;
+    if (projected <= context.budget) break;
+    const last = parts.pop();
+    const name = contributors.pop();
+    if (last === undefined || name === undefined) break;
+    used -= last.length + INJECTION_SEPARATOR.length;
+    dropped.push(name);
+  }
+
   if (dropped.length > 0) parts.push(droppedMarker(dropped));
 
   const text = parts.join(INJECTION_SEPARATOR);
@@ -86,7 +96,7 @@ export function allocate(
       text,
       contributors,
       dropped,
-      overflowed,
+      overflowed: overflowed || text.length > context.budget,
       chars: text.length,
     },
     complaints,
