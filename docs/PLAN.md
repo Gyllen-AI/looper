@@ -979,6 +979,52 @@ The effect is that adoption is honest in both directions: the existing code is
 not pretended to be compliant, and the team is not asked to fix four hundred
 files before the tool does anything for them.
 
+## How looper runs once it is installed, which is not how it runs here
+
+**Settled 2026-08-18, after the advertised install was found dead.** looper's own
+source is TypeScript run by type stripping, with no build step. An install puts
+that source under the adopter's `node_modules`, and Node refuses to strip types
+from any file below that directory. On Node 22.23.2, in an empty project, the two
+lines at the top of `README.md` produced this and nothing else:
+
+```
+Error [ERR_UNSUPPORTED_NODE_MODULES_TYPE_STRIPPING]: Stripping types is
+currently unsupported for files under node_modules, for
+".../node_modules/looper/src/main.ts"
+```
+
+No hooks written, no `.looper/`, no gate — for every adopter, from the first
+command in the README. A global install lands under a `node_modules` directory
+too, so it fails identically. Three routes out, and two of them were rejected:
+
+- **Compile to JavaScript at install time**, with a `prepare` script. That runs
+  our code on the adopter's machine before anyone has read a line of it, which is
+  the exact act `tests/invariants.test.ts` forbids a *dependency* from doing. A
+  rule we enforce on others and suspend for ourselves is not a rule. It would
+  also need a compiler dependency, argued against everywhere else in this file.
+- **Commit the compiled JavaScript.** Two copies of every source file, kept equal
+  by a freshness gate that has to be right forever. The generated half is what
+  actually runs, so a stale one is a bug nobody can see by reading.
+- **Strip the types ourselves, at startup.** `bin/looper.js` is plain JavaScript,
+  so Node loads it under `node_modules` without objection. It registers a
+  synchronous load hook — `module.registerHooks`, in Node since 22.15, and we
+  already require 22.18 — that hands Node the stripped source for looper's own
+  `.ts` files, then imports `src/main.ts`. No build, no dependency, no code at
+  install time, and one copy of the source.
+
+The third is what is built. **What it costs, measured 2026-08-18 on Node
+22.23.2, 20 runs of each:** `--help` 90 ms → 92 ms, `status` 88 ms → 92 ms,
+`law` over a one-file project 96 ms → 97 ms. On the heaviest path, which is the
+one that runs on every edit, the shim costs about a millisecond.
+
+`tests/installed.test.ts` is the gate: it copies the package into a real
+`node_modules` directory and runs `init` there, which is the thing that failed.
+It also asserts that Node still refuses `src/main.ts` on that same path — the day
+that restriction lifts, that test fails and the shim can be deleted.
+
+Working inside this repository is unaffected: the `dev` invocation still runs
+`node ./src/main.ts` straight from the checkout, where type stripping works.
+
 ## Init: merge, never clobber
 
 Four rules for every file we do not own, and the second one is the whole of

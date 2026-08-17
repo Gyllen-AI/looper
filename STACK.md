@@ -9,6 +9,7 @@ alternative — "The stack looper governs". Neither file repeats the other, and
 | | |
 |---|---|
 | runtime | Node >= 22.18, TypeScript run by type stripping, no build step |
+| entry point when installed | `bin/looper.js`, plain JavaScript, strips the types at startup because Node will not do it under `node_modules` |
 | dependencies | `@babel/parser@8.0.4` — the entire npm list |
 | tests | `node:test`, no framework |
 | reading Rust | an engine under `vendor/rust-law`, copied in under 0BSD, built once with the `cargo` a Rust project already has |

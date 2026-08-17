@@ -1,5 +1,7 @@
 # looper
 
+[![tests](https://github.com/gyllen-ai/looper/actions/workflows/test.yml/badge.svg)](https://github.com/gyllen-ai/looper/actions/workflows/test.yml)
+
 An agent writing code for you is fast, agreeable, and unsupervised. looper is
 the reviewer who is not in the room: rules that arrive before the work, and
 gates that read what was written before it lands.
@@ -71,7 +73,7 @@ decision that was reversed keeping both halves, and every number measured with
 the date beside it. Four tests read it and refuse the suite if it drifts from
 what the code does.
 
-`docs/FINDINGS.md` is the audit. Forty things that were wrong with this tool,
+`docs/FINDINGS.md` is the audit. Forty-one things that were wrong with this tool,
 how each was found, and what closing it cost. All of them are closed. A tool
 that publishes its own audit is making a claim that is expensive to fake.
 

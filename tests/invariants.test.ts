@@ -23,6 +23,8 @@ const ARGUED_FOR: readonly string[] = ["@babel/parser"];
 
 const INSTALL_HOOKS: readonly string[] = ["preinstall", "install", "postinstall"];
 
+const WRITTEN_HERE: readonly string[] = ["src", "bin"];
+
 function sourceFiles(dir: string): readonly string[] {
   const found: string[] = [];
   for (const entry of readdirSync(dir)) {
@@ -31,9 +33,13 @@ function sourceFiles(dir: string): readonly string[] {
       found.push(...sourceFiles(path));
       continue;
     }
-    if (entry.endsWith(".ts")) found.push(path);
+    if (entry.endsWith(".ts") || entry.endsWith(".js")) found.push(path);
   }
   return found;
+}
+
+function ourFiles(): readonly string[] {
+  return WRITTEN_HERE.flatMap((part) => sourceFiles(join(ROOT, part)));
 }
 
 function manifestAt(path: string): Record<string, unknown> {
@@ -67,7 +73,7 @@ function installedPackages(): readonly string[] {
 }
 
 test("nothing we wrote can open a socket", () => {
-  for (const file of sourceFiles(join(ROOT, "src"))) {
+  for (const file of ourFiles()) {
     const text = readFileSync(file, "utf8");
     for (const banned of SOCKET_CAPABLE) {
       assert.ok(
@@ -119,7 +125,7 @@ function grepTree(dir: string): readonly string[] {
 const MAY_SPAWN: readonly string[] = [SPAWN_SANCTUM, "law/rust/drive.ts"];
 
 test("only the named files may start another process, and each says what it starts", () => {
-  for (const file of sourceFiles(join(ROOT, "src"))) {
+  for (const file of ourFiles()) {
     const text = readFileSync(file, "utf8");
     if (!text.includes(`"${SPAWN_CAPABLE}"`)) continue;
     assert.ok(
@@ -210,6 +216,23 @@ test("looper is still private, which is the one flag left to flip", () => {
     true,
     "when this is deliberately made public, delete this test with the flag",
   );
+});
+
+test("the command an install exposes is plain JavaScript, and ships with everything it reads", () => {
+  const manifest = manifestAt(join(ROOT, "package.json"));
+  const entry = Object.getOwnPropertyDescriptor(manifest["bin"], "looper")?.value;
+  assert.equal(typeof entry, "string");
+  assert.ok(
+    String(entry).endsWith(".js"),
+    "Node refuses to strip types under node_modules, so a TypeScript entry point is dead on every machine but this one",
+  );
+  assert.ok(existsSync(join(ROOT, String(entry))), `${String(entry)} is what an install runs and it is not here`);
+
+  const shipped = manifest["files"];
+  assert.ok(Array.isArray(shipped));
+  for (const part of ["bin", "src", "vendor"]) {
+    assert.ok(shipped.includes(part), `an install without ${part} cannot run: it is read at runtime`);
+  }
 });
 
 test("the install line points at the repository this actually is", () => {

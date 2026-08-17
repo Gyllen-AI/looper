@@ -22,10 +22,7 @@ is a suspicion and belongs in the notes at the bottom, not in the list.
 
 ## Open
 
-_Empty. Both audits are closed._
-
-_The second audit is running: both languages and the seam between them. Findings
-land here as they are found; nothing is fixed until every pass has finished._
+_Empty. Every pass of both audits is closed, and finding 41 with them._
 
 ## The second audit — what it covered and what it found
 
@@ -71,6 +68,34 @@ tested, and every one was tested the way it was built rather than the way it
 will be used.
 
 ## Cleared
+
+### 41 · `missing` — the advertised install was dead on every machine but this one — cleared
+
+Found 2026-08-18, by doing the only thing every adopter does: installing the
+package the way `README.md` tells a stranger to, into an empty project. `npx
+looper init` never reached a line of looper's own code.
+
+```
+Error [ERR_UNSUPPORTED_NODE_MODULES_TYPE_STRIPPING]: Stripping types is
+currently unsupported for files under node_modules, for
+".../node_modules/looper/src/main.ts"
+```
+
+looper's entry point was `src/main.ts`, and Node refuses to strip types from any
+file under `node_modules`. No hooks, no `.looper/`, no gate — and no error anyone
+could act on. Every test in the suite passed throughout, because every one of
+them ran from this checkout, where stripping works. The same shape as findings
+34, 37 and 39: tested the way it was built, never the way it is used.
+
+Cleared by `bin/looper.js`, plain JavaScript that strips looper's own types at
+startup and then imports `src/main.ts` — no build step, no dependency, and
+nothing running on an adopter's machine at install time. The argument against the
+two alternatives is in `docs/PLAN.md`, "How looper runs once it is installed".
+Measured 2026-08-18 on Node 22.23.2, 20 runs of each: it costs about one
+millisecond on the heaviest path.
+
+The control is `tests/installed.test.ts`, which copies the package into a real
+`node_modules` directory and runs `init` there. It fails on the old entry point.
 
 ### 40 · one concession, two spellings — cleared
 

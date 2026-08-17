@@ -1,6 +1,6 @@
 {
   "name": "looper",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "private": true,
   "license": "0BSD",
   "repository": {
@@ -10,8 +10,13 @@
   "description": "A governed agent workflow: doctrine every turn, a law at every gate.",
   "type": "module",
   "bin": {
-    "looper": "./src/main.ts"
+    "looper": "./bin/looper.js"
   },
+  "files": [
+    "bin",
+    "src",
+    "vendor"
+  ],
   "engines": {
     "node": ">=22.18"
   },
