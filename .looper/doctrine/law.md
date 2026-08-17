@@ -16,3 +16,6 @@ Writing looper's own code, and writing the rules looper enforces.
   path is broken: sharpen it rather than soften it.
 - **Run every new rule over this repo before calling it done.** A rule tested only
   on fixtures its author wrote agrees with its author.
+- **A refusal closes the routes around it and names the one that is open.** An
+  agent that cannot commit will ask its human to type the command; a refusal that
+  does not say so has left the door it was standing in front of.

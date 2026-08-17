@@ -110,6 +110,7 @@ test("a commit carrying a key is refused, and says nothing was committed", () =>
     assert.equal(outcome.kind, "block");
     if (outcome.kind !== "block") return;
     assert.ok(outcome.reason.includes("Nothing was committed"));
+    assert.ok(outcome.reason.includes("not a way through"));
     assert.ok(outcome.reason.includes("change the key at whoever issued it"));
     assert.ok(outcome.reason.includes("already has a copy of it"));
   } finally {

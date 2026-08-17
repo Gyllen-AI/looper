@@ -1179,6 +1179,22 @@ It also closes a sentence this plan already contains and could not honour: *a
 violation the agent cannot discharge is our defect, recorded as one.* Recorded
 where? Here.
 
+**An agent that cannot commit will ask its human to type the command instead.
+Observed 2026-08-18.** An agent working in a project that had adopted looper hit
+the gate and passed the refused command to the person supervising it, presented
+as the one step left to run. The route buys nothing — the git hooks run in that
+person's shell as readily as anywhere, so the same rules judge the same commit —
+but the refusal never said so, and a route nobody closes is a route somebody
+takes. It says so now, and names `looper report` in the same breath: closing a
+route without naming the open one leaves switching the rule off as the only idea
+left. `tests/commit-gate.test.ts` holds both halves.
+
+What this cannot reach is the case where the person's shell has no hooks at all,
+because looper was never wired into that clone. There the handover really does
+get past the gate, and the answer is not a better sentence — it is that
+`.claude/settings.json` is committed, so the agent-side gate arrives with the
+clone even when `.git/hooks` does not.
+
 **looper does not send it. The agent does.** This is not a compromise around the
 no-network invariant, it is the only correct shape. looper stays incapable of
 opening a socket — that is the first line of its own constitution and the reason

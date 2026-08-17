@@ -1,4 +1,4 @@
-import { RUST_EXTENSION } from "../config.ts";
+import { NOT_A_WAY_THROUGH, RUST_EXTENSION } from "../config.ts";
 import { judgeRustIn } from "./project.ts";
 import { roleOf, shapeOf } from "./shape.ts";
 import { existsSync, readFileSync } from "node:fs";
@@ -186,7 +186,10 @@ export function judgeStaged(root: string): Outcome {
   }
 
   if (violations.length === 0) return { kind: "pass" };
-  return { kind: "block", reason: `${formatReport(violations, "some-new")}\nNothing was committed.` };
+  return {
+    kind: "block",
+    reason: `${formatReport(violations, "some-new")}\nNothing was committed.\n\n${NOT_A_WAY_THROUGH}`,
+  };
 }
 
 export function shrinkBaseline(root: string): Outcome {

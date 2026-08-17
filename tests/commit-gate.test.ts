@@ -97,6 +97,25 @@ test("staged code that breaks a rule refuses the commit", () => {
   }
 });
 
+test("the refusal closes the route of handing the command to a person to type", () => {
+  const root = repo();
+  try {
+    stage(root, "src/user.ts", GUILTY);
+    const reason = first(tryCommit(root, "git commit -m 'add user lookup'").refusals).reason;
+
+    assert.ok(
+      reason.includes("not a way through"),
+      "an agent that cannot commit will ask its human to run the command instead, and the refusal has to say that this is not a route",
+    );
+    assert.ok(
+      reason.includes("looper report"),
+      "closing a route without naming the open one leaves switching the rule off as the only idea left",
+    );
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
 test("--no-verify does not get past this gate, because it is not a git hook", () => {
   const root = repo();
   try {

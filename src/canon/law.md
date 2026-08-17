@@ -20,6 +20,7 @@ without a warning from anything. These are rules, not preferences.
   what it says. A parameter, an argument array and a schema at the edge are all
   shorter to write than the spelling that gets you robbed.
 - If a rule blocks you and its suggestions do not work, looper is wrong, not
-  you. Do not switch it off — run `looper report`, which writes the shape it
-  fired on and nothing else of yours, for a human to read first. Rules are meant
-  to be argued with: say so once and point at CONTRIBUTING.md.
+  you. Do not switch it off, and do not hand the command to a person to run
+  instead — the same rules judge their commit. Run `looper report`, which writes
+  the shape it fired on and nothing else of yours, for a human to read first.
+  Rules are meant to be argued with: say so once and point at CONTRIBUTING.md.

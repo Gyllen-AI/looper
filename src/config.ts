@@ -214,6 +214,8 @@ export const BASELINE_HEADER = `# Problems that were already here when looper ar
 #
 # Delete a line here once you have fixed it, or let looper shrink it for you.`;
 
+export const NOT_A_WAY_THROUGH = `Asking a person to run this command instead is not a way through: the same rules apply to their commit. If the rule is wrong here, run \`looper report\` — it writes the case for changing it, and CONTRIBUTING.md has the three routes out.`;
+
 export const TS_SECTION = "ts";
 
 export const SHARED_TRUTH_SECTION = "truth";

@@ -1,7 +1,7 @@
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 
-import { ALLOW_MARKER, SECRETS_ALLOW_PATH, SKIP_SUFFIXES } from "../config.ts";
+import { ALLOW_MARKER, NOT_A_WAY_THROUGH, SECRETS_ALLOW_PATH, SKIP_SUFFIXES } from "../config.ts";
 import { SILENT } from "../capability.ts";
 import type {
   Capability,
@@ -91,6 +91,8 @@ export function reportOn(caught: readonly Caught[]): string {
   lines.push(
     ``,
     `Nothing was committed.`,
+    ``,
+    NOT_A_WAY_THROUGH,
     ``,
     `If it is real: take it out of the file, put it in a setting instead, and`,
     `change the key at whoever issued it. That last step is not optional. Once a`,
