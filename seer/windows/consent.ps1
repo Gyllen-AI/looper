@@ -48,7 +48,8 @@ $said.Font = New-Object System.Drawing.Font('Segoe UI', 9)
 
 $armedSaid = New-Object System.Windows.Forms.Label
 $armedSaid.Dock = 'Bottom'
-$armedSaid.Height = 28
+$armedSaid.Height = 44
+$armedSaid.AutoEllipsis = $true
 $armedSaid.Padding = New-Object System.Windows.Forms.Padding(8, 6, 8, 0)
 $armedSaid.Font = New-Object System.Drawing.Font('Segoe UI', 9)
 
@@ -74,7 +75,7 @@ function Show-Armed {
         $armedSaid.ForeColor = [System.Drawing.Color]::DimGray
         return
     }
-    $armedSaid.Text = 'Armed: ' + ($state.Armed -join ' | ')
+    $armedSaid.Text = ('Armed (' + $state.Armed.Count + '): ') + ($state.Armed -join ' | ')
     $armedSaid.ForeColor = [System.Drawing.Color]::FromArgb(180, 60, 0)
 }
 

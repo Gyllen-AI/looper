@@ -1300,6 +1300,13 @@ from the earlier run, now caught and said out loud. One defect on the way: the
 window's title came back mangled through the shim until both ends were pinned to
 UTF-8.
 
+**Every window on the desktop, asked for at once, 2026-08-18.** Ten open windows,
+one request each through the real MCP server, three of them ticked in the consent
+window: three pictures back — 1550x830 `rendering`, 620x460 `rendering`, and
+159x27 `minimised` with the warning attached — and seven refusals. The seven were
+decided by the consent process, not by looper, which is the only division of
+labour that survives an agent being told what to ask for.
+
 **What is still not built:** a Linux desktop pair and a macOS pair. Until a
 platform has both halves it has no seer, and a capture program without a consent
 window is precisely what this design exists to refuse.
