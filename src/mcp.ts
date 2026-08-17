@@ -102,6 +102,18 @@ function content(result: ToolResult): unknown {
       isError: true,
     };
   }
+  if (result.kind === "shown") {
+    return {
+      content: [
+        { type: "text", text: result.said },
+        ...result.images.map((held) => ({
+          type: "image",
+          data: held.base64,
+          mimeType: held.media,
+        })),
+      ],
+    };
+  }
   return { content: [{ type: "text", text: result.text }] };
 }
 

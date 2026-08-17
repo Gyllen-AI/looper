@@ -122,7 +122,7 @@ function grepTree(dir: string): readonly string[] {
   return hits;
 }
 
-const MAY_SPAWN: readonly string[] = [SPAWN_SANCTUM, "law/rust/drive.ts"];
+const MAY_SPAWN: readonly string[] = [SPAWN_SANCTUM, "law/rust/drive.ts", "seer/drive.ts"];
 
 test("only the named files may start another process, and each says what it starts", () => {
   for (const file of ourFiles()) {
@@ -139,6 +139,7 @@ test("the files that may start a process start only what they were allowed to", 
   const starts: Record<string, string> = {
     [SPAWN_SANCTUM]: '"git"',
     "law/rust/drive.ts": '"cargo"',
+    "seer/drive.ts": "seerAt(",
   };
   for (const [file, expected] of Object.entries(starts)) {
     const text = readFileSync(join(ROOT, "src", file), "utf8");
@@ -172,6 +173,34 @@ test("no dependency runs code at install time", () => {
       assert.ok(
         !(hook in scripts),
         `${path} runs a ${hook} script. An install script executes on every machine that installs looper, before anyone has read a line of it.`,
+      );
+    }
+  }
+});
+
+test("no install can arrive able to look at a screen", () => {
+  assert.ok(
+    !existsSync(join(ROOT, "vendor", "seer")),
+    "a capture program is in the tree. Nothing that can photograph somebody's screen may arrive with an install: it is built deliberately, by the person whose screen it is, or it does not exist on that machine.",
+  );
+
+  const shipped = manifestAt(join(ROOT, "package.json"))["files"];
+  assert.ok(Array.isArray(shipped));
+  for (const part of shipped) {
+    assert.ok(
+      !String(part).includes("seer"),
+      `the package ships ${String(part)}, which would carry a capture program to every machine that installs looper`,
+    );
+  }
+});
+
+test("looper cannot record consent, because consent is not its to record", () => {
+  for (const file of sourceFiles(join(ROOT, "src", "seer"))) {
+    const text = readFileSync(file, "utf8");
+    for (const written of ["writeFileSync", "writeAtomically", "appendFileSync", "mkdirSync"]) {
+      assert.ok(
+        !text.includes(written),
+        `${file} writes to disk. Whether a window may be looked at is decided by the person at the machine, in a process looper does not own — anything looper can write, whoever is talking to the agent can have it write.`,
       );
     }
   }

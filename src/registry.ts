@@ -2,6 +2,7 @@ import { Law } from "./law/capability.ts";
 import { Recall } from "./recall/capability.ts";
 import { Router } from "./router.ts";
 import { Secrets } from "./secrets/capability.ts";
+import { Seer } from "./seer/capability.ts";
 import type { Capability, HookContext, Outcome } from "./capability.ts";
 import { reasonFrom } from "./fields.ts";
 
@@ -27,7 +28,7 @@ export type Dispatch = {
 };
 
 export function registry(): readonly Capability[] {
-  return [new Router(), new Law(), new Secrets(), new Recall()];
+  return [new Router(), new Law(), new Secrets(), new Recall(), new Seer()];
 }
 
 function verdict(capability: Capability, context: HookContext): Outcome {

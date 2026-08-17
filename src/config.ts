@@ -121,6 +121,16 @@ export const HOOK_TIMEOUT_SECONDS = 30;
 
 export const COMMIT_GATE_TIMEOUT_SECONDS = 300;
 
+export const SEER_DIR = "vendor/seer";
+
+export const SEER_NAME = "looper-seer";
+
+export const SEER_TOOL = "see";
+
+export const SEER_TIMEOUT_MS = 20_000;
+
+export const SEER_NAME_LIMIT = 200;
+
 export const REPORT_PATH = ".looper/report.md";
 
 export const REPORT_DEPTH = 6;

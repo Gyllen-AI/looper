@@ -1204,6 +1204,63 @@ anyone in work they did not ask for. That machinery already exists and adoption
 gets it for free — which also means a wrongly adopted rule costs a deletion
 rather than a crisis.
 
+## The seer: an agent that can look, and cannot look at anything it was not shown
+
+Proposed by an adopting agent as issue #10, and taken on 2026-08-18. The canon
+says done means the thing was demonstrated actually working, and for anything
+with an interface that sentence is prose today — an agent with no eyes reports
+what it believes. The failures it named are the ordinary ones: a screen called
+working from a rig that could not have rendered it, an error overlay left up
+because a compiler was happy.
+
+**The whole design is one sentence: looper never decides whether a capture may
+happen.** It cannot be trusted to, and not because of any defect in it — whoever
+writes the prompt chooses what the agent asks for, so a decision made inside
+looper is a decision made by whoever last talked to the agent. The decision lives
+in a consent process the person at the machine controls, and the capture program
+asks that process before every capture. looper drives the program and reads its
+answer, exactly the way it drives the Rust engine.
+
+**The seam, exit codes as protocol.** `looper-seer` is run with an argument list,
+never a shell line, and answers on stdout with one JSON object:
+
+| exit | means |
+|---|---|
+| 0 | `{"images":[{"label","media","base64"}],"missing":[…]}` — and `missing` is named, never silently dropped |
+| 3 | there is no window by that name |
+| 5 | disarmed: the person has not armed this target |
+| anything else | unavailable, and looper says so rather than guessing |
+
+**Off unless somebody built it.** No capture program ships in the package —
+`files` in `package.json` carries none, and a test refuses the suite if one
+appears. With no program on disk the `see` tool is not offered at all, and every
+call refuses in words. Installing looper therefore cannot gain the ability to
+look at anything, which is the property that had to be mechanical rather than
+promised.
+
+**What no prompt can reach, and why each is a control rather than a claim.**
+
+- **Nothing off this machine.** looper cannot open a socket and a test refuses any
+  import that could, so there is no remote caller to defend against — the
+  invariant the whole product already rests on is what makes this one hold.
+- **Nothing looper can arm.** There is no arm tool, no arm command, and no
+  consent state that looper reads or writes. Exit code 5 is a fact produced by
+  another process, and a refusal cannot be argued with by asking again.
+- **Nothing the agent names selects the program.** The path is fixed in code,
+  inside looper's own tree. What the agent supplies is one window name, crossing
+  as one argument with a length cap, and no shell ever sees it.
+- **Nothing invented.** A refusal never becomes an image. There is no default
+  target, no "closest match", and a capture that did not happen is reported as one
+  that did not happen.
+
+**What is not built here: the capture program and the consent app.** They are
+platform code — the proposal describes a Windows implementation of both, around
+1,150 lines, and offers to port it. Until a platform has both, that platform has
+no seer, which is the proposal's own line and the reason this half ships alone.
+This half is testable without them: a stub program standing in for the real one
+proves the disarmed path refuses, the missing-window path is named, and an
+image only ever reaches the agent behind exit code 0.
+
 ## The return path: every adopter's agent is a rule tester
 
 The rule set grows only on evidence, and the plan has never said where evidence

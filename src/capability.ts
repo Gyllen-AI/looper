@@ -37,8 +37,11 @@ export type ToolDef = {
   readonly inputSchema: unknown;
 };
 
+export type Shown = { readonly media: string; readonly base64: string };
+
 export type ToolResult =
   | { readonly kind: "text"; readonly text: string }
+  | { readonly kind: "shown"; readonly said: string; readonly images: readonly Shown[] }
   | { readonly kind: "unknown-tool"; readonly asked: string };
 
 export type ToolCall = {
