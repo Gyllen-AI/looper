@@ -1,12 +1,16 @@
 import { existsSync } from "node:fs";
 import { join } from "node:path";
 
-import type { Concessions } from "./concessions.ts";
+import { RUST_EXTENSION } from "../config.ts";
+import { isNamed, withoutLanguage, type Concessions } from "./concessions.ts";
+import { judgedFiles } from "./project.ts";
 import { required } from "../present.ts";
 
 const ALL_RULES = "ALL";
 
 const NEAR_ENOUGH = 3;
+
+const RUST_PREFIX = "RUST-";
 
 function distance(left: string, right: string): number {
   const row: number[] = Array.from({ length: right.length + 1 }, (_, at) => at);
@@ -36,10 +40,28 @@ function nearestTo(wanted: string, known: readonly string[]): string | null {
   return best;
 }
 
+function spokenHere(file: string, known: readonly string[]): readonly string[] {
+  const rust = file.endsWith(RUST_EXTENSION);
+  const sameLanguage = known.filter((held) => held.startsWith(RUST_PREFIX) === rust);
+  if (sameLanguage.length === 0) return known;
+  return sameLanguage;
+}
+
+function isKnown(named: string, known: readonly string[]): boolean {
+  if (known.includes(named)) return true;
+  const bare = withoutLanguage(named);
+  return known.some((held) => withoutLanguage(held) === bare);
+}
+
 function unknownRule(named: string, known: readonly string[], where: string): string {
   const nearest = nearestTo(named, known);
   const guess = nearest === null ? "" : ` Did you mean ${nearest}?`;
   return `looper: ${where} names ${named}, which is not a rule, so it does nothing.${guess}`;
+}
+
+function anythingNamed(root: string, file: string): boolean {
+  if (existsSync(join(root, file))) return true;
+  return judgedFiles(root).some((path) => isNamed(path, [file]));
 }
 
 export function misspelledIn(
@@ -55,19 +77,19 @@ export function misspelledIn(
       );
       continue;
     }
-    if (known.includes(named)) continue;
+    if (isKnown(named, known)) continue;
     said.push(unknownRule(named, known, "law.toml [rules] disabled"));
   }
 
   for (const [file, rules] of concessions.pardons) {
-    if (!existsSync(join(concessions.projectRoot, file))) {
+    if (!anythingNamed(concessions.projectRoot, file)) {
       said.push(
         `looper: law.toml [exempt] names ${file}, and there is no such file, so it does nothing.`,
       );
     }
     for (const named of rules) {
-      if (named === ALL_RULES || known.includes(named)) continue;
-      said.push(unknownRule(named, known, `law.toml [exempt] "${file}"`));
+      if (named === ALL_RULES || isKnown(named, known)) continue;
+      said.push(unknownRule(named, spokenHere(file, known), `law.toml [exempt] "${file}"`));
     }
   }
 

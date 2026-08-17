@@ -29,7 +29,7 @@ const ALL_RULES = "ALL";
 
 const NAMESPACED = /^[A-Z]+-/;
 
-function withoutLanguage(ruleId: string): string {
+export function withoutLanguage(ruleId: string): string {
   return ruleId.replace(NAMESPACED, "");
 }
 

@@ -26,6 +26,15 @@ not built and has deliberately deferred, and the law engine does not depend on
 it: its dependencies are `syn`, `proc-macro2`, `serde` and `toml`, and nothing
 else.
 
+**The one line in the manifest that is ours.** `[workspace]`, empty, at the top
+of `Cargo.toml`. Without it, a looper checked out inside a Rust project is
+claimed by that project's workspace and cargo refuses to build it at all —
+`current package believes it's in a workspace when it's not`. An empty workspace
+table makes this crate its own root, so no ancestor manifest can claim it, and
+every consumer is spared discovering `exclude` for their own `Cargo.toml`. It
+changes nothing about the copied source. Added 2026-08-18 from adopter issue #3,
+which arrived with the fix already measured at 16.56s for a clean release build.
+
 **The one file here that is ours.** `src/bin/looper-rust.rs` is written by us,
 not copied, and it is the only interface looper uses:
 

@@ -160,3 +160,16 @@ test("searching is case-insensitive, because nobody remembers how they wrote it"
   const notes = [{ learned: "2026-08-17", summary: "The Webhook", body: "detail" }];
   assert.equal(matching(notes, "webhook").length, 1);
 });
+
+test("a note written with a hyphen is a note, because a project may forbid the dash", () => {
+  const notes = parseNotes(
+    "# What this project has learned\n\n## 2026-08-18 - the tile server has to be running\n\nA blank map means nothing is serving tiles.\n",
+  );
+
+  assert.equal(
+    notes.length,
+    1,
+    "the heading did not parse, so the note was silently swallowed into whatever came before it. A project whose own rules ban the em dash cannot write a note looper will read.",
+  );
+  assert.equal(first(notes).summary, "the tile server has to be running");
+});

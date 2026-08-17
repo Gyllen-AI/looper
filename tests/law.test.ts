@@ -1,9 +1,9 @@
 import { parseToml, stringsAt, tableIn } from "../src/toml.ts";
-import { surveyProject } from "../src/law/project.ts";
+import { judgedFiles, surveyProject } from "../src/law/project.ts";
 import { test } from "node:test";
 import assert from "node:assert/strict";
 
-import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -207,6 +207,55 @@ test("a project with nothing the law can read is told that, not told it is clean
     const survey = surveyProject(root, "everything");
     assert.equal(survey.files, 0);
     assert.deepEqual([...survey.violations], []);
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
+const SWALLOWS = "export function f() {\n  try { g() } catch { return null }\n}\n";
+
+function projectHolding(where: string, marker: string): string {
+  const root = mkdtempSync(join(tmpdir(), "looper-elsewhere-"));
+  mkdirSync(join(root, where, "src"), { recursive: true });
+  writeFileSync(join(root, where, "src/theirs.ts"), SWALLOWS);
+  writeFileSync(join(root, where, marker), "");
+  mkdirSync(join(root, "src"), { recursive: true });
+  writeFileSync(join(root, "src/ours.ts"), "export const a = 1;\n");
+  return root;
+}
+
+test("a directory with its own law.toml is judged by that law, not by this project's", () => {
+  const root = projectHolding("tools/looper", "law.toml");
+  try {
+    const survey = surveyProject(root, "everything");
+
+    assert.deepEqual(
+      survey.violations.map((held) => held.file),
+      [],
+      "a checkout inside the project was judged under its host's law. `looper law` then exits 2 forever over somebody else's code, and a gate that can never pass is one people learn to skip.",
+    );
+    assert.ok(
+      !judgedFiles(root).some((path) => path.includes("tools")),
+      "the walk went into a tree that governs itself",
+    );
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test("a submodule is left to its own law even when it has no law.toml", () => {
+  const root = projectHolding("libs/theirs", "README.md");
+  try {
+    writeFileSync(
+      join(root, ".gitmodules"),
+      '[submodule "libs/theirs"]\n\tpath = libs/theirs\n\turl = https://example.invalid/theirs.git\n',
+    );
+
+    assert.deepEqual(
+      surveyProject(root, "everything").violations.map((held) => held.file),
+      [],
+      "somebody else's repository, checked out inside this one, is not this project's code to judge",
+    );
   } finally {
     rmSync(root, { recursive: true, force: true });
   }

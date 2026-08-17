@@ -18,7 +18,7 @@ import type {
 } from "../capability.ts";
 import { changedLines, stagedFiles, stagedLines, stagedText } from "../git.ts";
 import { isRecorded, readBaseline, countsOf, shrinkToward, totalIn, writeBaseline } from "./baseline.ts";
-import { surveyProject } from "./project.ts";
+import { surveyProject, underAnotherLaw } from "./project.ts";
 import { BASELINE_PRIORITY } from "../config.ts";
 import { intentOf } from "./commit-command.ts";
 import { readConcessions } from "./concessions.ts";
@@ -101,6 +101,7 @@ export function targetOf(root: string, payload: string): Target {
   if (OUTSIDE_THE_LAW.some((part) => inside.split("/").includes(part))) {
     return { kind: "not-ours", path: inside };
   }
+  if (underAnotherLaw(root, inside)) return { kind: "not-ours", path: inside };
   if (!JUDGED_EXTENSIONS.some((suffix) => inside.endsWith(suffix))) {
     return { kind: "not-ours", path: inside };
   }
@@ -173,6 +174,7 @@ export function judgeStaged(root: string): Outcome {
   for (const path of staged.paths) {
     if (!JUDGED_EXTENSIONS.some((suffix) => path.endsWith(suffix))) continue;
     if (OUTSIDE_THE_LAW.some((part) => path.split("/").includes(part))) continue;
+    if (underAnotherLaw(root, path)) continue;
     const held = stagedText(root, path);
     if (held.kind === "unreadable") continue;
 

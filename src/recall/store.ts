@@ -11,7 +11,7 @@ export type Note = {
   readonly body: string;
 };
 
-const ENTRY = /^##\s+(\d{4}-\d{2}-\d{2})\s+—\s+(.*)$/;
+const ENTRY = /^##\s+(\d{4}-\d{2}-\d{2})\s+[—-]\s+(.*)$/;
 
 export function parseNotes(source: string): readonly Note[] {
   const notes: Note[] = [];

@@ -22,7 +22,7 @@ is a suspicion and belongs in the notes at the bottom, not in the list.
 
 ## Open
 
-_Empty. Every pass of both audits is closed, and findings 41 to 44 with them._
+_Empty. Every pass of both audits is closed, and findings 41 to 50 with them._
 
 ## The second audit — what it covered and what it found
 
@@ -68,6 +68,82 @@ tested, and every one was tested the way it was built rather than the way it
 will be used.
 
 ## Cleared
+
+### 50 · `blunt` — the vendored engine could not build inside a Rust project — cleared
+
+Filed by an adopting agent as issue #3, with the fix already measured. A looper
+checked out inside a Rust project is claimed by that project's workspace, so
+cargo refuses the crate outright and looper's Rust half never builds — in exactly
+the projects it exists for. Reproduced here, then fixed and reproduced again:
+
+```
+with the line:     cargo accepted the crate
+without the line:  error: current package believes it's in a workspace when it's not
+```
+
+The fix is `[workspace]`, empty, at the top of `vendor/rust-law/Cargo.toml`. It
+makes the crate its own root so no ancestor manifest can claim it. This is not a
+patch to somebody else's source — finding 36's policy stands — it is one line in
+the manifest, and `PROVENANCE.md` records it beside the one file there that is
+already ours.
+
+### 49 · `wrong` — `TAURI:1` pooled the commands of every app in the repository — cleared
+
+Filed by an adopting agent as issue #11. `commandsAnswering` merged every
+`#[tauri::command]` from every `src-tauri` directory into one set, so a
+repository with two Tauri apps accepted `invoke("x")` in app A when only app B
+answers `x`. Nothing connects them at runtime, so that call fails exactly the way
+the rule exists to prevent, and the rule said it was fine.
+
+One set per app now, keyed by the directory above its `src-tauri`, and a file is
+judged against the app it lives under. A file under no app gets no verdict rather
+than a wrong one, which is the same choice made everywhere else here.
+
+### 48 · `blunt` — a recall note had to use a character the project's own rules forbid — cleared
+
+Filed by an adopting agent as issue #12. Note headings parsed only with an em
+dash, and `.looper/recall.md` is written by the agent and read by the team — so a
+project whose constitution bans the em dash had to break one rule or the other on
+every note. Worse, a hyphen did not fail loudly: the heading simply did not parse
+and the note was swallowed into the entry above it. Either separator is accepted
+now.
+
+### 47 · `blunt` — nothing could be kept out of looper's law — cleared
+
+Filed by an adopting agent as issue #7. `OUTSIDE_THE_LAW` was a fixed list of
+directory names, so a looper checked out inside a project was judged under its
+host's law: 35 violations in code nobody there wrote, and `looper law` exiting 2
+forever. A gate that can never pass is a gate people learn to skip.
+
+Two exclusions now, both decidable and neither of them a setting anybody has to
+discover: a directory holding its own `law.toml` is governed by itself, and a
+path named in `.gitmodules` belongs to whoever wrote it. The walk skips them and
+so do the edit and commit gates, which is the half that matters — an exclusion
+only the survey honours is not an exclusion.
+
+### 46 · `wrong` — a live pardon reported as dead weight — cleared
+
+Filed by an adopting agent as issue #6, and it is the worse half of 45. The Rust
+engine matches `[exempt]` keys against the path it reports, which is relative to
+the crate's `src`; looper resolved the same key against the repository root,
+found nothing, and said the pardon does nothing. Somebody believing that message
+deletes a concession that is holding a rule off generated code.
+
+A key is now taken as live if any judged file matches it the way the engine
+matches it. That costs a walk of the project, but only when the key is not found
+at the root: measured 2026-08-18 on this repo, 119 files, 0.6 ms.
+
+### 45 · `wrong` — no rule id spelling satisfied both halves of the law — cleared
+
+Filed by an adopting agent as issue #5. The Rust engine hard-errors on a
+namespaced id, so `RUST-TRUTH:1` in `law.toml` breaks every judgement in the
+project, and `TRUTH:1` — the only spelling that works — was reported on every
+single edit as not a rule, with a `TS-` id offered as the correction for a `.rs`
+file.
+
+Both spellings are accepted now, matched with the same `withoutLanguage` the
+pardon lookup already used, and a suggestion is drawn from the language of the
+file it is about.
 
 ### 44 · `missing` — init left an existing `.mcp.json` alone and never said the tools were unwired — cleared
 

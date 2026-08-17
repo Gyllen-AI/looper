@@ -11,6 +11,7 @@ import { roleOf, shapeOf } from "../src/law/shape.ts";
 import { RUST_RULES, rustRuleFor } from "../src/law/rust/rules.ts";
 import { bansTheEngineDeclares } from "../src/law/rust/engine-words.ts";
 import { crossingsIn } from "../src/law/rust/boundary.ts";
+import { answeringFor } from "../src/law/project.ts";
 
 const GUILTY_RUST = `fn read_setting(name: &str) -> String {
     std::env::var(name).unwrap()
@@ -352,5 +353,27 @@ test("the one file in the vendored tree that is ours obeys our law", () => {
     commented.map((held) => `line ${held.at}: ${held.line.slice(0, 40)}`),
     [],
     "vendor/ is outside the law because it holds somebody else's code. This file is ours, and RUST-DEAD:2 applies to it.",
+  );
+});
+
+test("two Tauri apps in one repository do not answer each other's invokes", () => {
+  const apps = new Map<string, ReadonlySet<string>>([
+    ["crates/client", new Set(["save_note"])],
+    ["crates/launcher", new Set(["start_game"])],
+  ]);
+
+  const inClient = answeringFor(apps, "crates/client/src/App.tsx");
+  assert.equal(inClient.kind, "named");
+  if (inClient.kind !== "named") return;
+  assert.ok(
+    !inClient.names.has("start_game"),
+    "a command only the launcher answers was accepted in the client. Nothing connects them at runtime, so that call fails exactly the way TAURI:1 exists to prevent.",
+  );
+  assert.ok(inClient.names.has("save_note"));
+
+  assert.equal(
+    answeringFor(apps, "packages/shared/src/util.ts").kind,
+    "none",
+    "a file under no app has no owning command set, and guessing one is how the union bug started",
   );
 });

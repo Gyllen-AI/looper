@@ -7,7 +7,7 @@ import { join } from "node:path";
 
 import { readConcessions, standingOf } from "../src/law/concessions.ts";
 import { misspelledIn } from "../src/law/misspelled.ts";
-import { CHECKS } from "../src/law/checks.ts";
+import { CHECKS, knownRuleIds } from "../src/law/checks.ts";
 
 const KNOWN = CHECKS.map((held) => held.rule.id);
 
@@ -52,6 +52,40 @@ test("an exemption for a file that is not there is said out loud", () => {
   const said = withLaw('[exempt]\n"src/gone.ts" = ["TS-TRUTH:2"]\n');
   assert.equal(said.length, 1);
   assert.ok(first(said).includes("no such file"));
+});
+
+test("the spelling the Rust engine demands is not called a mistake", () => {
+  const root = mkdtempSync(join(tmpdir(), "looper-bare-"));
+  try {
+    mkdirSync(join(root, "crates/shared/src/game"), { recursive: true });
+    writeFileSync(join(root, "crates/shared/src/game/generated.rs"), "pub fn a() {}\n");
+    writeFileSync(join(root, "law.toml"), '[exempt]\n"game/generated.rs" = ["TRUTH:1"]\n');
+
+    assert.deepEqual(
+      misspelledIn(readConcessions(root), knownRuleIds()),
+      [],
+      "TRUTH:1 is the only id the engine accepts, and the pardon is live: the engine matches the key against the path it reports, which is relative to the crate's src. Calling either of those a mistake talks somebody into deleting a working concession.",
+    );
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test("a rule that really is mistyped is offered one from the file's own language", () => {
+  const root = mkdtempSync(join(tmpdir(), "looper-lang-"));
+  try {
+    writeFileSync(join(root, "a.rs"), "pub fn a() {}\n");
+    writeFileSync(join(root, "law.toml"), '[exempt]\n"a.rs" = ["RUST-TRUTH-1"]\n');
+
+    const said = misspelledIn(readConcessions(root), knownRuleIds());
+    assert.equal(said.length, 1);
+    assert.ok(
+      first(said).includes("RUST-TRUTH:1"),
+      `a .rs file was offered ${first(said)}, and a TypeScript id in a Rust file is advice that cannot work`,
+    );
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
 });
 
 test("one concession, written once, is read by both halves", () => {

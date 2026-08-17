@@ -937,6 +937,27 @@ real inference begins. Directly imported functions are caught, from your own
 files and from installed packages alike, following a rename at the import.
 A package that declares no types is passed over rather than guessed at.
 
+### What this project's law does not reach. Settled 2026-08-18, from adopter issue #7
+
+`OUTSIDE_THE_LAW` — `node_modules`, `dist`, `.git`, `target`, `vendor` — was a
+fixed list of names and the only way out. A project that checked looper out
+inside itself had looper's own source judged under the project's law, which is
+somebody else's code failing a gate that then exits 2 forever. A gate that can
+never pass is a gate people learn to skip, so this is a defect in the same class
+as a false positive.
+
+Two exclusions, and the reason both are derived rather than configured is that a
+setting nobody knows to write is not an answer:
+
+- **A directory holding its own `law.toml` is governed by itself.** That file is
+  the declaration; nothing else has to be said anywhere.
+- **A path named in `.gitmodules` belongs to whoever wrote it.** Free and exact,
+  and it covers the checkouts that carry no `law.toml` at all.
+
+Both apply to the walk, the edit gate and the commit gate together. An exclusion
+only the survey honours would leave every edit inside the excluded tree still
+refused, which is the failure wearing a different hat.
+
 ### The baseline, because an existing repo starts non-compliant
 
 Point the slow pass at a real codebase written before looper existed and it will
@@ -1786,6 +1807,16 @@ drift apart.
 `TAURI:1` is the reason to do this properly rather than bolt a second linter on
 the side. It is only decidable if one tool reads both halves of the repository,
 and it is exactly the failure a mixed-stack project ships.
+
+**One command pool per app, not one per repository. Corrected 2026-08-18, from
+adopter issue #11.** The first version merged every `#[tauri::command]` from
+every `src-tauri` directory into one set, so a repository with two Tauri apps
+accepted a call in one app that only the other app answers — nothing joins them
+at runtime, so that is the failure the rule exists to catch, passing. The pool is
+now keyed by the directory above each `src-tauri`, and a file is judged against
+the app it lives under. A file under no app is not judged by this rule at all,
+because a verdict against a guessed app is how the union got written in the first
+place.
 
 ### Knowing which stack a project is
 

@@ -1,7 +1,7 @@
 import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
 import { dirname, join, relative } from "node:path";
 
-import { JUDGED_EXTENSIONS, OUTSIDE_THE_LAW, RUST_EXTENSION } from "../config.ts";
+import { JUDGED_EXTENSIONS, LAW_PATH, OUTSIDE_THE_LAW, RUST_EXTENSION } from "../config.ts";
 import { trackedFiles } from "../git.ts";
 import { readConcessions } from "./concessions.ts";
 import { judge } from "./engine.ts";
@@ -21,14 +21,59 @@ export type Survey = {
   readonly unreadable: readonly string[];
 };
 
+const SUBMODULES = ".gitmodules";
+
+const SUBMODULE_PATH = /^\s*path\s*=\s*(.+?)\s*$/;
+
+export function submodulesOf(root: string): readonly string[] {
+  const path = join(root, SUBMODULES);
+  if (!existsSync(path)) return [];
+  const found: string[] = [];
+  for (const line of readFileSync(path, "utf8").split("\n")) {
+    const held = SUBMODULE_PATH.exec(line);
+    if (held === null) continue;
+    found.push(required(held[1], "the path of a submodule"));
+  }
+  return found;
+}
+
+function governsItself(root: string, at: string, submodules: readonly string[]): boolean {
+  if (at === "" || at === ".") return false;
+  if (submodules.includes(at)) return true;
+  return existsSync(join(root, at, LAW_PATH));
+}
+
+function anyAncestorGoverns(
+  root: string,
+  parts: readonly string[],
+  submodules: readonly string[],
+): boolean {
+  let at = "";
+  for (const part of parts) {
+    if (part === "" || part === ".") continue;
+    at = at === "" ? part : `${at}/${part}`;
+    if (governsItself(root, at, submodules)) return true;
+  }
+  return false;
+}
+
+export function underAnotherLaw(root: string, path: string): boolean {
+  const parts = relative(root, join(root, path)).split(/[\\/]/);
+  parts.pop();
+  return anyAncestorGoverns(root, parts, submodulesOf(root));
+}
+
 export function judgedFiles(root: string): readonly string[] {
   const found: string[] = [];
+  const submodules = submodulesOf(root);
 
   function walkDirectory(dir: string): void {
     for (const entry of readdirSync(dir)) {
       if (OUTSIDE_THE_LAW.includes(entry)) continue;
       const path = join(dir, entry);
       if (statSync(path).isDirectory()) {
+        const inside = relative(root, path).split(/[\\/]/);
+        if (anyAncestorGoverns(root, inside, submodules)) continue;
         walkDirectory(path);
         continue;
       }
@@ -60,21 +105,50 @@ function looperRoot(): string {
 
 type Answering =
   | { readonly kind: "none" }
-  | { readonly kind: "named"; readonly names: ReadonlySet<string> };
+  | { readonly kind: "named"; readonly apps: ReadonlyMap<string, ReadonlySet<string>> };
+
+function appAbove(where: string): string {
+  const above = dirname(where);
+  return above === "." ? "" : above;
+}
 
 function commandsAnswering(root: string, shape: Shape): Answering {
   if (shape.kind !== "tauri") return { kind: "none" };
 
-  const names = new Set<string>();
-  let read = false;
+  const apps = new Map<string, Set<string>>();
   for (const where of shape.rustUnder) {
     const said = commandsUnder(looperRoot(), join(root, where));
     if (said.kind !== "named") continue;
-    read = true;
+    const app = appAbove(where);
+    const held = apps.get(app);
+    const names = held === undefined ? new Set<string>() : held;
     for (const name of said.names) names.add(name);
+    apps.set(app, names);
   }
-  return read ? { kind: "named", names } : { kind: "none" };
+  return apps.size === 0 ? { kind: "none" } : { kind: "named", apps };
 }
+
+export function answeringFor(
+  apps: ReadonlyMap<string, ReadonlySet<string>>,
+  file: string,
+): Answered {
+  let owner = "";
+  let found = false;
+  for (const app of apps.keys()) {
+    if (app !== "" && file !== app && !file.startsWith(`${app}/`)) continue;
+    if (found && app.length <= owner.length) continue;
+    owner = app;
+    found = true;
+  }
+  if (!found) return { kind: "none" };
+  const names = apps.get(owner);
+  if (names === undefined) return { kind: "none" };
+  return { kind: "named", names };
+}
+
+type Answered =
+  | { readonly kind: "none" }
+  | { readonly kind: "named"; readonly names: ReadonlySet<string> };
 
 function crateRootFor(file: string, stopAt: string): string {
   let at = dirname(file);
@@ -184,9 +258,12 @@ export function surveyProject(root: string, reach: Reach): Survey {
       continue;
     }
     if (answered.kind === "named") {
-      violations.push(
-        ...crossingsIn(named, text, answered.names).map((held) => ({ ...held, file: named })),
-      );
+      const owner = answeringFor(answered.apps, named);
+      if (owner.kind === "named") {
+        violations.push(
+          ...crossingsIn(named, text, owner.names).map((held) => ({ ...held, file: named })),
+        );
+      }
     }
     const subject = { file: path, text };
     violations.push(
