@@ -7,7 +7,7 @@ use serde::Deserialize;
 use crate::violation::{LawError, Rule, Violation};
 
 #[derive(Debug, Clone, Deserialize)]
-#[serde(default, deny_unknown_fields)]
+#[serde(default)]
 pub struct LawConfig {
     pub max_loc: usize,
     pub max_fn_loc: usize,

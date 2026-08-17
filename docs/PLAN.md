@@ -2134,6 +2134,22 @@ the file states. The vendored engine keeps its own `LICENSE` and
 neither, and shipping 3,900 lines of somebody else's work without saying whose
 is a different thing from what the licence permits.
 
+**What may be changed in the vendored engine, and what may not. Settled
+2026-08-18, narrowing an earlier decision.** The first answer was: nothing. Five
+known gaps in the engine's rules were left as they are and written into
+`PROVENANCE.md`, because a diff against somebody else's judgement of what code
+should look like is an argument that has to be re-won against every future copy.
+That reasoning holds, and those five are still upstream's.
+
+It stopped holding for the engine's plumbing. `LawConfig` refused any table it
+did not own, so the `[entry]` and `[ts]` sections looper's own TypeScript half
+asks a project to write took the entire Rust law down — a project broken to keep
+a copy pristine that nothing was refreshing. So the line is drawn between the
+two: **rule logic goes upstream, plumbing may be changed here**, each change
+named in `PROVENANCE.md` with a test that fails if a newer copy silently undoes
+it. Two changes exist under that rule today, the empty `[workspace]` table and
+that one attribute, and both are guarded in `tests/invariants.test.ts`.
+
 **What was checked rather than assumed.** The repository was scanned for every
 name that must not ship: no employer, no adopter, no personal path. The only
 hits are `tests/canon.test.ts`, where those words are the blocklist that keeps

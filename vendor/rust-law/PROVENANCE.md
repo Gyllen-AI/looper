@@ -26,6 +26,19 @@ not built and has deliberately deferred, and the law engine does not depend on
 it: its dependencies are `syn`, `proc-macro2`, `serde` and `toml`, and nothing
 else.
 
+**What we changed in the copied source, 2026-08-18.** One attribute in
+`src/config.rs`: `#[serde(default, deny_unknown_fields)]` on `LawConfig` became
+`#[serde(default)]`. With it, any top-level table the engine does not own — the
+`[entry]` and `[ts]` sections looper's TypeScript half reads out of the same
+file — made the engine reject the whole `law.toml`, and it failed as "could not
+read law.toml" rather than as anything naming the cause. The four
+`deny_unknown_fields` on the inner tables are untouched, because there a typo
+really is a concession nobody notices: `sanctm` is still refused by name.
+
+This is a change to somebody else's code and it has a price. Whoever copies a
+newer lawkeeper in must re-apply it, and `tests/invariants.test.ts` fails until
+they do, which is the only reason that price is payable.
+
 **The one line in the manifest that is ours.** `[workspace]`, empty, at the top
 of `Cargo.toml`. Without it, a looper checked out inside a Rust project is
 claimed by that project's workspace and cargo refuses to build it at all —

@@ -194,6 +194,21 @@ test("everything a public repository owes a reader is present", () => {
   assert.ok(licence.includes("Zero-Clause BSD"), "the licence is not the one package.json declares");
 });
 
+test("a fresh copy of the engine does not silently undo what we changed in it", () => {
+  const config = readFileSync(join(ROOT, "vendor", "rust-law", "src", "config.rs"), "utf8");
+  const outer = config.indexOf("pub struct LawConfig");
+  assert.ok(outer > 0, "LawConfig is gone, so this guard is reading the wrong file");
+
+  assert.ok(
+    !config.slice(0, outer).endsWith("#[serde(default, deny_unknown_fields)]\n"),
+    "LawConfig refuses every table it does not own, so one [ts] section takes the whole Rust half down with it and the message names the file rather than the cause. If this arrived with a newer lawkeeper, re-apply the change PROVENANCE.md records.",
+  );
+  assert.ok(
+    config.includes("deny_unknown_fields"),
+    "the inner tables lost it too. A typo inside a table the engine owns is a concession nobody notices, which is what that attribute is for.",
+  );
+});
+
 test("the vendored engine keeps its own licence and its provenance", () => {
   const vendored = join(ROOT, "vendor", "rust-law");
   assert.ok(existsSync(join(vendored, "LICENSE")), "somebody else's code without its licence");

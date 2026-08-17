@@ -22,7 +22,7 @@ is a suspicion and belongs in the notes at the bottom, not in the list.
 
 ## Open
 
-_Empty. Every pass of both audits is closed, and findings 41 to 50 with them._
+_Empty. Every pass of both audits is closed, and findings 41 to 51 with them._
 
 ## The second audit — what it covered and what it found
 
@@ -69,6 +69,34 @@ will be used.
 
 ## Cleared
 
+### 51 · `blunt` — one TypeScript section took the whole Rust half down — cleared
+
+Filed by an adopting agent as issue #4. `LawConfig` carried
+`deny_unknown_fields`, so any top-level table the engine does not own made it
+reject the entire `law.toml` — including `[entry]` and `[ts]`, which are the
+sections looper's own TypeScript half tells a project to write, in the same file
+by design. A Rust project stopped being governed the moment it gained a
+TypeScript entry point, and it failed as "could not read law.toml" rather than as
+anything naming the cause.
+
+Reproduced on a real crate, then fixed and reproduced again:
+
+```
+before:  {"error":"could not read …/law.toml: unknown field `entry`,
+          expected one of `max_loc`, `max_fn_loc`, `truth`, `deputies`, …"}
+after:   {"violations":[{"rule":"ERROR:5","file":"main.rs","line":1}]}
+```
+
+The four `deny_unknown_fields` on the inner tables are untouched, and a typo
+inside one is still refused by name: `sanctm` gets `expected one of sanctum,
+env_files, trace_symbols`. That is the half worth keeping — there, an unknown
+field really is a concession nobody notices.
+
+This is a change to copied source, which finding 36 had refused. The policy is
+narrowed rather than dropped, and both halves are written there.
+`tests/invariants.test.ts` fails if a newer copy of lawkeeper arrives with the
+attribute restored, so the change cannot be undone in silence.
+
 ### 50 · `blunt` — the vendored engine could not build inside a Rust project — cleared
 
 Filed by an adopting agent as issue #3, with the fix already measured. A looper
@@ -82,10 +110,9 @@ without the line:  error: current package believes it's in a workspace when it's
 ```
 
 The fix is `[workspace]`, empty, at the top of `vendor/rust-law/Cargo.toml`. It
-makes the crate its own root so no ancestor manifest can claim it. This is not a
-patch to somebody else's source — finding 36's policy stands — it is one line in
-the manifest, and `PROVENANCE.md` records it beside the one file there that is
-already ours.
+makes the crate its own root so no ancestor manifest can claim it. It is a line
+in the manifest rather than a change to the copied source, and `PROVENANCE.md`
+records it beside the one file there that was already ours.
 
 ### 49 · `wrong` — `TAURI:1` pooled the commands of every app in the repository — cleared
 
@@ -305,6 +332,16 @@ it does not catch, and they belong upstream.
 
 Three of the five are rare enough in real Rust to argue about. Two are one word
 from a spelling the rule already catches, and are worth an issue.
+
+**This was narrowed on 2026-08-18, by finding 51, and the reasoning above still
+stands for what it was about.** Rule logic is not patched here: a diff against
+somebody else's judgement of what code should look like is a permanent argument
+with every future copy, and these five stay upstream. What changed is that the
+engine's own plumbing — the settings reader, the manifest — may be changed when
+it is what stops a real project working, on the record and with a test that
+fails if a re-copy undoes it. The two categories are not the same size, and
+treating them as one kept a project broken to protect a copy nobody was
+refreshing.
 
 
 ### 39 · every Rust edit blocked, told it was not TypeScript — cleared
