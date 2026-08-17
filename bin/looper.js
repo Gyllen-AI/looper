@@ -1,6 +1,8 @@
 #!/usr/bin/env node
 import { readFileSync } from "node:fs";
-import { registerHooks, stripTypeScriptTypes } from "node:module";
+import nodeModule from "node:module";
+
+const NEEDS = "22.18";
 
 const OURS = ["stripTypeScriptTypes", "registerHooks", "Type Stripping"];
 
@@ -10,13 +12,27 @@ process.on("warning", (warning) => {
   console.error(`${warning.name}: ${warning.message}`);
 });
 
-registerHooks({
+if (
+  typeof nodeModule.registerHooks !== "function" ||
+  typeof nodeModule.stripTypeScriptTypes !== "function"
+) {
+  console.error(
+    [
+      `looper cannot run on Node ${process.version}. It needs Node ${NEEDS} or newer,`,
+      "which is the version that can read looper's own source.",
+      "Nothing was checked and nothing was changed.",
+    ].join("\n"),
+  );
+  process.exit(1);
+}
+
+nodeModule.registerHooks({
   load(url, context, next) {
     if (!url.endsWith(".ts")) return next(url, context);
     return {
       format: "module",
       shortCircuit: true,
-      source: stripTypeScriptTypes(readFileSync(new URL(url), "utf8"), {
+      source: nodeModule.stripTypeScriptTypes(readFileSync(new URL(url), "utf8"), {
         mode: "strip",
         sourceUrl: url,
       }),

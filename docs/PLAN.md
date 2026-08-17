@@ -1025,6 +1025,23 @@ that restriction lifts, that test fails and the shim can be deleted.
 Working inside this repository is unaffected: the `dev` invocation still runs
 `node ./src/main.ts` straight from the checkout, where type stripping works.
 
+**Which Node versions this was run on, 2026-08-18.** The suite passes on 22.23.2,
+24.19.0 and 26.7.0 — 333 tests, three times. A packed install wires a project and
+refuses a bad commit on 22.23.2 and on 26.7.0, so the newest Node is covered by
+the same evidence as the oldest supported one. The matrix in
+`.github/workflows/test.yml` names 22.18.0, 24.x and 26.x for the same reason:
+looper is installed into somebody else's project, and their Node is not ours.
+
+**A Node too old to run looper says so.** Below 22.18 there is nothing to strip
+types with, and the failure was a stack trace about a missing export. The shim
+now checks for the two things it needs and prints one sentence naming the version
+it is on and the version it needs — verified on Node 22.10.0. It exits 1, which
+the commit hook reads as "could not check" rather than a refusal, so an
+unsupported Node fails open and says so, exactly as everything else here does.
+The check is reachable only because `bin/looper.js` imports `node:module` whole
+rather than by name: a named import of something an old Node lacks fails at load,
+before any message of ours can print. `tests/installed.test.ts` holds that.
+
 ## Init: merge, never clobber
 
 Four rules for every file we do not own, and the second one is the whole of

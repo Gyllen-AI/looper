@@ -65,6 +65,22 @@ test("the shim says nothing on a path that runs on every turn", () => {
   }
 });
 
+test("a Node too old to run looper is told so in words it can act on", () => {
+  const shim = readFileSync(join(REPO, "bin", "looper.js"), "utf8");
+  assert.ok(
+    !/import \{[^}]*\} from "node:module"/.test(shim),
+    "a named import of something an older Node does not have fails at load, before the sentence explaining why. The check has to be reachable on the version it is about.",
+  );
+
+  const held: unknown = JSON.parse(readFileSync(join(REPO, "package.json"), "utf8"));
+  const engines = Object.getOwnPropertyDescriptor(held, "engines")?.value;
+  const wanted = String(Object.getOwnPropertyDescriptor(engines, "node")?.value).replace(/[^0-9.]/g, "");
+  assert.ok(
+    shim.includes(wanted),
+    `package.json asks for Node ${wanted} and the message the shim prints names a different version`,
+  );
+});
+
 test("Node still refuses the TypeScript entry, which is the whole reason the shim exists", () => {
   const root = installedProject();
   try {
