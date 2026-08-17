@@ -1,8 +1,16 @@
-import { chmodSync, existsSync, readFileSync } from "node:fs";
+import { chmodSync, existsSync, readFileSync, readdirSync } from "node:fs";
 import { join } from "node:path";
 
 import { writeAtomically, type Backup } from "./atomic.ts";
 import {
+  DEV_ENTRY,
+  INSTALLED,
+  LOCAL,
+  LOOPER_COMMAND,
+  SHIM,
+  inside,
+  launchFor,
+  scriptUnder,
   LOCAL_BIN,
   CONSTITUTION_PATH,
   CONSTITUTION_STUB,
@@ -29,7 +37,7 @@ import {
 import { countsOf, totalIn, writeBaseline } from "./law/baseline.ts";
 import { surveyProject } from "./law/project.ts";
 import { BASELINE_PATH } from "./config.ts";
-import { mergeSettings } from "./settings.ts";
+import { mergeMcp, mergeSettings } from "./settings.ts";
 import type { Existing } from "./types.ts";
 
 export type Step =
@@ -57,7 +65,14 @@ export type Step =
   | { readonly kind: "gate-wired"; readonly hook: string; readonly path: string }
   | { readonly kind: "gate-already"; readonly hook: string; readonly path: string }
   | { readonly kind: "gate-yours"; readonly hook: string; readonly path: string; readonly line: string }
-  | { readonly kind: "gate-impossible"; readonly hook: string; readonly why: string };
+  | { readonly kind: "gate-impossible"; readonly hook: string; readonly why: string }
+  | {
+      readonly kind: "mcp-unreadable";
+      readonly path: string;
+      readonly why: string;
+      readonly block: string;
+    }
+  | { readonly kind: "entry-unreachable"; readonly what: string };
 
 export type Report = {
   readonly steps: readonly Step[];
@@ -75,6 +90,81 @@ const STUBS: readonly Stub[] = [
 function readExisting(path: string): Existing {
   if (!existsSync(path)) return { kind: "absent" };
   return { kind: "present", text: readFileSync(path, "utf8") };
+}
+
+const VENDOR = "vendor";
+
+const MANIFEST = "package.json";
+
+const NAMED_LOOPER = '"name": "looper"';
+
+const ON_WINDOWS = "looper.cmd";
+
+const MCP_TOOLS = "the doctrine and recall tools";
+
+const MODULES = "node_modules";
+
+type Checkout = { readonly kind: "none" } | { readonly kind: "found"; readonly at: string };
+
+function isLooperCheckout(path: string): boolean {
+  if (!existsSync(join(path, SHIM))) return false;
+  const manifest = join(path, MANIFEST);
+  if (!existsSync(manifest)) return false;
+  return readFileSync(manifest, "utf8").includes(NAMED_LOOPER);
+}
+
+function directoriesIn(path: string): readonly string[] {
+  if (!existsSync(path)) return [];
+  return readdirSync(path, { withFileTypes: true })
+    .filter((entry) => entry.isDirectory())
+    .map((entry) => entry.name);
+}
+
+export function checkoutUnder(root: string): Checkout {
+  for (const name of directoriesIn(root)) {
+    if (name === MODULES) continue;
+    if (isLooperCheckout(join(root, name))) return { kind: "found", at: name };
+  }
+  for (const name of directoriesIn(join(root, VENDOR))) {
+    if (isLooperCheckout(join(root, VENDOR, name))) {
+      return { kind: "found", at: `${VENDOR}/${name}` };
+    }
+  }
+  return { kind: "none" };
+}
+
+type Reach = { readonly kind: "reachable" } | { readonly kind: "missing"; readonly what: string };
+
+function fileReach(root: string, relative: string): Reach {
+  if (existsSync(join(root, relative))) return { kind: "reachable" };
+  return { kind: "missing", what: relative };
+}
+
+function pathReach(searchPath: readonly string[]): Reach {
+  for (const directory of searchPath) {
+    if (existsSync(join(directory, LOOPER_COMMAND))) return { kind: "reachable" };
+    if (existsSync(join(directory, ON_WINDOWS))) return { kind: "reachable" };
+  }
+  return { kind: "missing", what: `${LOOPER_COMMAND}, which is not in any directory on PATH` };
+}
+
+export function entryReach(
+  root: string,
+  invocation: Invocation,
+  searchPath: readonly string[],
+): Reach {
+  if (invocation.kind === "local") return fileReach(root, LOCAL_BIN);
+  if (invocation.kind === "inside") {
+    const script = fileReach(root, scriptUnder(invocation.at));
+    if (script.kind === "missing") return script;
+    if (existsSync(join(root, invocation.at, MODULES))) return { kind: "reachable" };
+    return {
+      kind: "missing",
+      what: `what ${invocation.at} needs to run — it is a looper checkout with no ${MODULES}, so run npm install inside it`,
+    };
+  }
+  if (invocation.kind === "dev") return fileReach(root, DEV_ENTRY);
+  return pathReach(searchPath);
 }
 
 function wireSettings(root: string, invocation: Invocation): Step {
@@ -95,8 +185,20 @@ function wireSettings(root: string, invocation: Invocation): Step {
   };
 }
 
-function stubsFor(invocation: Invocation): readonly Stub[] {
-  return [...STUBS, { path: MCP_PATH, body: mcpStub(invocation) }];
+function wireMcp(root: string, invocation: Invocation): Step {
+  const path = join(root, MCP_PATH);
+  const outcome = mergeMcp(readExisting(path), launchFor(invocation));
+
+  if (outcome.kind === "unchanged") return { kind: "already-wired", path };
+  if (outcome.kind === "unreadable") {
+    return { kind: "mcp-unreadable", path, why: outcome.why, block: mcpStub(invocation) };
+  }
+
+  const written = writeAtomically(path, outcome.text);
+  if (outcome.kind === "created") {
+    return { kind: "created", path, wired: [MCP_TOOLS] };
+  }
+  return { kind: "merged", path, wired: [MCP_TOOLS], backup: written.backup };
 }
 
 function scaffold(root: string, stub: Stub): Step {
@@ -154,14 +256,24 @@ function survey(root: string): Step {
 }
 
 export function reachedFrom(root: string): Invocation {
-  return existsSync(join(root, LOCAL_BIN)) ? "local" : "installed";
+  if (existsSync(join(root, LOCAL_BIN))) return LOCAL;
+  const found = checkoutUnder(root);
+  if (found.kind === "found") return inside(found.at);
+  return INSTALLED;
 }
 
-export function runInit(root: string, invocation: Invocation): Report {
+export function runInit(
+  root: string,
+  invocation: Invocation,
+  searchPath: readonly string[],
+): Report {
   const steps: Step[] = [wireSettings(root, invocation)];
-  for (const stub of stubsFor(invocation)) steps.push(scaffold(root, stub));
+  for (const stub of STUBS) steps.push(scaffold(root, stub));
+  steps.push(wireMcp(root, invocation));
   steps.push(commitGate(root, invocation));
   steps.push(messageGate(root, invocation));
+  const reach = entryReach(root, invocation, searchPath);
+  if (reach.kind === "missing") steps.push({ kind: "entry-unreachable", what: reach.what });
   if (!existsSync(join(root, BASELINE_PATH))) steps.push(survey(root));
   const gate = steps.some(
     (step) =>

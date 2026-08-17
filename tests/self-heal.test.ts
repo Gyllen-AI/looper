@@ -7,6 +7,10 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 
 import { Law } from "../src/law/capability.ts";
+import { INSTALLED } from "../src/config.ts";
+
+const NO_PATH: readonly string[] = [];
+
 import { runInit } from "../src/init.ts";
 import { dispatchHook } from "../src/registry.ts";
 
@@ -37,7 +41,7 @@ function adopted(): string {
   writeFileSync(join(root, "src/orders.ts"), LEGACY);
   git("add", "-A");
   git("commit", "-qm", "before");
-  runInit(root, "installed");
+  runInit(root, INSTALLED, NO_PATH);
   git("add", "-A");
   git("commit", "-qm", "adopt");
   return root;

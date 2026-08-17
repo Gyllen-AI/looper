@@ -10,6 +10,9 @@ import { INJECTION_BUDGET } from "../src/config.ts";
 import { Law, shrinkBaseline } from "../src/law/capability.ts";
 import { readBaseline, totalIn } from "../src/law/baseline.ts";
 import { runInit } from "../src/init.ts";
+import { INSTALLED } from "../src/config.ts";
+
+const NO_PATH: readonly string[] = [];
 
 const GUILTY = `export async function load(id: string) {
   const base = process.env.API_URL;
@@ -46,7 +49,7 @@ function adopted(source: string): string {
   writeFileSync(join(root, "src/orders.ts"), source);
   git("add", "-A");
   git("commit", "-qm", "before");
-  runInit(root, "installed");
+  runInit(root, INSTALLED, NO_PATH);
   return root;
 }
 

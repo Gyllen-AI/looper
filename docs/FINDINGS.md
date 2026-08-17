@@ -22,7 +22,7 @@ is a suspicion and belongs in the notes at the bottom, not in the list.
 
 ## Open
 
-_Empty. Every pass of both audits is closed, and findings 41 and 42 with them._
+_Empty. Every pass of both audits is closed, and findings 41 to 44 with them._
 
 ## The second audit — what it covered and what it found
 
@@ -68,6 +68,38 @@ tested, and every one was tested the way it was built rather than the way it
 will be used.
 
 ## Cleared
+
+### 44 · `missing` — init left an existing `.mcp.json` alone and never said the tools were unwired — cleared
+
+Filed by an adopting agent as issue #9. For a git hook it will not overwrite,
+init prints the exact line to add and says the check is not running. For an
+existing `.mcp.json` it printed `yours already, left alone` and nothing else, so
+looper's `doctrine` and `recall` tools silently never appeared — in every project
+that already runs any MCP server, which is the common case.
+
+Cleared by merging it the way `.claude/settings.json` is merged: looper's server
+added under `mcpServers`, every other server untouched, the previous version kept
+beside it. Demonstrated on a project whose file already named another server —
+both are in it afterwards. Where the file cannot be parsed, init leaves it
+untouched and prints the block to add, because a file we cannot read is not one
+we may rewrite.
+
+### 43 · `missing` — init wrote hooks that could not run, and reported them as wired — cleared
+
+Filed by an adopting agent as issue #8. `reachedFrom` knew two shapes — installed
+on PATH, or `node_modules/.bin` — so a looper checked out inside the project fell
+through to `installed`, and every hook was written as a bare `looper` that is not
+on PATH. The hooks were present, correct-looking, and dead. That is precisely the
+failure `docs/PLAN.md` had already named as the one init exists to prevent, which
+is worth recording: the principle was written, and the case it was written for
+was the case nobody checked.
+
+Cleared twice over. Init recognises a checkout — a directory under the root or
+under `vendor/` holding `bin/looper.js` and a `package.json` naming looper — and
+wires the hooks to it. Then, whatever shape it picked, it checks that the command
+resolves and says so in the report when it does not. Demonstrated: in a project
+with a checkout at `vendor/looper`, the hooks now read
+`node "$CLAUDE_PROJECT_DIR/vendor/looper/bin/looper.js" inject`.
 
 ### 42 · `blunt` — the commit gate reading the harness's own ids as the project's secrets — cleared
 

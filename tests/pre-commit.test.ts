@@ -8,6 +8,9 @@ import { Law } from "../src/law/capability.ts";
 import { preCommitScript } from "../src/config.ts";
 import { gitIn as git } from "./helpers.ts";
 import { runInit } from "../src/init.ts";
+import { INSTALLED } from "../src/config.ts";
+
+const NO_PATH: readonly string[] = [];
 
 const BROKEN = "export function f() {\n  try { g() } catch { return null }\n}\n";
 
@@ -31,7 +34,7 @@ function verdictOn(root: string) {
 test("init installs the hook where git already looks", () => {
   const root = started();
   try {
-    const report = runInit(root, "installed");
+    const report = runInit(root, INSTALLED, NO_PATH);
 
     assert.ok(report.steps.some((step) => step.kind === "gate-wired"));
     assert.equal(report.commitGate, "wired");
@@ -44,7 +47,7 @@ test("init installs the hook where git already looks", () => {
 test("the commit check reads staged files, not a payload it was never given", () => {
   const root = started();
   try {
-    runInit(root, "installed");
+    runInit(root, INSTALLED, NO_PATH);
     writeFileSync(join(root, "src/bad.ts"), BROKEN);
     git(root, "add", "-A");
 
@@ -62,7 +65,7 @@ test("the commit check reads staged files, not a payload it was never given", ()
 test("a clean staged change passes the commit check", () => {
   const root = started();
   try {
-    runInit(root, "installed");
+    runInit(root, INSTALLED, NO_PATH);
     writeFileSync(join(root, "src/b.ts"), "export const vat = 0.25;\n");
     git(root, "add", "-A");
 
@@ -79,7 +82,7 @@ test("a hook the project already wrote is never overwritten", () => {
     writeFileSync(path, "#!/bin/sh\ntheir-own-check\n");
     chmodSync(path, 0o755);
 
-    const report = runInit(root, "installed");
+    const report = runInit(root, INSTALLED, NO_PATH);
 
     assert.equal(readFileSync(path, "utf8"), "#!/bin/sh\ntheir-own-check\n");
     assert.equal(report.commitGate, "not-wired");
@@ -93,8 +96,8 @@ test("a hook the project already wrote is never overwritten", () => {
 test("running init twice does not wire it twice", () => {
   const root = started();
   try {
-    runInit(root, "installed");
-    const second = runInit(root, "installed");
+    runInit(root, INSTALLED, NO_PATH);
+    const second = runInit(root, INSTALLED, NO_PATH);
 
     assert.ok(second.steps.some((step) => step.kind === "gate-already"));
     assert.equal(second.commitGate, "wired");
@@ -119,7 +122,7 @@ test("outside a git repository there is nothing to wire, and it says so", () => 
   const root = mkdtempSync(join(tmpdir(), "looper-nogit-"));
   try {
     writeFileSync(join(root, "package.json"), JSON.stringify({ name: "t" }));
-    const report = runInit(root, "installed");
+    const report = runInit(root, INSTALLED, NO_PATH);
 
     assert.equal(report.commitGate, "not-wired");
     assert.ok(report.steps.some((step) => step.kind === "gate-impossible"));

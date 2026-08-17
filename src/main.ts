@@ -4,7 +4,8 @@ import { createInterface } from "node:readline";
 
 import { allocate, type Allocation } from "./allocator.ts";
 import { isHookEvent, type Payload } from "./capability.ts";
-import { INJECTION_BUDGET, type Invocation } from "./config.ts";
+import { DEV, INJECTION_BUDGET, searchPath, type Invocation } from "./config.ts";
+import { describeStep } from "./announce.ts";
 import { reachedFrom, runInit, type Report, type Step } from "./init.ts";
 import { totalIn, readBaseline } from "./law/baseline.ts";
 import { formatReport } from "./law/report.ts";
@@ -52,57 +53,6 @@ function readMessage(path: string | undefined): Payload {
   }
 }
 
-function describeStep(step: Step): readonly string[] {
-  if (step.kind === "created") {
-    return [
-      `  created  ${step.path}`,
-      ...step.wired.map((command) => `             wired  ${command}`),
-    ];
-  }
-  if (step.kind === "merged") {
-    const backup =
-      step.backup.kind === "kept"
-        ? [`             your previous version is kept at ${step.backup.path}`]
-        : [];
-    return [
-      `  merged   ${step.path} (everything already in it was left alone)`,
-      ...step.wired.map((command) => `             wired  ${command}`),
-      ...backup,
-    ];
-  }
-  if (step.kind === "gate-wired") return [`  created  ${step.path}`];
-  if (step.kind === "gate-already") {
-    return [`  the ${step.hook} check was already in place`];
-  }
-  if (step.kind === "gate-yours") {
-    return [
-      `  you already have your own ${step.path}, which was left alone.`,
-      `           That check is NOT running until you add this line to it:`,
-      `             ${step.line}`,
-    ];
-  }
-  if (step.kind === "gate-impossible") {
-    return [`  no ${step.hook} check: ${step.why}`];
-  }
-  if (step.kind === "surveyed-clean") {
-    return [`  read every file (${step.files}) and found nothing to fix.`];
-  }
-  if (step.kind === "surveyed") {
-    return [
-      `  read every file (${step.files}) and found ${step.outstanding} things worth fixing.`,
-      `           They are listed in ${step.path} as work outstanding, not as`,
-      `           exceptions. Nothing is blocked because of them: looper refuses`,
-      `           only new problems, and problems on a line you touch, so the list`,
-      `           gets shorter wherever anyone works. Run \`looper law\` to read it.`,
-    ];
-  }
-  if (step.kind === "scaffolded") return [`  created  ${step.path}`];
-  if (step.kind === "yours-already") {
-    return [`  yours already, left alone  ${step.path}`];
-  }
-  return [`  already wired, nothing to change  ${step.path}`];
-}
-
 function printReport(report: Report): void {
   const lines = ["looper init:"];
   for (const step of report.steps) lines.push(...describeStep(step));
@@ -115,12 +65,12 @@ function printReport(report: Report): void {
 }
 
 function invocationFrom(args: readonly string[]): Invocation {
-  if (args.includes("--dev")) return "dev";
+  if (args.includes("--dev")) return DEV;
   return reachedFrom(process.cwd());
 }
 
 function init(args: readonly string[]): number {
-  printReport(runInit(process.cwd(), invocationFrom(args)));
+  printReport(runInit(process.cwd(), invocationFrom(args), searchPath()));
   return 0;
 }
 

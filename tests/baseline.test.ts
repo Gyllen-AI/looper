@@ -7,6 +7,10 @@ import { join } from "node:path";
 import { countsOf, readBaseline, shrinkToward, totalIn } from "../src/law/baseline.ts";
 import { Law } from "../src/law/capability.ts";
 import { gitIn as git, first } from "./helpers.ts";
+import { INSTALLED } from "../src/config.ts";
+
+const NO_PATH: readonly string[] = [];
+
 import { runInit } from "../src/init.ts";
 import { dispatchHook } from "../src/registry.ts";
 import { STUB_VALUE } from "../src/law/ts/stub-value.ts";
@@ -38,7 +42,7 @@ function legacyRepo(): string {
   writeFileSync(join(root, "src/orders.ts"), LEGACY);
   git(root, "add", "-A");
   git(root, "commit", "-qm", "before looper");
-  runInit(root, "installed");
+  runInit(root, INSTALLED, NO_PATH);
   git(root, "add", "-A");
   git(root, "commit", "-qm", "adopt looper");
   return root;
@@ -140,7 +144,7 @@ test("a clean project gets no baseline file at all", () => {
     mkdirSync(join(root, "src"), { recursive: true });
     writeFileSync(join(root, "package.json"), JSON.stringify({ name: "t" }));
     writeFileSync(join(root, "src/a.ts"), "export const total = 1;\n");
-    const report = runInit(root, "installed");
+    const report = runInit(root, INSTALLED, NO_PATH);
 
     assert.ok(report.steps.some((step) => step.kind === "surveyed-clean"));
     assert.equal(totalIn(readBaseline(root)), 0);

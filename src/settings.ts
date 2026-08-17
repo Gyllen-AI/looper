@@ -1,5 +1,6 @@
 import {
   COMMAND_KEY,
+  SERVER_NAME,
   HOOKS_KEY,
   HOOK_ENTRY_TYPE,
   HOOK_TIMEOUT_SECONDS,
@@ -13,6 +14,7 @@ import {
   SettingsNotAnObject,
   SettingsUnparseable,
 } from "./errors.ts";
+import type { Launch } from "./config.ts";
 import type {
   Existing,
   HookSpec,
@@ -135,6 +137,47 @@ function withHookWired(root: JsonObject, spec: HookSpec): JsonObject {
 
 function serialise(root: JsonObject): string {
   return `${JSON.stringify(root, null, JSON_INDENT)}\n`;
+}
+
+const SERVERS_KEY = "mcpServers";
+
+export type McpMerge =
+  | { readonly kind: "unchanged" }
+  | { readonly kind: "created"; readonly text: string }
+  | { readonly kind: "merged"; readonly text: string }
+  | { readonly kind: "unreadable"; readonly why: string };
+
+function serverEntry(launch: Launch): JsonObject {
+  return {
+    type: "stdio",
+    command: launch.command,
+    args: [...launch.args, "serve"],
+  };
+}
+
+export function mergeMcp(existing: Existing, launch: Launch): McpMerge {
+  const only = { [SERVERS_KEY]: { [SERVER_NAME]: serverEntry(launch) } };
+  if (existing.kind === "absent") return { kind: "created", text: serialise(only) };
+
+  let value: unknown;
+  try {
+    value = JSON.parse(existing.text);
+  } catch (cause) {
+    return { kind: "unreadable", why: reasonFrom(cause) };
+  }
+  if (value === null || typeof value !== "object" || Array.isArray(value)) {
+    return { kind: "unreadable", why: `it holds a ${describe(value)} rather than an object` };
+  }
+
+  const root: JsonObject = { ...value };
+  const written = root[SERVERS_KEY];
+  const servers: JsonObject = isJsonObject(written) ? written : {};
+  if (servers[SERVER_NAME] !== undefined) return { kind: "unchanged" };
+
+  return {
+    kind: "merged",
+    text: serialise({ ...root, [SERVERS_KEY]: { ...servers, [SERVER_NAME]: serverEntry(launch) } }),
+  };
 }
 
 export function mergeSettings(

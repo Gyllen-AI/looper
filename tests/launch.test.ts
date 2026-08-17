@@ -1,9 +1,9 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 
-import { entryFor, launchFor, mcpStub } from "../src/config.ts";
+import { DEV, INSTALLED, entryFor, inside, launchFor, mcpStub, type Invocation } from "../src/config.ts";
 
-function parsed(invocation: "installed" | "dev"): Record<string, unknown> {
+function parsed(invocation: Invocation): Record<string, unknown> {
   const value: unknown = JSON.parse(mcpStub(invocation));
   assert.ok(value !== null && typeof value === "object");
   const servers = Object.getOwnPropertyDescriptor(value, "mcpServers")?.value;
@@ -14,7 +14,7 @@ function parsed(invocation: "installed" | "dev"): Record<string, unknown> {
 }
 
 test("no argument in the mcp entry carries a quote character", () => {
-  for (const invocation of ["installed", "dev"] as const) {
+  for (const invocation of [INSTALLED, DEV, inside("vendor/looper")]) {
     const args = parsed(invocation)["args"];
     assert.ok(Array.isArray(args));
     for (const arg of args) {
@@ -27,12 +27,12 @@ test("no argument in the mcp entry carries a quote character", () => {
 });
 
 test("the hook command is a shell line and does quote its path", () => {
-  assert.ok(entryFor("dev").includes('"'));
-  assert.equal(entryFor("installed"), "looper");
+  assert.ok(entryFor(DEV).includes('"'));
+  assert.equal(entryFor(INSTALLED), "looper");
 });
 
 test("both forms end up asking for the same thing", () => {
-  for (const invocation of ["installed", "dev"] as const) {
+  for (const invocation of [INSTALLED, DEV, inside("vendor/looper")]) {
     const args = parsed(invocation)["args"];
     assert.ok(Array.isArray(args));
     assert.equal(args[args.length - 1], "serve");
@@ -41,7 +41,7 @@ test("both forms end up asking for the same thing", () => {
 });
 
 test("the installed form is a bare command with nothing machine-specific", () => {
-  const launch = launchFor("installed");
+  const launch = launchFor(INSTALLED);
   assert.equal(launch.command, "looper");
   assert.deepEqual([...launch.args], []);
 });

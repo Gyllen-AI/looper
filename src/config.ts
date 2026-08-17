@@ -1,3 +1,4 @@
+import { delimiter } from "node:path";
 import type { HookSpec } from "./types.ts";
 
 export const SETTINGS_PATH = ".claude/settings.json";
@@ -184,8 +185,9 @@ export function commitMessageScript(entry: string): string {
 export const HOOK_MARKER = "looper hook PreCommit";
 
 export function gitHookEntryFor(invocation: Invocation): string {
-  if (invocation === "dev") return "node ./src/main.ts";
-  if (invocation === "local") return LOCAL_FROM_ROOT;
+  if (invocation.kind === "dev") return "node ./src/main.ts";
+  if (invocation.kind === "local") return LOCAL_FROM_ROOT;
+  if (invocation.kind === "inside") return `node ./${scriptUnder(invocation.at)}`;
   return INSTALLED_ENTRY;
 }
 
@@ -256,11 +258,14 @@ export const MCP_PATH = ".mcp.json";
 export type Launch = { readonly command: string; readonly args: readonly string[] };
 
 export function launchFor(invocation: Invocation): Launch {
-  if (invocation === "dev") {
+  if (invocation.kind === "dev") {
     return { command: "node", args: [`${DEV_SCRIPT}`] };
   }
-  if (invocation === "local") {
+  if (invocation.kind === "local") {
     return { command: LOCAL_FROM_ROOT, args: [] };
+  }
+  if (invocation.kind === "inside") {
+    return { command: "node", args: [`$CLAUDE_PROJECT_DIR/${scriptUnder(invocation.at)}`] };
   }
   return { command: INSTALLED_ENTRY, args: [] };
 }
@@ -292,11 +297,35 @@ export const BACKUP_SUFFIX = ".looper-backup";
 
 export const EDIT_TOOLS = "Edit|MultiEdit|Write";
 
-export type Invocation = "installed" | "local" | "dev";
+export type Invocation =
+  | { readonly kind: "installed" }
+  | { readonly kind: "local" }
+  | { readonly kind: "dev" }
+  | { readonly kind: "inside"; readonly at: string };
+
+export const INSTALLED: Invocation = { kind: "installed" };
+
+export const LOCAL: Invocation = { kind: "local" };
+
+export const DEV: Invocation = { kind: "dev" };
+
+export function inside(at: string): Invocation {
+  return { kind: "inside", at };
+}
 
 const DEV_SCRIPT = "$CLAUDE_PROJECT_DIR/src/main.ts";
 
 const INSTALLED_ENTRY = "looper";
+
+export const LOOPER_COMMAND = INSTALLED_ENTRY;
+
+export const DEV_ENTRY = "src/main.ts";
+
+export function searchPath(): readonly string[] {
+  const written = process.env["PATH"];
+  if (written === undefined) return [];
+  return written.split(delimiter);
+}
 
 const LOCAL_ENTRY = "$CLAUDE_PROJECT_DIR/node_modules/.bin/looper";
 
@@ -304,9 +333,18 @@ const LOCAL_FROM_ROOT = "./node_modules/.bin/looper";
 
 export const LOCAL_BIN = "node_modules/.bin/looper";
 
+export const SHIM = "bin/looper.js";
+
+export function scriptUnder(at: string): string {
+  return `${at}/${SHIM}`;
+}
+
 export function entryFor(invocation: Invocation): string {
-  if (invocation === "dev") return `node "${DEV_SCRIPT}"`;
-  if (invocation === "local") return `"${LOCAL_ENTRY}"`;
+  if (invocation.kind === "dev") return `node "${DEV_SCRIPT}"`;
+  if (invocation.kind === "local") return `"${LOCAL_ENTRY}"`;
+  if (invocation.kind === "inside") {
+    return `node "$CLAUDE_PROJECT_DIR/${scriptUnder(invocation.at)}"`;
+  }
   return INSTALLED_ENTRY;
 }
 

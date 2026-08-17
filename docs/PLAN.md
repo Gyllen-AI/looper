@@ -1082,6 +1082,28 @@ clones runs `looper init` once. The agent-side gate *is* committed, in
 `.claude/settings.json`, so a fresh clone is still governed on the path that
 matters most before anyone does anything.
 
+**Every file we merge into, we merge into — including `.mcp.json`. Corrected
+2026-08-18, from adopter issue #9.** The settings file was merged from the first
+line of code and `.mcp.json` was not: init found an existing one, said "yours
+already, left alone", and stopped. A project that already runs any MCP server has
+one, so for that project looper's own tools silently never appeared, and nothing
+said so. It is now the same merge as the settings file — looper's server added
+under `mcpServers`, everything else untouched, the previous version kept beside
+it. Where the file cannot be parsed it is left exactly as it is and init prints
+the block to add, because a file we cannot read is not one we may rewrite.
+
+**Init checks that the command it just wrote can actually be found. Added
+2026-08-18, from adopter issue #8.** `reachedFrom` knew two shapes, installed and
+`node_modules/.bin`, so a looper checked out inside the project fell through to
+`installed` and every hook was written as a bare `looper` that is not on PATH.
+The hooks were there, they read correctly in the settings file, and nothing ran.
+Two answers, and both are needed. Init now recognises a checkout — any directory
+under the root, or under `vendor/`, holding `bin/looper.js` and a `package.json`
+naming looper — and wires the hooks to that path, because nothing load-bearing
+may sit behind a command somebody has to know to type. And whatever shape it
+picks, it then checks: the file exists, or the command is in a directory on PATH.
+When it is not, init says so in the report rather than reporting success.
+
 **A hook the project already wrote is never overwritten.** A shell script cannot
 be merged the way a settings file can, so init leaves it exactly as it is,
 reports the gate as **not wired**, and prints the one line to add. Reporting a

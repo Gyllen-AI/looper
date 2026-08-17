@@ -1,12 +1,14 @@
-import { reachedFrom } from "../src/init.ts";
-import { gitHookEntryFor, launchFor, looperHooks } from "../src/config.ts";
 import { test } from "node:test";
+import { DEV, INSTALLED, LOCAL, gitHookEntryFor, inside, launchFor, looperHooks } from "../src/config.ts";
+import { reachedFrom } from "../src/init.ts";
 import assert from "node:assert/strict";
 import { mkdtempSync, readFileSync, rmSync, writeFileSync, mkdirSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
 import { runInit } from "../src/init.ts";
+
+const NO_PATH: readonly string[] = [];
 import { assembleConstitution, readProjectConstitution } from "../src/doctrine.ts";
 import { readMap } from "../src/map.ts";
 import type { Step } from "../src/init.ts";
@@ -22,13 +24,17 @@ function pathsOf(steps: readonly Step[], kind: Step["kind"]): readonly string[] 
 test("a fresh project gets a doctrine tree it can actually use", () => {
   const root = scratch();
   try {
-    const report = runInit(root, "installed");
+    const report = runInit(root, INSTALLED, NO_PATH);
     const made = pathsOf(report.steps, "scaffolded");
 
-    assert.equal(made.length, 4);
-    for (const tail of ["constitution.md", "map.toml", "README.md", ".mcp.json"]) {
+    assert.equal(made.length, 3);
+    for (const tail of ["constitution.md", "map.toml", "README.md"]) {
       assert.ok(made.some((path) => path.endsWith(tail)), `${tail} was not created`);
     }
+    assert.ok(
+      pathsOf(report.steps, "created").some((path) => path.endsWith(".mcp.json")),
+      "the MCP file is wired rather than scaffolded, because a project that already has one still needs looper's server added to it",
+    );
   } finally {
     rmSync(root, { recursive: true, force: true });
   }
@@ -37,7 +43,7 @@ test("a fresh project gets a doctrine tree it can actually use", () => {
 test("the constitution starts empty, so it costs nothing until someone writes a line", () => {
   const root = scratch();
   try {
-    runInit(root, "installed");
+    runInit(root, INSTALLED, NO_PATH);
     const project = readProjectConstitution(root);
 
     assert.equal(project.kind, "empty");
@@ -51,7 +57,7 @@ test("the constitution starts empty, so it costs nothing until someone writes a 
 test("the stub map parses, so the first branch someone adds works", () => {
   const root = scratch();
   try {
-    runInit(root, "installed");
+    runInit(root, INSTALLED, NO_PATH);
     const map = readMap(root);
 
     assert.equal(map.kind, "present");
@@ -68,7 +74,7 @@ test("nothing a project already wrote is touched", () => {
     mkdirSync(join(root, ".looper/doctrine"), { recursive: true });
     writeFileSync(join(root, ".looper/doctrine/constitution.md"), "OUR OWN RULE\n");
 
-    const report = runInit(root, "installed");
+    const report = runInit(root, INSTALLED, NO_PATH);
 
     assert.equal(
       readFileSync(join(root, ".looper/doctrine/constitution.md"), "utf8"),
@@ -88,12 +94,86 @@ test("nothing a project already wrote is touched", () => {
 test("twice is indistinguishable from once", () => {
   const root = scratch();
   try {
-    runInit(root, "installed");
-    const second = runInit(root, "installed");
+    runInit(root, INSTALLED, NO_PATH);
+    const second = runInit(root, INSTALLED, NO_PATH);
 
     assert.deepEqual([...pathsOf(second.steps, "scaffolded")], []);
-    assert.equal(pathsOf(second.steps, "yours-already").length, 4);
-    assert.equal(pathsOf(second.steps, "already-wired").length, 1);
+    assert.equal(pathsOf(second.steps, "yours-already").length, 3);
+    assert.equal(pathsOf(second.steps, "already-wired").length, 2);
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test("a project with its own .mcp.json gets looper's server added to it", () => {
+  const root = scratch();
+  try {
+    writeFileSync(
+      join(root, ".mcp.json"),
+      JSON.stringify({ mcpServers: { theirs: { command: "their-server" } } }, null, 2),
+    );
+
+    runInit(root, INSTALLED, NO_PATH);
+    const held: unknown = JSON.parse(readFileSync(join(root, ".mcp.json"), "utf8"));
+    const servers = Object.getOwnPropertyDescriptor(held, "mcpServers")?.value;
+
+    assert.ok(
+      Object.getOwnPropertyDescriptor(servers, "theirs") !== undefined,
+      "the server they already had was dropped, which is the failure merging exists to prevent",
+    );
+    assert.ok(
+      Object.getOwnPropertyDescriptor(servers, "looper") !== undefined,
+      "looper's server was not added, so the doctrine and recall tools silently never appear",
+    );
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test("a command the hooks cannot reach is said out loud, not left looking wired", () => {
+  const root = scratch();
+  try {
+    const report = runInit(root, INSTALLED, NO_PATH);
+
+    assert.ok(
+      report.steps.some((step) => step.kind === "entry-unreachable"),
+      "the hooks name a command that is nowhere on PATH. They look right in the settings file and do nothing at all, which is the one outcome init exists to prevent.",
+    );
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test("looper checked out inside a project is wired as the checkout it is", () => {
+  const root = scratch();
+  try {
+    const at = join(root, "vendor", "looper");
+    mkdirSync(join(at, "bin"), { recursive: true });
+    writeFileSync(join(at, "bin", "looper.js"), "");
+    writeFileSync(join(at, "package.json"), JSON.stringify({ name: "looper" }, null, 2));
+
+    const reached = reachedFrom(root);
+    assert.deepEqual(reached, inside("vendor/looper"));
+
+    for (const spec of looperHooks(reached)) {
+      assert.ok(
+        spec.command.includes("vendor/looper/bin/looper.js"),
+        `${spec.event} was wired to ${spec.command}, which is not where looper actually is`,
+      );
+    }
+
+    const bare = runInit(root, reached, NO_PATH);
+    assert.ok(
+      bare.steps.some((step) => step.kind === "entry-unreachable"),
+      "a checkout with no node_modules cannot run a line of looper, and init reported it as wired",
+    );
+
+    mkdirSync(join(at, "node_modules"), { recursive: true });
+    const ready = runInit(root, reached, NO_PATH);
+    assert.ok(
+      !ready.steps.some((step) => step.kind === "entry-unreachable"),
+      "the checkout is right there, installed, and init still said it could not be reached",
+    );
   } finally {
     rmSync(root, { recursive: true, force: true });
   }
@@ -102,29 +182,29 @@ test("twice is indistinguishable from once", () => {
 test("looper wires itself the way it was actually reached", () => {
   const root = mkdtempSync(join(tmpdir(), "looper-reach-"));
   try {
-    assert.equal(reachedFrom(root), "installed");
+    assert.deepEqual(reachedFrom(root), INSTALLED);
 
     mkdirSync(join(root, "node_modules", ".bin"), { recursive: true });
     writeFileSync(join(root, "node_modules", ".bin", "looper"), "");
-    assert.equal(reachedFrom(root), "local");
+    assert.deepEqual(reachedFrom(root), LOCAL);
   } finally {
     rmSync(root, { recursive: true, force: true });
   }
 });
 
 test("a project that installed looper gets commands that resolve there", () => {
-  const claude = looperHooks("local");
+  const claude = looperHooks(LOCAL);
   for (const spec of claude) {
     assert.ok(
       spec.command.includes("node_modules/.bin/looper"),
       `${spec.event} was wired to ${spec.command}, which a project cannot run`,
     );
   }
-  assert.equal(gitHookEntryFor("local"), "./node_modules/.bin/looper");
-  assert.equal(launchFor("local").command, "./node_modules/.bin/looper");
+  assert.equal(gitHookEntryFor(LOCAL), "./node_modules/.bin/looper");
+  assert.equal(launchFor(LOCAL).command, "./node_modules/.bin/looper");
 });
 
 test("a global install is still a bare name, and dev still runs from source", () => {
-  assert.equal(gitHookEntryFor("installed"), "looper");
-  assert.ok(gitHookEntryFor("dev").startsWith("node "));
+  assert.equal(gitHookEntryFor(INSTALLED), "looper");
+  assert.ok(gitHookEntryFor(DEV).startsWith("node "));
 });
