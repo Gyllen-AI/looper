@@ -1253,6 +1253,26 @@ promised.
   target, no "closest match", and a capture that did not happen is reported as one
   that did not happen.
 
+**Run against a real screen, 2026-08-18.** A capture program and a consent
+process were written outside the tree and driven through the real MCP server, on
+this machine, against Windows windows reachable from WSL. Three runs, in order:
+with no consent process running, the answer was words and no picture; with one
+running that had a different window armed, the same; with the asked-for window
+armed, a 1038×808 PNG came back through the tool. The refusal in the middle case
+came out of the consent process, not out of looper — its own log recorded the
+question and its `no`. Both halves were deleted afterwards and the suite
+re-run: the tool is gone from the tool list again, because there is no program on
+disk.
+
+**The trap that run exposed, and the first thing the platform stage owes.** The
+picture was a real capture of that window and it showed the application's splash
+art rather than its content, because `PrintWindow` on a window that is minimised
+or composited on the GPU returns what the window last drew. A capture that is
+honest and useless is worse than a refusal: an agent will reason from it. So the
+capture program has to report the window's state — minimised, occluded, not
+rendering — beside the image, and looper has to say it, or the seer will produce
+exactly the confident wrong answers it exists to prevent.
+
 **What is not built here: the capture program and the consent app.** They are
 platform code — the proposal describes a Windows implementation of both, around
 1,150 lines, and offers to port it. Until a platform has both, that platform has
