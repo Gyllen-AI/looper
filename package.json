@@ -1,0 +1,25 @@
+{
+  "name": "looper",
+  "version": "0.0.0",
+  "private": true,
+  "license": "0BSD",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/gyllen-ai/looper.git"
+  },
+  "description": "A governed agent workflow: doctrine every turn, a law at every gate.",
+  "type": "module",
+  "bin": {
+    "looper": "./src/main.ts"
+  },
+  "engines": {
+    "node": ">=22.18"
+  },
+  "scripts": {
+    "test": "node --test 'tests/**/*.test.ts'",
+    "check": "npm run test"
+  },
+  "dependencies": {
+    "@babel/parser": "8.0.4"
+  }
+}

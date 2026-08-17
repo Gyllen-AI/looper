@@ -1,0 +1,1086 @@
+# Findings
+
+Everything an audit pass turned up, and nothing else. This is a pile to clear,
+not a plan — the plan for how the passes run is in `docs/PLAN.md`.
+
+**During a pass, record. Do not fix.** A pass that fixes as it goes is auditing a
+moving target, and the count at the end means nothing. Clear the pile afterwards,
+in one deliberate go, in severity order.
+
+Each entry carries what it is, where, and the evidence. An entry with no evidence
+is a suspicion and belongs in the notes at the bottom, not in the list.
+
+| kind | means |
+|---|---|
+| `wrong` | it reaches a verdict that is not true |
+| `blunt` | it fires on code that is fine — the failure that gets a tool switched off |
+| `missing` | something claimed, in the plan or a message, with nothing behind it |
+| `slow` | a measured cost that will bite at a size we have not reached |
+| `noise` | duplication, dead weight, or a message nobody can act on |
+
+---
+
+## Open
+
+_Empty. Both audits are closed._
+
+_The second audit is running: both languages and the seam between them. Findings
+land here as they are found; nothing is fixed until every pass has finished._
+
+## The second audit — what it covered and what it found
+
+Run before the repository was made public, over both languages and the seam
+between them.
+
+**Foreign code.** 3.2 million lines of Rust nobody here wrote — 80 distinct
+crates from the cargo registry, generated bindings and duplicate versions
+excluded after a first attempt at 7.1 million lines turned out to be half
+`windows-sys` in five versions. 631,188 violations, 27 of 28 rules firing.
+`LAYER:1` never fired because it needs a declared layer map and none of them has
+one; `LAYER:3` fired once in 3.2 million lines and fires correctly on a written
+case, so a `static` holding a callable is simply rare. The TypeScript corpus was
+re-judged after everything that changed and is stable at 5,759 violations over
+56,366 lines. **No false positive was found in either.** The rules are behaving
+on strangers' code.
+
+**Evasion.** 24 adversarial cases against the Rust rules' own ban text. Four
+real gaps, in finding 36. Two of the six disagreements were the harness naming
+the wrong rule, which is worth saying: the stdout handle it flagged is caught by
+`LOG:2`, exactly as designed.
+
+**Failure modes.** A malformed `Cargo.toml`, an empty one, a `.rs` file with no
+crate above it, a malformed `tauri.conf.json`, Rust that does not parse, a
+forty-crate workspace. Nothing wedged and nothing hung. Findings 37 and 38 came
+out of it, and finding 39 came out of following one of them.
+
+**Scale.** Forty crates and 2,400 lines of Rust: `looper law` 231ms, edit gate
+101ms, commit gate 272ms. Nothing here is slow.
+
+**Claims and consolidation.** Findings 35 and 40.
+
+**Eight findings, and one of them stops the tool working.** Finding 39 blocks
+every Rust edit with a message saying the file is not TypeScript. Findings 34
+and 37 are both the same shape as finding 16 from the first audit — a verdict
+that is honest about what it looked at and silent about what it did not.
+
+The pattern across all three of 34, 37 and 39 is worth naming, because it is not
+a coding mistake. Each is two correct pieces meeting: `.rs` added to the judged
+extensions meeting the edit gate; a root-only shape check meeting a workspace
+layout; a per-crate engine meeting a per-file promise. Every one of them was
+tested, and every one was tested the way it was built rather than the way it
+will be used.
+
+## Cleared
+
+### 40 · one concession, two spellings — cleared
+
+A project writes it once now. looper's TypeScript half reads `[truth]` when
+`[ts]` does not answer, and reads a bare string as readily as a list, because
+the Rust convention is `sanctum = "config.rs"` and looper's was a list of one.
+`[ts]` still wins where a project wrote both, so nothing that worked stops
+working.
+
+Pointed at the real project, looper now reads what was already there:
+
+```
+sanctum       = config.rs
+env_files     = config.rs, main.rs
+trace_symbols = tracing::warn, tracing::error
+```
+
+Before this it read none of them and silently used its own defaults.
+
+The pardon seam went the same way. `[exempt] "file.rs" = ["TRUTH:1"]` — the
+engine's spelling — now pardons `RUST-TRUTH:1`, and so does `RUST-TRUTH:1`
+itself, which is the id every report prints. Either is honoured; neither is
+silently ignored.
+
+### 35 · the plan describing rules that do something else — cleared
+
+There is one Rust table now rather than two. The first was written from a design
+before the engine was read, the rules were then written from the engine, and the
+two were never reconciled — so for a day six ids described something other than
+what they ban.
+
+The two that were not renumbering but promises are named as what they are:
+
+| id | would ban | state |
+|---|---|---|
+| `RUST-ERROR:10` | a blocking call inside an `async fn` | **not built yet** — Tokio's most expensive quiet failure, and neither the engine nor looper reads for it |
+| `RUST-TYPE:6` | an `unsafe` block outside a declared module | **not built yet**, and the real answer is a deputy — `#![deny(unsafe_code)]` under `RUST-ERROR:5`, off unless a project declares it |
+
+And a control, because finding 30's lesson is that prose does not hold: the plan
+check now compares what each row *says* against what the rule it names *does*,
+not merely that both exist. It caught a missing row the moment the old table was
+deleted.
+
+### 36 and 33 · gaps in the vendored engine — closed as upstream, not patched
+
+Five known misses, all in code we did not write:
+`Err(_) => "".to_string()`, `panic!("not implemented yet")`, `Option::unwrap`
+through an alias, `Command::new("printenv")`, and `== Delimiter::None` read as
+`Option::None`.
+
+Not fixed here, and that is the decision rather than an omission. Patching
+vendored source means owning the change forever and conflicting with every
+future copy — `PROVENANCE.md` says as much about updates, and it would be a poor
+sort of consistency to break that the first time it was inconvenient. They are
+written into `PROVENANCE.md` beside the code, where anyone reading it sees what
+it does not catch, and they belong upstream.
+
+Three of the five are rare enough in real Rust to argue about. Two are one word
+from a spelling the rule already catches, and are worth an issue.
+
+
+### 39 · every Rust edit blocked, told it was not TypeScript — cleared
+
+The edit gate now asks what language the file is before it asks what is wrong
+with it. A `.rs` file goes to the Rust law; everything else goes where it went.
+
+```
+a violating Rust edit  ->  [RUST-ERROR:1] src/good.rs:1   exit 2
+a clean Rust edit      ->  exit 0
+```
+
+The rule that fires is the right one, and the message is about Rust.
+
+### 34 · Tauri only recognised at the root — cleared
+
+`shapeOf` now walks the tree for `src-tauri/tauri.conf.json` rather than looking
+in one place, four levels deep, skipping `target`, `node_modules`, `dist` and
+`vendor`. `rustUnder` becomes every directory it found, and `TAURI:1` gathers
+commands from all of them rather than from one assumed path.
+
+On a fixture shaped like the real project:
+
+```
+shape : tauri — the Rust under crates/launcher/src-tauri is the backend,
+        and the TypeScript around it is the interface
+[RUST-ERROR:1]  crates/launcher/src-tauri/src/main.rs:7
+[TAURI:1]       crates/launcher/ui/src/App.tsx:4
+```
+
+All three consequences gone: the shape is right, `DATA:1` no longer fires on the
+interface, and the boundary rule catches `invoke("gret")` against `fn greet`.
+
+Writing that walk cost two of looper's own rules first. `TS-ERROR:4` and
+`TS-ERROR:3` caught a `catch { return }` and a `catch { return false }` in it —
+a directory that cannot be listed is a real answer and was being swallowed. It
+now reads directory entries once with their types, so there is one failure to
+handle rather than two, and the unreadable directories are named in what the
+shape says about itself.
+
+### 37 · one unparseable file silencing a whole crate — cleared
+
+`RUST-ERROR:9`, looper's own rather than the engine's: *a file that cannot be
+read as Rust at all*. The engine judges a crate at a time, so one broken file
+takes the whole crate with it — the blast radius is larger than `TS-ERROR:8`'s,
+which is why the rule says so in its reason.
+
+The engine's refusal names the file and the line, so the rule points at it:
+
+```
+[RUST-ERROR:9]  src/broken.rs:1
+```
+
+Ids 1 to 8 in each category are the engine's; 9 upward are looper's. Written
+into the plan, which the control immediately demanded.
+
+### 38 · the welded message — cleared, and a sibling with it
+
+The doubled opening is gone: the engine's detail already begins "could not
+read", and that prefix is stripped before looper adds its own.
+
+The sibling was worth more than the message. A crate that could not be judged
+for **any** reason — a malformed `Cargo.toml`, not just unparseable Rust — still
+ended with `nothing to fix`. That line now says what is true:
+
+> looper: 2 files, and nothing to fix in the ones it could read. 1 could not be
+> read, named above — those were not judged at all, which is not the same as
+> being clean.
+
+
+### 32 · nineteen `??` against a doctrine claiming none — cleared, by building the rule
+
+The doctrine said *"there is not one `??` in the tree"* and there were nineteen.
+The fix was not to correct the sentence. It was `TS-TRUTH:1`, the rule the plan
+calls its worked example and one of the ten marked **not built yet**.
+
+Built at the strength the plan chose — every spelling of a default born outside
+the sanctum: `??`, `||` as a value, `??=`, `||=`, a default parameter, a
+destructuring default, `if (!x) x = 5`, and a spread merge over a defaults
+object. Twelve cases from the ban text, all passing on the first run.
+
+**Then the corpus made it a better rule twice.**
+
+The plan's reasoning was that banning the construct outright removes all
+judgment. That holds for `??`, which only ever supplies a missing value. It does
+not hold for `||`, which is also the boolean or, and the corpus said so at once:
+
+```ts
+return (value && value instanceof Subscriber) || (isObserver(value) && isSubscription(value));
+return _parentage === parent || (Array.isArray(_parentage) && _parentage.includes(parent));
+```
+
+Neither births a default. A first attempt excused `||` inside a test position,
+which was not enough — the same shape returned from a function still fired. The
+line that works asks nothing about booleans at all: **a default's right operand
+is a value.** A literal, an identifier, a member expression, an object, an
+array, a `new`. If the right side is a call or a comparison, it is logic, not a
+fallback. `given || "anonymous"` fires; `isA(x) || isB(x)` does not.
+
+That is the doctrine's own instruction followed to the letter — *a blunt rule is
+not a strict rule; sharpen it rather than soften it* — and it took the corpus
+from 460 hits to 431, all of which are real.
+
+**And then it was run over this repo, which is the part that counts.** 79
+violations, in the repo whose doctrine claimed there were none. Every one fixed
+rather than baselined:
+
+- `src/present.ts` is new: `required(value, what)` throws when something that
+  must be there is not, and `countIn(counts, key)` names zero as an answer once
+  instead of nineteen times.
+- Eleven default parameters became explicit arguments, and where that would have
+  churned every call site, one function became two named ones — `countIn` and
+  `countWhere`, `found` and `foundAtCap`. A pair of honest names costs less than
+  a hidden default.
+- The test assertions that read `(said[0] ?? "")` now read `first(said)`, which
+  fails loudly on an empty list instead of quietly asserting against `""`.
+
+`??` in looper's own code: **nineteen, then zero.** The four that remain are
+inside the rule's own ban text, where they are the thing being named.
+
+The doctrine line no longer makes a claim it cannot keep. It now says
+`TS-TRUTH:1` holds that line, not the sentence — which is finding 30's lesson
+applied to the file that taught it.
+
+
+### 24 · the security rules now have a category of their own — cleared
+
+`SECURITY` exists, it sorts first so it leads any report, and `DATA:1`,
+`DATA:2`, `NODE:1` and `NEXT:1` are in it. The banner says what is actually at
+stake:
+
+> **SECURITY** — someone is going to send your program something you did not
+> expect, on purpose. these are the ways that ends badly.
+
+Before, "someone can empty your database" printed under *every fact has one
+home. two homes means none.*
+
+### 28 · the adoption message no longer contradicts itself — cleared
+
+A freshly adopted repo used to be told *"5 problems still standing. Fix every
+one above, then run again"* and then, one line later, that none of them blocked
+anything. The loud sentence was the wrong one, and it was the first thing a new
+adopter ever read.
+
+The report now knows whether anything is new:
+
+```
+looper found 2 problems, all of them older than looper.
+…
+2 problems above, and none of them are blocking you.
+All 2 of these were already here before looper arrived, and are recorded in
+.looper/baseline.toml. They do not block a commit until you touch the line
+they are on. Fix them when you are next in that file.
+```
+
+and when some are new it says which, and that those are the blocking ones.
+
+### 6 · line 0 — cleared
+
+`TS-DECOMPOSITION:1` reported every hit at line 0, which no file has, so the
+`file:line` in the report went nowhere when clicked. It now points at the first
+line past the cap — a line that exists, and the useful one.
+
+### 29 · the canon said nothing about the highest-stakes rules — cleared
+
+It restated four rules in prose and did not mention SQL, a shell or injection
+once, though `DATA:1` and `NODE:1` are the two most serious things in the set.
+It now carries one line covering all four security rules.
+
+Paying for it cost two lines, because the budget test refused it twice — 10,072
+characters, then 9,905, against 9,800. What went:
+
+- the bullet instructing on defaults in one file, which is `TS-TRUTH:1`, one of
+  the ten marked **not built yet**. The other half of finding 29 was that the
+  canon instructs on a gate that is not there, so this is both halves at once.
+- *"Small functions, plain types, no cleverness"* — judged against the canon's
+  own bar, which is a line a model would **not** reliably follow unprompted.
+  A model largely does this, and `TS-DECOMPOSITION:1` measures the part that
+  matters.
+
+### 31 · the parser's vocabulary — cleared, and it found one more gap
+
+Not the refactor the finding proposed. A misspelled node type compiles, reviews
+clean and makes its rule silently never fire, and renaming 56 literals into
+constants moves that risk rather than removing it. What removes it is checking
+them: `tests/vocabulary.test.ts` parses every file in the repo plus every case
+in `audit/cases.ts`, collects every node type a parse actually produces, and
+fails if any literal a rule compares against a `type` is not among them.
+
+It found seven node types the rules match and nothing exercised —
+`DoWhileStatement`, `ForInStatement`, `SwitchStatement`, `FunctionExpression`,
+`TSDeclareFunction`, `TSEnumDeclaration`, `TSTypeAssertion`. Writing cases for
+them found a real gap: `export declare function find(id): User | null` was
+invisible to `TS-TYPE:2`. Fixed.
+
+`looper` then refused the scanner itself, for a `catch { return }` that
+swallowed a parse failure — the rule strengthened two findings earlier, catching
+its author inside the commit that was building a control. It reports what it
+could not read now.
+
+### 25 · the repair prompt has two readers — cleared
+
+The line above the suggestions said **write it this way instead**, followed by
+`throw new NotFound(id)` and three more that name classes existing in no
+project. To a model that is right; it knows to invent the class. To the person
+the constitution names, it is an instruction that does not compile.
+
+It now says: *the shape that works instead — the names in it are examples, not
+code to copy*. Nine words, and both readers are told the truth.
+
+
+### 20 · the commit gate crosses its own timeout — cleared
+
+The gate is priced per staged file at about 4.5ms, and 30 seconds ran out at
+roughly six thousand of them. That is not a daily commit; it is the first commit
+of a repo that has just adopted looper, when the whole project is staged and the
+tool is being judged.
+
+Hooks now carry their own timeout rather than sharing one. The commit gate gets
+**300 seconds**, written down as `COMMIT_GATE_TIMEOUT_SECONDS` beside the
+measurement that chose it: 30.3s at 6,001 files, so 300 covers a first commit of
+roughly sixty thousand. Every other hook stays at 30, because they are flat in
+project size and a slow one there means something is wrong.
+
+The per-file cost is the parse, and it is near the floor already.
+
+### 21, 22 · the startup cost — measured, and neither fix pays
+
+Both are closed by measurement rather than by a change, and the numbers are the
+point.
+
+**Finding 22's premise was wrong, and measuring it is what showed that.**
+`main.ts` does import the survey, the MCP server, the initialiser and the rest
+for every command — but `registry.ts` reaches the same graph anyway, because
+every capability contributes to injection. Making each command load its own
+machinery cut the eager import from 86ms to 64ms and moved the wall clock **not
+at all**: 87ms against 86 before, inside the noise. It was reverted. A change
+that buys nothing is not worth the two bugs it introduced while I wrote it, and
+it introduced exactly two.
+
+What the tension resolved into is better than either side of it. `TS-LAYER:2`'s
+own advice already read *"if something genuinely must load late, the entry point
+decides that, not a function buried three levels down"* — the words permitted it
+and the code had no way to allow it. The rule now carries the same
+`[entry] files` valve `TS-LOG:1` has. That is a correctness fix regardless of
+performance, and it is tested.
+
+**Finding 21 stands at 86ms and is accepted.** Bare node is 17ms; the module
+graph is 64ms; the judging is about 10. `@babel/parser` is 9ms of it and the
+rest is Node stripping types from roughly a hundred modules, one process at a
+time. `NODE_COMPILE_CACHE` was tried and saved 6ms, 86 to 80. The only fix that
+would move it is a build step, which this project refused deliberately and for
+reasons that have not changed.
+
+So the price of no build step is now a number rather than a feeling: **69ms per
+process, about 430ms of a turn with three edits.** Written down here so the next
+person deciding it is deciding with the figure in front of them.
+
+
+### 15 · tests written from the code, not the ban — cleared
+
+Two halves: the sweep, and the thing that stops it happening again.
+
+**The sweep.** Every assertion in the suite that expects zero was read against
+the reason given for it. Sixty-eight of them, and five carry an explanation.
+All five are boundaries between rules rather than rationalised holes — *"as any
+is TS-TYPE:3; counting it here would report one mistake twice"*, *"the tag is
+the escaping; flagging it would teach people to avoid the safe spelling"*, *"on
+the server this is TS-TRUTH:2's business, not this rule's"*. The one bad case
+was REACT:1's, which asserted zero under a title claiming the opposite, and it
+was corrected when finding 10 was cleared.
+
+**The control.** `audit/evasion.ts` had grown to 126 cases written from ban text
+and nothing ran it. It is now split — `audit/cases.ts` holds the cases,
+`audit/judge.ts` runs them, `audit/evasion.ts` prints, and
+`tests/ban-text.test.ts` fails the suite on any disagreement. A second assertion
+requires **every** rule to have at least one case written from its words.
+
+That second one failed immediately on four rules nobody had written a ban-text
+case for: `TS-DECOMPOSITION:1`, `TS-ERROR:1`, `TS-ERROR:7` and `NEXT:1`. Writing
+them found a real gap in `TS-ERROR:7`:
+
+```ts
+class C {
+  async close(): Promise<void> {}
+  [Symbol.dispose]() { this.close(); }   // was silent
+}
+```
+
+Its `calledNames` collected bare identifiers only, so a method called on `this`
+— which is how a dispose actually reaches its own clean-up — was invisible, and
+it never knew a class's own async methods were async. Both fixed.
+
+The harness now stands at **135 cases, 0 mismatches**, run on every commit. A
+rule that stops doing what its own words say is a red suite from here on.
+
+
+### 30 · the doctrine forbids this in prose — cleared, and it took 26 and 27 with it
+
+`tests/plan-is-true.test.ts` is the control. Two assertions:
+
+- a rule the plan's table names is built, or its row says **not built yet**
+- a rule that exists is named somewhere in the plan
+
+It failed on its first run with exactly the two findings that prompted it, and
+with one more nobody had noticed: `TS-ERROR:8`, added during this clearing three
+days after the audit and never written into the design record. The control
+caught its author's own omission on the run that introduced it, which is the
+whole argument for having it.
+
+**Finding 26** is now true rather than fixed. Ten rows say **not built yet** —
+`TS-LOG:2`, `TS-TRUTH:1`, `TS-TYPE:1`, `TS-ERROR:2`, `TS-ERROR:5`, `TS-LAYER:1`,
+`TS-LAYER:3`, `TS-DECOMPOSITION:2`, `TS-DECOMPOSITION:3`, `TS-TESTS:1`. The
+doctrine sanctions exactly this: *covered by a test, or stated plainly as not yet
+built*. They are still worth building and the table still says what each would
+do; what has changed is that the document no longer claims a barrier that is not
+wired.
+
+**Finding 27** is fixed rather than annotated. Chunk 4 gained the table it never
+had, with a row for each of `REACT:1`, `REACT:2`, `DATA:1`, `DATA:2`, `NODE:1`
+and `NEXT:1`, and the TypeScript table gained `TS-ERROR:8` with its origin — the
+only rule here with no ancestor, born from this audit.
+
+The doctrine line that named the principle now names the gate, and paying for
+that sentence cost something. Adding it took the always-on tier to 9,807
+characters against a budget of 9,800, and the budget test refused it:
+
+> doctrine at its widest is 9807 characters against a budget of 9800. Something
+> falls off silently on the turn every branch matches. Either a branch has grown
+> past what it earns, or it is too broad to be selective and is two branches, or
+> the budget is wrong — decide which, and write the number down.
+
+Seven characters. The scarcity mechanism `.looper/doctrine/doctrine.md`
+describes — *a new line must say what it replaces* — did exactly what it was
+built to do, on its author, in the commit that was congratulating itself for
+building controls. The sentence was cut to fit rather than the number raised.
+
+
+### 2 · TS-ERROR:3 cannot tell a made-up value from a reported failure — cleared
+
+Two doors, and a value that goes through either is an answer rather than an
+invention.
+
+**The catch looked at the error.** If the caught binding appears in an `if`, a
+ternary or a `switch` inside the handler, the value returned was chosen by
+examining the failure. That is the RealtimeChannel case: `if (error instanceof
+Error && error.name === "AbortError") return "timed out"`. The same door was
+added to TS-ERROR:4 for the same reason, one finding earlier.
+
+**The normal path already gives that answer.** If the `try` block returns the
+same literal, the catch returning it is not inventing anything. That is
+`supportsLocalStorage`, which returns `false` from both.
+
+A value that appears in neither still fires, which is the whole rule:
+`try { return db.get(id) } catch { return null }`.
+
+On the corpus TS-ERROR:3 went from 8 hits to 3, and the 3 that remain are real —
+a `JSON.parse` failure becoming `null`, and a detection failure becoming
+`false`.
+
+### 5 · TS-DEAD:2 fires on compiler directives — cleared
+
+`/// <reference path="…" />` is an instruction to the compiler that happens to be
+spelled with slashes; deleting it changes what the project builds. It is no
+longer read as prose.
+
+A licence header is excused when it is the first thing in the file and mentions
+copyright, a licence or an SPDX identifier. Some projects are required to carry
+one, and it is not a description of the code, so the rule's own reasoning —
+that a comment drifts out of date while the code moves — does not touch it.
+Prose lower down the file that happens to say "Copyright" is not excused.
+
+On the corpus this removed exactly four hits, 4,127 to 4,123, all four of them
+reference directives.
+
+
+### 23 · a mistyped concession is ignored without a word — cleared
+
+`src/law/misspelled.ts` checks what the config names against what exists, and
+`looper law` and the edit gate both say what it finds. The correct spelling
+stays silent.
+
+```
+looper: law.toml [rules] disabled names TS-TRUTH-2, which is not a rule, so it
+does nothing. Did you mean TS-TRUTH:2?
+
+looper: law.toml [rules] disabled names ts-truth:2, which is not a rule, so it
+does nothing. Did you mean TS-TRUTH:2?
+
+looper: law.toml [exempt] names src/nosuchfile.ts, and there is no such file,
+so it does nothing.
+```
+
+The nearest real rule is offered when there is one within three characters,
+which is what turns a dead end into a fix. The person writing this is copying an
+id out of an error message by hand and cannot read the code that would tell them
+it did not take.
+
+`ALL` is now settled on the record rather than left ambiguous. Under
+`[rules] disabled` it is refused, in words, with the thing they probably wanted
+named:
+
+```
+looper: law.toml [rules] disabled names ALL, which does nothing here. Rules are
+turned off one at a time, by name. To excuse a whole file instead, name it
+under [exempt].
+```
+
+The asymmetry is deliberate and now stated: `[exempt] "file" = ["ALL"]` is a
+graded concession — one file, all rules — and it is honoured. A project-wide off
+switch is not a graded concession, and looper does not have one.
+
+Five cases are locked into `tests/misspelled.test.ts`.
+
+
+### 12, 13, 14 · a rule reads the act, not one spelling of it — cleared
+### 3, 4 · two of the blunt findings, cleared alongside them
+
+Five findings, one idea. Each rule was matching a shape; each now matches what
+the shape *means*.
+
+**TS-ERROR:6** knew only the word `async` at the call. It now knows which
+functions in the file are async, so `items.forEach(save)` and
+`items.forEach((i) => save(i))` both fire, and `items.forEach(tally)` on a plain
+function stays silent. Its ban text was widened in the same commit to cover
+`map` whose answer is thrown away, because that is the same dropped promise and
+the words had to move with the behaviour.
+
+**TS-TYPE:4** read type annotations only, so `type Loose = any` and
+`function f<T = any>()` were the two places you could write `any` without being
+told. Both are read now, and the alias is reported where it is written rather
+than at every use.
+
+**TS-TYPE:2** was rewritten, and this is where findings 3 and 13 met. It walked
+the whole return type looking for the words `null` or `undefined`, so
+`OperatorFunction<T, T | undefined>` counted (finding 3) while
+`type Maybe = string | null` did not (finding 13). It now reads the return type
+properly: a union member, the answer inside a `Promise`, or an alias followed to
+its definition and no further. `Box<string | null>` is silent, `Promise<User |
+null>` fires, and `export default function` is finally looked at.
+
+On the corpus that turned 5 hits into 10. The old false positive is gone and
+five new ones are real, reached through a two-level alias:
+`type BaseValue = null | string | …` then `type RecordValue = BaseValue |
+BaseValue[]`.
+
+**TS-DEAD:3** was finding 4: `constructor(private readonly x: number) {}` does
+its work in the signature, and `private constructor() {}` exists to stop
+construction. Neither is a stub. Both are silent now, and a bare `return;` —
+which really does nothing — fires. On the corpus this rule went from **8 hits to
+1**, and the one left is `export function noop() { }`, which the pile still
+records as a suspicion rather than a finding.
+
+**The rest of finding 14**, one line each: `export * as types from "./x"` is
+still `export *`; `s >> 0` truncates exactly as `| 0` does; a made-up value is
+still made up behind `as User`, and `void 0` and `NaN` are made-up values; a
+handler given to `.then` as its second argument is a catch, and so is one passed
+by name.
+
+`audit/evasion.ts` now runs **119 cases with 0 mismatches**, from 42 when the
+clearing began. Twenty more shapes are locked into `tests/ts-batch.test.ts`.
+
+
+### 11 · TS-ERROR:4 is satisfied by naming the error — cleared
+
+The check asked whether the caught binding was *read*. Reading it into nothing
+counted, so `String(e)` and `const _unused = e` both passed. I wrote that second
+shape four times while building this repo, in the file that enforces the rule,
+and recorded it as a discipline problem. It was a mechanical hole worth two
+characters.
+
+It now asks whether the error actually **leaves**, which is what the rule's own
+`why` says: throw it on, hand it to the caller, or log it, and no fourth. A name
+bound to an expression carrying the error carries it too, computed to a
+fixpoint, so laundering through one variable does not help.
+
+Fires:
+
+```ts
+catch (e) { String(e); return 1 }
+catch (e) { const _unused = e; return 1 }
+catch (e) { const d = String(e); return 1 }
+catch (e) { throw new Error("failed") }
+```
+
+The last is new and is the stricter reading taken deliberately: a `throw` that
+does not carry the cause loses it. The rule's own `instead` has shown
+`throw new CouldNotRead(path, cause)` all along.
+
+Silent, and every one of these was found by running it over the foreign corpus
+rather than by thinking about it:
+
+```ts
+catch (e) { throw new Wrapped(e) }
+catch (e) { const d = String(e); return { d } }
+catch (e) { reject(e) }
+catch (e) { setState({ error: e }) }
+catch (e) { if (e.name === "AbortError") return "timed out"; return "error" }
+catch (e) { held = [e] }
+```
+
+The last two were false positives the first version produced. Examining the
+error to decide what to return **is** looking at what you caught — it is the
+ban's own word. And assigning it to a variable declared outside the catch is
+handing it to the caller by another door. Both are now doors.
+
+On the corpus TS-ERROR:4 went from 18 to 21. The one new distinct case is a
+correct fire: a caught error discarded and replaced by `throw new Error("tried
+to push … before joining")`, a message that would actively mislead if the push
+had failed for any other reason.
+
+Twelve shapes are locked into `tests/ts-rules.test.ts`.
+
+
+### 7 · every global matched by one spelling only — cleared
+
+`src/law/ts/globals.ts` is new. It answers one question: what global does this
+expression actually reach. It follows `globalThis.`, computed access
+(`process["env"]`), a name bound to a global (`const p = process`), and a name
+destructured out of one (`const { log } = console`) — and it answers *nothing*
+when the name is shadowed by a parameter, an import or a local declaration.
+
+Nine spellings, all now caught, and two things that must stay silent:
+
+```ts
+const p = process;       p.env.TOKEN            // TS-TRUTH:2
+const { env } = process; env.TOKEN              // TS-TRUTH:2
+process["env"].TOKEN                            // TS-TRUTH:2
+globalThis.process.env.TOKEN                    // TS-TRUTH:2
+const c = console;       c.log("hi")            // TS-LOG:1
+const { log } = console; log("hi")              // TS-LOG:1
+globalThis.console.log("hi")                    // TS-LOG:1
+const r = require;       r("./m")               // TS-LAYER:2
+createRequire(import.meta.url)("./m")           // TS-LAYER:2
+
+function f(process) { return process.env }      // silent, it is shadowed
+function f(console) { console.log("hi") }       // silent, it is shadowed
+```
+
+Making it see aliases immediately produced a false positive worth keeping out.
+`const base = process.env.URL` followed by `fetch(base)` fired twice — once at
+the read and once at every use of the value. Copying a setting into a local is
+not a second read of the outside world. TS-TRUTH:2 now reports the door and not
+what came through it: the line where the value leaves `process.env`, once.
+
+Sixteen shapes are locked into `tests/ts-scope-rules.test.ts`.
+
+Across the foreign corpus the totals did not move — 5,199 violations before and
+after, TS-LOG:1 steady at 36. No new false positives in 56,366 lines.
+
+The pass 2 note about `process.stdout.write` is not part of this. It is outside
+TS-LOG:1's ban, and the rule that covers it is `TS-LOG:2`, which finding 26
+records as specified in the plan and never built. Its case in
+`audit/evasion.ts` is labelled accordingly rather than forced onto the wrong
+rule.
+
+
+### 8 · no rule follows a value one line — cleared
+
+`src/law/ts/bindings.ts` is new and does one thing: given an expression, hand
+back everything that expression could be, following a name to what it was bound
+to, up to three hops, with a seen-set so a cycle cannot spin.
+
+Each of the three rules then asks its existing question of every value in that
+set rather than only of the expression in front of it. No rule learned a new
+idea; each stopped being fooled by a name.
+
+```ts
+const q = "SELECT * FROM users WHERE id = " + id;
+const rows = db.query(q);                       // DATA:1 now fires
+
+const cmd = "ls " + dir;
+execSync(cmd);                                  // NODE:1 now fires
+
+try { g(); } catch { const fallback = null; return fallback; }  // TS-ERROR:3 now fires
+```
+
+NODE:1 gained the other half of finding 8 at the same time. It watched `exec`
+and `execSync` only, so `spawn(cmd, { shell: true })` walked past — and a shell
+is the whole of what the rule exists to stop. It now watches `spawn`,
+`spawnSync`, `execFile` and `execFileSync` as well, but only when the call asks
+for a shell, so `spawn("git", ["clone", url])` stays silent as it must.
+
+For TS-ERROR:3 the trace is built from the catch body alone rather than the
+file, so a name bound to `null` somewhere else entirely cannot reach it.
+
+Sixteen shapes are locked into `tests/security-packs.test.ts`, and the safe
+spellings are in there beside the unsafe ones: parameters, an argument array,
+a template that is not SQL, a built string that never reaches a shell, and a
+real value computed in a catch.
+
+Across the 339-file foreign corpus the change added **no** new violations —
+DATA:1 and NODE:1 report zero there before and after. That is worth reading
+honestly rather than as a pass: those two libraries contain no SQL and start no
+processes, so the corpus does not exercise either rule. Their only evidence
+against false positives is the controls written here.
+
+
+### 9 · REACT:2 cannot see props, and is dead in practice — cleared
+### 10 · REACT:1 misses the early return it names — cleared
+
+**Correction to finding 10 first.** It claimed `on && useState(0)` and
+`on ? useState(0) : null` were silent as well. They were not — `BRANCHING`
+already listed `LogicalExpression` and `ConditionalExpression`, and both fired
+all along. The finding was written from an ad-hoc probe that only tested the
+early-return forms and then generalised. Only the early return was missing.
+
+**REACT:1.** A function body is now read statement by statement: once a
+statement contains a `return` and is not the last one, every hook after it is
+reported. The search for that return stops at function boundaries, so a
+`return` inside the effect's own callback is not the component's.
+
+Its existing test was titled *"a hook after an early return is caught"* and
+asserted **zero**, with the message *"an early return is a separate shape and is
+not what this rule reads"*. The title said one thing, the assertion said the
+opposite, and the message rationalised the gap. The rule's ban names the early
+return, so the test was wrong and now asserts one.
+
+**REACT:2.** It gathered candidate names only from declarators with a plain
+`name`, so a destructured prop, an array pattern and a member expression were
+all invisible — which is every real source of a missing dependency. It now
+gathers from patterns and from function parameters alike, and it stops counting
+the property half of `user.id` as a name of its own.
+
+That alone produced false positives on ordinary React, and fixing them was the
+better half of the work:
+
+- a `useState` setter and a `useRef` value are stable, and React requires they
+  are *not* listed. Both were being demanded.
+- a parameter of a callback *inside* the effect — the `x` in `get(id).then((x)
+  => …)` — counted as bound but not as declared within, so every promise chain
+  in an effect was a violation.
+
+Thirteen idiomatic components — a cleanup return, an async effect with a
+cancellation flag, a `setInterval` with a functional update, a `useMemo` with a
+sort comparator — now produce **zero** violations between the two rules.
+
+There is no foreign React on this machine, so those thirteen are written here
+and carry the weakness finding 15 describes. Stated rather than glossed: this
+pair has not met a stranger's code.
+
+Eleven shapes are locked into `tests/react.test.ts`.
+
+
+### 1 · DATA:2 catches three of ten — cleared
+
+`src/law/data/unchecked-input.ts`, rewritten the other way round.
+
+It walked `VariableDeclarator` nodes and asked whether the thing being declared
+was an arrival. So it could only ever see an arrival that was bound to a fresh
+`const`, and nothing else — assignment to a variable that already existed, a
+straight `return`, a destructure, a value handed to another function, a property
+on `this`.
+
+Now it collects every arrival in the file and then forgives the ones that are
+accounted for: checked on the spot, bound to a name that is checked later, or
+thrown away without being used at all.
+
+On the corpus it went from 3 hits to 11, and one of the 11 was a false positive
+worth having found — `await res.text()` as a statement on its own, draining a
+response body before a retry. Nothing is used there, and *using* what arrived is
+what the rule bans. Forgiving a discarded arrival took it to 10, and all 10 are
+real.
+
+Eleven shapes are locked into `tests/security-packs.test.ts`, seven that must
+fire and four that must not.
+
+
+### 16 · a file that does not parse is exempt from every rule — cleared
+
+`TS-ERROR:8` — *a file that cannot be read as TypeScript at all* — in
+`src/law/ts/unreadable.ts`. The parse failure already carried its line and its
+reason and threw both away; the rule returns them. It goes through the ordinary
+report machinery, so it can be baselined at adoption like anything else, which
+matters for a repo that has an unparseable file on the day it adopts.
+
+Pass 3's reproduction, re-run:
+
+| | before | after |
+|---|---|---|
+| `looper law` on a file with a stray bracket and three violations | nothing to fix | 3 problems |
+| the edit gate on the same file | exit 0, silent | exit 2, names the line |
+| `looper law` on a binary file named `.ts` | nothing to fix | 4 problems |
+
+Fires zero times across the 339-file foreign corpus, so it costs no adopter
+anything. Case added to `audit/evasion.ts`.
+
+### 17 · the edit gate fails silently on a malformed payload — cleared
+
+One branch in `src/law/capability.ts`. `targetOf` already built the reason —
+"the hook payload was not JSON", "the hook payload named no tool input" — and
+the caller dropped it on the floor along with three other cases it was right to
+drop. Now the unreadable case alone returns a `mention` carrying the reason, and
+the other three still pass in silence because they are deliberate rather than
+broken.
+
+```
+looper: this edit was not judged, because the hook payload named no tool
+input. Nothing here is a verdict on it.
+```
+
+It mentions rather than blocks, which is `.looper/doctrine/law.md` exactly:
+fail open and fail silent are not the same obligation, so observe, then pass.
+The session cannot be wedged by a payload looper does not understand, and
+looper can no longer be silently switched off by one.
+
+
+_None yet._
+
+## Suspicions, not findings
+
+- TS-ERROR:3's second door is sensitive to a spelling it should not care about.
+  It excuses a literal the `try` block also returns, so
+  `try { return false } catch { return false }` is silent while
+  `try { return env.type === "native" } catch { return false }` fires — the same
+  function, one of them computing its answer instead of writing it out. The
+  corpus has exactly one of these and the fire is defensible on its own terms
+  (if detection throws, the honest answer is "I do not know", not "no"). But the
+  rule is deciding on a difference that does not matter, and that is worth
+  saying out loud rather than leaving in the code.
+- A licence header is excused by shape, so a determined writer could keep prose
+  at the top of a file by putting the word "Copyright" in it. The exception is
+  narrow — first thing in the file only — and the alternative was no way to carry
+  a header a project is legally required to have.
+
+- `export function noop() { }` is reported by TS-DEAD:3. A deliberate no-op
+  passed as a callback is arguably a real thing rather than a stub, but nothing
+  here shows it causing harm. Needs a case where the rule forces a worse
+  spelling before it becomes a finding.
+- `process.stdout.write("hi")` is silent under TS-LOG:1. The stated ban is the
+  console family, so this is outside the letter, but a library writing to stdout
+  decides output for every future caller, which is the whole of the reason given
+  in the rule's `why`.
+- `items.map(async (i) => { await save(i) })` with nothing awaiting the array is
+  silent under TS-ERROR:6. The ban names `forEach` only. Same dropped promise.
+
+## Judged and left alone
+
+- TS-TYPE:3 is silent on `const loose: any = x; const a: User = loose`. TS-TYPE:4
+  catches the `any` on the line above, so the pair is covered. Deliberate.
+- TS-DEAD:2 fires 4,127 times on the corpus and TS-TYPE:4 fires 732. Both are
+  the rules working. Neither is a finding, and neither should be reopened as
+  one.
+- The commit gate holds. Six spellings of the same commit — a leading space,
+  `git -C .`, chained after `cd`, prefixed with an environment variable, and
+  `--no-verify` — all blocked with the full repair prompt. `--no-verify` matters
+  most: it defeats the git hook and does not defeat this one.
+- No hook input crashed or hung. Empty stdin, unparseable text, `null`, an
+  array and `{}` across PostToolUse, PreToolUse and Stop: fifteen runs, all
+  exit 0, none slower than the timeout. Empty stdin staying silent is right —
+  git hooks are run with it deliberately.
+- No git state broke anything. A repo with no commits, a detached HEAD, a merge
+  in progress, and no repo at all: the gate passes cleanly in each.
+- A 50,000-line file and 4,000 nested parentheses both finished. Neither hung,
+  and the long file was correctly reported as too long.
+- `max_loc` written at the root of `law.toml` works, which is the spelling the
+  rule's own valve prints. Guessing `[ts] max_loc` does nothing, but nothing in
+  looper ever tells anyone to write that.
+- Inject, the edit gate and the Stop hook are flat in project size. 100 files or
+  6,000, they are 88, 96 and 89ms. Nothing in the per-turn path walks the
+  project, which is the property that was designed for and it holds.
+- `looper law` is linear and unremarkable: 224ms at 100 files, 781 at 1,000,
+  1,731 at 3,000, 3,204 at 6,000. A hundred thousand lines judged in three
+  seconds.
+- The parse memoisation is doing its job. `surveyProject` over 1,001 files runs
+  1,927ms cold and 496ms warm in the same process.
+- All 23 rules pass every mechanical check on their text: each offers at least
+  one legal spelling, each gives a reason, none names a file or a type from
+  looper's own source, and none runs long.
+- Every valve spelling a rule prints is the spelling that works. `[ts]
+  env_files`, `[entry] files`, `[ts] trace_symbols`, root-level `max_loc` and
+  `[exempt]` were each written into a `law.toml` and each did what the rule
+  said it would.
+- Pardon and disable both work when spelled correctly: `[exempt]` removes one
+  rule from one file, `[rules] disabled` removes it from the project.
+- Adoption works, end to end, exactly as chunk 5 promises. On a repo with three
+  pre-existing violations: `init` writes the baseline, the first commit passes
+  with nothing disabled, a new violation in a new file refuses, and adding a
+  violation to an already-baselined file refuses. That is the whole adoption
+  story and every part of it held.
+- `init` holds every claim made for it: a foreign `UserPromptSubmit` hook
+  survives, looper's own are added beside it, and running it twice leaves the
+  project byte-identical.
+- A project with an entirely empty doctrine directory still gets 2,334
+  characters of real rules injected.
+- `law.toml` is genuinely optional. Deleting it changes no verdict.
+- Every one of the 23 rules is exercised by a test. An earlier count here said
+  17 were not; that was a bad grep looking for rule ids in files that import the
+  check objects by name instead. The coverage is real — what finding 15 says
+  about its *quality* still stands.
+- The doctrine tree does not repeat itself. The canon half is about writing
+  TypeScript and the project half about writing looper, and across six files and
+  199 lines the only overlap is finding 29. The line that holds it — *"the
+  project half instantiates the canon and never repeats it"* — is working.
+- Only five exports in `src/` are referenced once there, and every one of the
+  five is used by a test. The dead-export problem found in the earlier
+  consolidation pass has not come back.
+- The rule prose is the strongest part of this codebase and none of it needed a
+  finding. It names the consequence in the reader's terms rather than the
+  compiler's — a price of 10.99 becoming 10, a screen holding what was true a
+  minute ago, a key printed in the page source. That was the thing this pass
+  was built to test and it held.
+
+## Passes run
+
+### Pass 1 — foreign code · 339 files, 56,366 lines
+
+Two open-source client libraries, read from a `node_modules` already on this
+machine. Neither was written here, which was the point. 5,192 violations.
+
+| rule | hits | judged |
+|---|---|---|
+| TS-DEAD:2 | 4127 | correct, minus finding 5 |
+| TS-TYPE:4 | 732 | correct — the corpus really does write `any` |
+| TS-TYPE:3 | 187 | correct, sampled 8, all real |
+| TS-LOG:1 | 36 | correct |
+| TS-DEAD:1 | 27 | correct |
+| TS-DECOMPOSITION:1 | 19 | finding 6 |
+| TS-ERROR:4 | 18 | correct — the two suspicious ones read as deliberate |
+| TS-DEAD:4 | 14 | correct |
+| TS-DEAD:3 | 8 | finding 4 |
+| TS-TYPE:5 | 8 | correct |
+| TS-ERROR:3 | 8 | finding 2 |
+| TS-TYPE:2 | 5 | finding 3 |
+| DATA:2 | 3 | finding 1 |
+
+Ten rules never fired: TS-ERROR:1, TS-ERROR:6, TS-ERROR:7, TS-TRUTH:2,
+TS-LAYER:2, REACT:1, REACT:2, DATA:1, NODE:1, NEXT:1. Most have an honest
+reason — the corpus has no React and no database — but silence is not evidence
+of correctness, and pass 2 owes each of them a case that should fire.
+
+Timing, for pass 4 to take seriously rather than as a result: 1,090ms for the
+whole corpus in one process.
+
+### Pass 2 — evasion · 79 cases, 39 mismatches
+
+For each rule, code that breaks its stated ban in a spelling the rule was not
+written against. The harness is `audit/evasion.ts`; it lists the case, the rule,
+and whether the rule should fire, and prints only the disagreements.
+
+39 of 79 disagreed. Two of those were the pass 1 false positives reproducing in
+one line each, which is good news — findings 3 and 4 now have a minimal case.
+The other 37 are new, and they are findings 7 through 15.
+
+The shape of it: almost nothing here is a clever dodge. Aliasing a global,
+naming a long string before passing it, pulling a callback body out into a
+declared function, and destructuring props are all things people do while
+tidying. The rules are written against one spelling of each act, and ordinary
+tidying produces the others.
+
+### Pass 3 — failure modes · 44 hostile inputs
+
+Malformed hook payloads on every event, nonsense and broken `law.toml`, a
+corrupt baseline, binary and UTF-16 and empty and unreadable and enormous and
+deeply nested files, symlink loops, symlinks out of the project, a repo with no
+commits, a detached HEAD, a merge in progress, no repo at all, and six spellings
+of `git commit`.
+
+Two questions were asked of each: does it reach a wrong verdict, and can it
+wedge the session. **Nothing wedged the session.** No hang, no hook exiting
+non-zero for any reason other than a real block, and the commit gate held
+against every spelling put to it.
+
+The wrong verdicts are findings 16 through 19, and the first two share a shape
+with each other and with the pass 2 results: when looper does not know, it says
+nothing and returns clean. A file it cannot parse is clean. A payload it cannot
+read is clean. Both are indistinguishable, from the outside, from a project
+with nothing wrong in it.
+
+### Pass 4 — scale · synthetic projects of 100 to 6,000 files
+
+Generated projects with a real import graph, three imports per file, up to
+108,000 lines. Every moment measured: inject, the edit gate, the commit gate,
+`looper law`, the Stop hook.
+
+Most of it holds. The per-turn path does not touch the project and does not
+care how big it is. `looper law` is linear and judges a hundred thousand lines
+in three seconds. The parse cache earns its place four times over.
+
+Three costs are worth writing down, and only one of them is a cliff. The commit
+gate is priced per staged file and meets its own 30-second timeout at about six
+thousand of them, which is nobody's daily commit and exactly the first commit
+of a repo that has just adopted looper. The other two are the same cost seen
+twice: looper spends 86ms starting before it does 10ms of work, because there
+is no build step and every hook re-strips the types off a hundred files.
+
+Findings 20 through 22. Note that 22 is a tension rather than a defect — the
+obvious fix for the startup cost is banned by TS-LAYER:2.
+
+### Pass 5 — messages · all 23 rules, read one at a time
+
+Mechanical checks first: a legal spelling on every rule, a reason on every
+rule, no word from looper's own source anywhere in the text, nothing over
+length. Zero complaints. Then each rule's `bans`, `why`, `instead` and valve
+read against the claim that it reads to someone who cannot code.
+
+The prose holds. It is the best-made part of this project and it did not
+produce a finding. What produced findings is everything around it: the config
+that silently ignores what the reader types back, the banner that frames a
+break-in as untidiness, and the fact that the repair prompt is read by two
+different creatures and was written for the one that can improvise.
+
+### Pass 6 — claims · every "Done when" in PLAN.md, and the rule table
+
+Seven "Done when" blocks, run rather than read. Six of them hold, and the
+adoption one holds in full — which matters more than any single finding here,
+because adoption is the thing the product is for.
+
+The failures are all in one place: the rule table. It names ten rules as
+carrying or rewritten that were never built, and says nothing at all about five
+that were. One of the ten, `TS-LOG:2`, closes a hole this audit spent pass 2
+rediscovering.
+
+Findings 26 through 28.
+
+### Pass 7 — consolidation · literals, exports, files and doctrine
+
+The earlier sweeps covered function bodies. This one covered repeated string
+literals across every file, exports nobody imports, and the doctrine tree read
+against itself.
+
+The doctrine came out clean, which is the result worth having: six files, 199
+lines, canon and project half, and one overlap between them. Dead exports are
+down to two, both added by the sweep that removed the last three.
+
+Findings 29 through 31. Finding 30 is the one that matters and it is not really
+about duplication — it is that three doctrine lines already forbid this audit's
+largest finding, and all three are prose, which the first of them says stops
+nothing.
+
+## Clearing the pile
+
+31 findings. The order below is severity, and within a severity the cheapest
+first.
+
+**`wrong` — it reaches a verdict that is not true.** ~~16~~, ~~17~~, ~~1~~,
+~~9~~, ~~10~~, ~~8~~, ~~7~~, ~~11~~, ~~12~~, ~~13~~, ~~14~~, ~~23~~. All cleared.
+
+**`blunt` — it fires on code that is fine.** ~~2~~, ~~3~~, ~~4~~, ~~5~~. All
+cleared.
+
+**`missing` — claimed with nothing behind it.** ~~30~~, ~~26~~, ~~27~~, ~~15~~.
+All cleared.
+
+**`slow` — a measured cost.** ~~20~~, ~~21~~, ~~22~~. All closed: one fixed,
+two measured and accepted with the numbers written down.
+
+**`noise`.** ~~6~~, ~~24~~, ~~25~~, ~~28~~, ~~29~~, ~~31~~. All cleared.
+
+Two rules for the clearing, both learned here. Every fix gets a case in
+`audit/evasion.ts` written from the rule's *ban text* before the code is
+touched, because finding 15 is what let all of this sit under 261 green tests.
+And nothing is called done until it has been run over the foreign corpus, which
+is what `.looper/doctrine/law.md` has said all along.

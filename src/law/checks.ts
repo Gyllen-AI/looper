@@ -1,0 +1,64 @@
+import { anonymousProvenanceCheck } from "./ts/anonymous-provenance.ts";
+import { builtQueryCheck } from "./data/injection.ts";
+import { uncheckedInputCheck } from "./data/unchecked-input.ts";
+import { clientSecretCheck } from "./next/client-secret.ts";
+import { builtCommandCheck } from "./node/command.ts";
+import { conditionalHookCheck } from "./react/hooks.ts";
+import { lyingDependenciesCheck } from "./react/effect-deps.ts";
+import { commentCheck } from "./ts/comment.ts";
+import { disposeWorkCheck } from "./ts/dispose.ts";
+import { droppedPromisesCheck } from "./ts/dropped-promises.ts";
+import { hiddenDependencyCheck } from "./ts/hidden-dependency.ts";
+import { nothingReturnedCheck } from "./ts/nothing-returned.ts";
+import { silentMangleCheck } from "./ts/silent-mangle.ts";
+import { unfinishedCheck } from "./ts/unfinished.ts";
+import { writtenAnyCheck } from "./ts/written-any.ts";
+import { defeatedCheckingCheck } from "./ts/defeated-checking.ts";
+import { fileLengthCheck } from "./ts/file-length.ts";
+import { floatingPromiseCheck } from "./ts/floating-promise.ts";
+import { outsideWorldCheck } from "./ts/outside-world.ts";
+import { strayPrintCheck } from "./ts/stray-print.ts";
+import { bornDefaultCheck } from "./ts/born-default.ts";
+import { stubValueCheck } from "./ts/stub-value.ts";
+import { unreadableFileCheck } from "./ts/unreadable.ts";
+import { RUST_RULES } from "./rust/rules.ts";
+import { CROSSED_BOUNDARY } from "./rust/boundary.ts";
+import { suppressionCheck } from "./ts/suppression.ts";
+import { vanishedErrorCheck } from "./ts/vanished-error.ts";
+import type { Check } from "./engine.ts";
+
+export const CHECKS: readonly Check[] = [
+  bornDefaultCheck,
+  unreadableFileCheck,
+  stubValueCheck,
+  vanishedErrorCheck,
+  defeatedCheckingCheck,
+  suppressionCheck,
+  outsideWorldCheck,
+  strayPrintCheck,
+  commentCheck,
+  fileLengthCheck,
+  anonymousProvenanceCheck,
+  writtenAnyCheck,
+  droppedPromisesCheck,
+  hiddenDependencyCheck,
+  silentMangleCheck,
+  nothingReturnedCheck,
+  unfinishedCheck,
+  floatingPromiseCheck,
+  disposeWorkCheck,
+  conditionalHookCheck,
+  lyingDependenciesCheck,
+  builtQueryCheck,
+  builtCommandCheck,
+  clientSecretCheck,
+  uncheckedInputCheck,
+];
+
+export function knownRuleIds(): readonly string[] {
+  return [
+    ...CHECKS.map((held) => held.rule.id),
+    ...RUST_RULES.map((held) => held.id),
+    CROSSED_BOUNDARY.id,
+  ];
+}

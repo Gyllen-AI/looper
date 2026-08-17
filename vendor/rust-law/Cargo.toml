@@ -1,0 +1,20 @@
+[package]
+name = "looper-rust-law"
+version = "0.1.0"
+edition = "2024"
+license = "0BSD"
+
+[[bin]]
+name = "looper-rust"
+path = "src/bin/looper-rust.rs"
+
+[lib]
+name = "rust_law"
+path = "src/lib.rs"
+
+
+[dependencies]
+syn = { version = "2", features = ["full", "visit"] }
+proc-macro2 = { version = "1", features = ["span-locations"] }
+serde = { version = "1", features = ["derive"] }
+toml = "0.8"

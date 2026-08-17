@@ -1,0 +1,17 @@
+# Ties each doctrine branch to the code it governs. A branch is injected when the
+# files this session has touched land in its area. A branch too broad to be
+# selective is two branches: the always-on tier is what pays for a wide map.
+
+[governs]
+law = ["src/**/*.ts", "tests/**/*.ts"]
+process = ["docs/PLAN.md"]
+doctrine = [".looper/doctrine/**", "src/canon/**"]
+
+# Which branch goes stale when what changes. [governs] above is for injection and
+# wants to be broad — pull the law branch whenever any code is touched. Staleness
+# wants the opposite: a document only rots when the thing it describes moves, and
+# a gate that fires on every commit teaches people to bypass it. Absent, [governs]
+# is used for both.
+[freshness]
+law = ["src/law/**"]
+doctrine = ["src/canon/**", "src/router.ts", "src/map.ts", "src/allocator.ts"]

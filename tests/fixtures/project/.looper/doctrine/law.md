@@ -1,0 +1,1 @@
+- A fixture rule, so this test does not depend on what looper's own doctrine says.

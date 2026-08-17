@@ -1,0 +1,2 @@
+[governs]
+law = ["src/**/*.ts"]

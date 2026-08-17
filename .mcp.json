@@ -1,0 +1,12 @@
+{
+  "mcpServers": {
+    "looper": {
+      "type": "stdio",
+      "command": "node",
+      "args": [
+        "$CLAUDE_PROJECT_DIR/src/main.ts",
+        "serve"
+      ]
+    }
+  }
+}
