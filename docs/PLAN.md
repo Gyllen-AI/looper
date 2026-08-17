@@ -1368,6 +1368,26 @@ remove, because the value was not the agent's. A refusal with no compliant path
 is what sends an agent looking for a way round, and the way round it found was a
 person.
 
+**What a fork is told, and what it is asked to prove. Built 2026-08-18.** The
+doctrine tree and `.claude/settings.json` are committed, so a fork receives
+looper's own rules the moment somebody works in it — measured on a clone: 8,345
+characters on a turn touching a rule file, before this change. What it did not
+receive was anything about what a change sent *back* must carry; that lived in
+`CONTRIBUTING.md`, in prose, which by this repo's own doctrine stops nothing.
+
+Two halves now. A `contribution` branch, mapped to `src/law/**`, `src/canon/**`
+and `audit/**`, arrives exactly when somebody touches a rule: cases first from
+the rule's own ban text, a run over code nobody here wrote, and the evidence sent
+with the change rather than the conclusion. Measured on a clean fork changing a
+rule: 9,577 characters, nothing dropped.
+
+And the half a document cannot do: `.github/workflows/evidence.yml` refuses a
+pull request that changes `src/law/` without touching `audit/cases.ts`, and says
+why. The third step — the foreign-corpus run — is deliberately not mechanised,
+because no machine here can check that somebody read fifty thousand lines of
+somebody else's code. It goes in the pull request in their own words, and it is
+what decides whether the rule is taken.
+
 **looper does not send it. The agent does.** This is not a compromise around the
 no-network invariant, it is the only correct shape. looper stays incapable of
 opening a socket — that is the first line of its own constitution and the reason

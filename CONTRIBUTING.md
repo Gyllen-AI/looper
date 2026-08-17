@@ -69,6 +69,15 @@ Fork it. Then, in this order, because the order is the whole discipline:
 Then open a pull request that says what you found in step 3. A rule with
 evidence behind it will be taken; a rule that only sounds right will not.
 
+Two of those steps are wired rather than asked for. Working in a fork, looper
+hands your agent the same rules it hands ours — the `contribution` set arrives
+whenever anything under `src/law/`, `src/canon/` or `audit/` is touched, because
+the doctrine tree is committed and travels with the clone. And a pull request
+that changes `src/law/` without touching `audit/cases.ts` is refused by
+`.github/workflows/evidence.yml`, which says why. Step 3, the run over foreign
+code, is the one no machine here can check: it goes in the pull request in your
+own words, and it is the part that decides whether the rule is taken.
+
 ## Why it is built under its own rules
 
 looper is written for a person with an idea and no way to read the code that

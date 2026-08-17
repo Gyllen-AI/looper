@@ -1,0 +1,30 @@
+name: a rule change carries its cases
+
+on:
+  pull_request:
+
+jobs:
+  cases:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: a change to the law must change the cases with it
+        run: |
+          base="origin/${{ github.base_ref }}"
+          changed=$(git diff --name-only "$base"...HEAD)
+          rules=$(echo "$changed" | grep -E '^src/law/' || true)
+          cases=$(echo "$changed" | grep -E '^audit/cases\.ts$' || true)
+          if [ -n "$rules" ] && [ -z "$cases" ]; then
+            echo "This pull request changes what looper enforces:"
+            echo "$rules" | sed 's/^/  /'
+            echo
+            echo "and audit/cases.ts is untouched. A rule's cases are written first,"
+            echo "from its own ban text: what must fire and what must stay silent."
+            echo "A test written after the code can only agree with the code."
+            echo
+            echo "CONTRIBUTING.md, 'Changing a rule, or adding one', has the order."
+            exit 1
+          fi
+          echo "no rule changed, or the cases changed with it"
