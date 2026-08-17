@@ -4,3 +4,4 @@ dist/
 *.looper-tmp
 *.looper-backup
 vendor/rust-law/target/
+vendor/seer/

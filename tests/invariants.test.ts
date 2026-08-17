@@ -1,6 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync, readdirSync, statSync, existsSync } from "node:fs";
+import { execFileSync } from "node:child_process";
 import { join } from "node:path";
 
 const ROOT = join(import.meta.dirname, "..");
@@ -179,9 +180,15 @@ test("no dependency runs code at install time", () => {
 });
 
 test("no install can arrive able to look at a screen", () => {
+  const tracked = execFileSync("git", ["ls-files", "vendor/seer"], { cwd: ROOT, encoding: "utf8" });
+  assert.equal(
+    tracked.trim(),
+    "",
+    "a capture program is committed. Nothing that can photograph somebody's screen may travel with looper: it is installed deliberately, on the machine whose screen it is, and vendor/seer/ is ignored so it cannot be committed by accident.",
+  );
   assert.ok(
-    !existsSync(join(ROOT, "vendor", "seer")),
-    "a capture program is in the tree. Nothing that can photograph somebody's screen may arrive with an install: it is built deliberately, by the person whose screen it is, or it does not exist on that machine.",
+    readFileSync(join(ROOT, ".gitignore"), "utf8").includes("vendor/seer/"),
+    "vendor/seer/ is not ignored, so an installed capture program can be committed by a careless git add -A",
   );
 
   const shipped = manifestAt(join(ROOT, "package.json"))["files"];

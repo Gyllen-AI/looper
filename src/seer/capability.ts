@@ -11,7 +11,7 @@ import type {
   ToolDef,
   ToolResult,
 } from "../capability.ts";
-import { capture, seerIsInstalled, type Shot } from "./drive.ts";
+import { capture, seerIsInstalled, type Image, type Shot } from "./drive.ts";
 
 const NO_HOOKS: readonly HookEvent[] = [];
 
@@ -62,6 +62,25 @@ function windowIn(args: ReadonlyMap<string, string>): Asked {
   return { kind: "window", name: held };
 }
 
+const NOT_WHAT_IT_SHOWS: Record<string, string> = {
+  minimised:
+    "was minimised, so this is what it last drew rather than what it shows now. Do not read it as the state of the running thing.",
+  blank:
+    "drew nothing into this picture, which usually means it renders on the graphics card and this way of capturing cannot see it. Do not read it as an empty screen.",
+  unknown:
+    "came back without saying whether it was actually rendering, so this picture may be stale. Treat it as unconfirmed.",
+};
+
+function warningsIn(images: readonly Image[]): string {
+  const said: string[] = [];
+  for (const held of images) {
+    const warning = NOT_WHAT_IT_SHOWS[held.state];
+    if (warning === undefined) continue;
+    said.push(` "${held.label}" ${warning}`);
+  }
+  return said.join("");
+}
+
 export function answerFor(shot: Shot, window: string): ToolResult {
   if (shot.kind === "not-installed") {
     return {
@@ -92,7 +111,7 @@ export function answerFor(shot: Shot, window: string): ToolResult {
     shot.missing.length === 0 ? "" : ` It could not find: ${shot.missing.join(", ")}.`;
   return {
     kind: "shown",
-    said: `looked at "${window}".${missing}`,
+    said: `looked at "${window}".${missing}${warningsIn(shot.images)}`,
     images: shot.images.map((held) => ({ media: held.media, base64: held.base64 })),
   };
 }

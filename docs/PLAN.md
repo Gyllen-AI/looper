@@ -1226,7 +1226,7 @@ never a shell line, and answers on stdout with one JSON object:
 
 | exit | means |
 |---|---|
-| 0 | `{"images":[{"label","media","base64"}],"missing":[…]}` — and `missing` is named, never silently dropped |
+| 0 | `{"images":[{"label","media","base64","state"}],"missing":[…]}` — `missing` is named, never silently dropped, and `state` is `rendering`, `minimised` or `blank` |
 | 3 | there is no window by that name |
 | 5 | disarmed: the person has not armed this target |
 | anything else | unavailable, and looper says so rather than guessing |
@@ -1273,13 +1273,36 @@ capture program has to report the window's state — minimised, occluded, not
 rendering — beside the image, and looper has to say it, or the seer will produce
 exactly the confident wrong answers it exists to prevent.
 
-**What is not built here: the capture program and the consent app.** They are
-platform code — the proposal describes a Windows implementation of both, around
-1,150 lines, and offers to port it. Until a platform has both, that platform has
-no seer, which is the proposal's own line and the reason this half ships alone.
-This half is testable without them: a stub program standing in for the real one
-proves the disarmed path refuses, the missing-window path is named, and an
-image only ever reaches the agent behind exit code 0.
+**The two programs, built 2026-08-18 for WSL-with-Windows.** `seer/windows/consent.ps1`
+is the person's: an always-on-top window listing what is open, a tick box per
+window, and a local pipe that answers `yes` only for what is ticked. Closing it
+disarms everything. `seer/windows/capture.ps1` asks that pipe before it captures
+anything and stops at exit code 5 when the answer is not yes, so the program that
+can see is never the program that decides. `seer/linux/looper-seer` is the shim
+looper runs from inside WSL, and it passes the title through and nothing else.
+
+**They are source, and installing them is a deliberate act on the machine whose
+screen it is.** The package does not ship `seer/`, `vendor/seer/` is ignored so an
+installed one cannot be committed by accident, and a test reads `git ls-files` to
+prove nothing under it is tracked. This is the one place where a command somebody
+has to type is the right answer: the canon's rule against that is about
+governance, which must not be optional, and this is an eye, which must be.
+
+**Run against a real desktop, 2026-08-18, and what it cost to get right.** The
+first consent window rebuilt its list every two seconds, which wiped a tick the
+moment it was made, and docked its panels in an order that hid the first row —
+unusable, and found by the person trying to use it rather than by any test. The
+second one keeps the armed set as the truth and rebuilds the list only when the
+open windows actually change. With one window ticked and one request made through
+the real MCP server, the answer came back with the picture and the words *was
+minimised, so this is what it last drew rather than what it shows now* — the trap
+from the earlier run, now caught and said out loud. One defect on the way: the
+window's title came back mangled through the shim until both ends were pinned to
+UTF-8.
+
+**What is still not built:** a Linux desktop pair and a macOS pair. Until a
+platform has both halves it has no seer, and a capture program without a consent
+window is precisely what this design exists to refuse.
 
 ## The return path: every adopter's agent is a rule tester
 

@@ -40,11 +40,14 @@ test("a machine with no seer installed cannot be looked at, and says so", () => 
   }
 });
 
-test("looper offers no way to look at anything until somebody installs a seer", () => {
-  assert.deepEqual(
-    [...new Seer().tools()],
-    [],
-    "the tool is offered on a machine with no capture program, so installing looper would advertise the ability to look at a screen. Nothing about this may arrive with an install.",
+test("the tool exists exactly when a capture program does, and never otherwise", () => {
+  const here = join(import.meta.dirname, "..");
+  const offered = new Seer().tools().length;
+
+  assert.equal(
+    offered,
+    seerIsInstalled(here) ? 1 : 0,
+    "the see tool is offered when there is no program to run, or withheld when there is one. Whether an agent is told it can look must follow one fact: a capture program the person installed themselves.",
   );
 });
 
@@ -126,4 +129,57 @@ test("what the agent asks for is checked before anything is started", () => {
   assert.equal(empty.kind, "text");
   if (empty.kind !== "text") return;
   assert.ok(empty.text.includes("needs the title of a window"));
+});
+
+test("a picture of a window that was not rendering says so beside the picture", () => {
+  const seen = answerFor(
+    {
+      kind: "seen",
+      images: [{ label: A_WINDOW, media: "image/png", base64: ONE_PIXEL, state: "minimised" }],
+      missing: [],
+    },
+    A_WINDOW,
+  );
+
+  assert.equal(seen.kind, "shown");
+  if (seen.kind !== "shown") return;
+  assert.ok(
+    seen.said.includes("what it last drew"),
+    "a capture of a minimised window is honest and useless, and an agent will reason from it as though it were the running thing. That is the confident wrong answer the seer exists to prevent.",
+  );
+});
+
+test("a seer that does not say what state the window was in is not believed", () => {
+  const root = scratch();
+  try {
+    withSeer(
+      root,
+      `printf '{"images":[{"label":"the app","media":"image/png","base64":"${ONE_PIXEL}"}]}'`,
+    );
+    const shot = capture(root, A_WINDOW);
+    assert.equal(shot.kind, "seen");
+    if (shot.kind !== "seen") return;
+    assert.equal(shot.images[0]?.state, "unknown");
+
+    const answer = answerFor(shot, A_WINDOW);
+    assert.equal(answer.kind, "shown");
+    if (answer.kind !== "shown") return;
+    assert.ok(answer.said.includes("Treat it as unconfirmed"));
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test("a window that really was rendering is handed over without a warning attached", () => {
+  const seen = answerFor(
+    {
+      kind: "seen",
+      images: [{ label: A_WINDOW, media: "image/png", base64: ONE_PIXEL, state: "rendering" }],
+      missing: [],
+    },
+    A_WINDOW,
+  );
+  assert.equal(seen.kind, "shown");
+  if (seen.kind !== "shown") return;
+  assert.equal(seen.said, `looked at "${A_WINDOW}".`);
 });

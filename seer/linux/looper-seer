@@ -1,0 +1,22 @@
+#!/bin/sh
+set -eu
+
+here=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
+script=$(wslpath -w "$here/capture.ps1")
+
+window=""
+while [ $# -gt 0 ]; do
+  case "$1" in
+    --window)
+      shift
+      window=${1:-}
+      ;;
+  esac
+  shift || true
+done
+
+if [ -z "$window" ]; then
+  exit 4
+fi
+
+exec powershell.exe -NoProfile -ExecutionPolicy Bypass -File "$script" -Window "$window"

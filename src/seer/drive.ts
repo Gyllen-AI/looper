@@ -5,11 +5,23 @@ import { join } from "node:path";
 import { SEER_DIR, SEER_NAME, SEER_TIMEOUT_MS } from "../config.ts";
 import { fieldAt, reasonFrom } from "../fields.ts";
 
+export type State = "rendering" | "minimised" | "blank" | "unknown";
+
+const STATES: readonly State[] = ["rendering", "minimised", "blank"];
+
 export type Image = {
   readonly label: string;
   readonly media: string;
   readonly base64: string;
+  readonly state: State;
 };
+
+function stateFrom(said: unknown): State {
+  if (typeof said !== "string") return "unknown";
+  const known = STATES.find((held) => held === said);
+  if (known === undefined) return "unknown";
+  return known;
+}
 
 export type Shot =
   | { readonly kind: "not-installed"; readonly platform: string }
@@ -41,7 +53,7 @@ function imagesFrom(payload: unknown): readonly Image[] {
     if (typeof label !== "string" || typeof media !== "string" || typeof base64 !== "string") {
       continue;
     }
-    found.push({ label, media, base64 });
+    found.push({ label, media, base64, state: stateFrom(fieldAt(one, "state")) });
   }
   return found;
 }
