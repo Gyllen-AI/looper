@@ -2,7 +2,8 @@ import { required } from "../src/present.ts";
 import { test } from "node:test";
 import assert from "node:assert/strict";
 
-import { branchesFor, matches, parseMap } from "../src/map.ts";
+import { branchesFor, matches, parseMap, withCanonDefaults } from "../src/map.ts";
+import { canonGoverns } from "../src/canon.ts";
 import { TomlMalformed } from "../src/errors.ts";
 
 test("a star stays inside one path segment", () => {
@@ -75,4 +76,32 @@ frontend = ["ui/**"]
     "process",
   ]);
   assert.deepEqual([...branchesFor(governs, ["README.md"])], []);
+});
+
+test("the branch governing most of what was touched arrives first", () => {
+  const governs = parseMap(`
+[governs]
+law = ["src/**/*.ts"]
+frontend = ["ui/**"]
+`);
+
+  assert.deepEqual(
+    [...branchesFor(governs, ["src/a.ts", "src/b.ts", "ui/panel.tsx"])],
+    ["law", "frontend"],
+    "a turn wider than the budget drops from the end, so the order is a judgement about which rules this turn is actually about. Alphabetical order is not that judgement.",
+  );
+  assert.deepEqual(
+    [...branchesFor(governs, ["src/a.ts", "ui/one.tsx", "ui/two.tsx"])],
+    ["frontend", "law"],
+  );
+});
+
+test("the canon's own map is filled in only where the project said nothing", () => {
+  const project = parseMap(`[governs]\nlaw = ["only/here/**"]\n`);
+  const merged = withCanonDefaults(project, canonGoverns());
+
+  assert.deepEqual([...merged.get("law")], ["only/here/**"], "the project's own mapping was overwritten");
+  assert.ok(merged.has("rust"), "a branch the project never mentioned did not get the canon's default");
+  assert.deepEqual([...branchesFor(merged, ["src/a.ts"])], [], "the canon default fired for a branch the project had claimed");
+  assert.deepEqual([...branchesFor(merged, ["crates/a/src/main.rs"])], ["architecture", "rust"].filter((name) => merged.has(name)));
 });

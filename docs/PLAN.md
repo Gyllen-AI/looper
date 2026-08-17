@@ -2054,6 +2054,48 @@ fits**, so one kind of work is always served whole, and **a drop is always
 named**. The old guard's value — that the tree cannot grow quietly — is kept by
 the bullet cap on the always-on tier, which is untouched.
 
+### The four branches the canon was missing. Built 2026-08-18, from adopter issue #13
+
+Each was proposed with evidence that it is generic: two unrelated projects wrote
+several of the same lines without seeing each other's. What each needed before it
+could ship was not the words but **the thing that makes it selective**, because a
+branch that fires on everything is the always-on tier under another name.
+
+| branch | fires when the turn touches | what it replaces |
+|---|---|---|
+| `security` | `.env*`, anything named for a secret, credential, token or auth, and `config.*` | nothing — looper shipped a secrets gate with no doctrine behind it |
+| `evidence` | any `.md` | the measurement line in looper's own `process.md`, deleted in the same commit |
+| `frontend` | `.tsx`, `.jsx`, `.css`, `components/`, `pages/` | nothing — the canon said a view "decides nothing" and stopped there |
+| `sources` | nothing, by choice | most of looper's own `sources.md`, cut to the two lines that are only true here |
+
+`sources` gets no path mapping for the same reason `architecture` does not: its
+subject is a kind of work rather than a kind of file, and no path says "somebody
+is reading prior work right now". Both arrive through the `doctrine` tool, whose
+description already tells an agent to pull what a task touches before starting.
+
+**What a turn costs now, measured 2026-08-18 against this repo,** where the
+constitution is 3,179 characters:
+
+```
+  6520  a TypeScript edit      law
+  4174  a Rust edit            rust
+  4198  a screen               frontend
+  7233  settings or a key      law, security
+  5004  a document             evidence, process
+  5453  doctrine itself        doctrine, evidence
+ 12557  all of them at once    everything — over the 9,800 budget
+```
+
+Every real kind of work fits with room to spare. The last line is a turn that
+touched all six areas at once, and it is over: the lowest-priority sets are
+dropped and named, as the allocator has always done.
+
+**Which one drops stopped being alphabetical.** Branches are now ordered by how
+many of the turn's touched paths they govern, so the set most connected to the
+work survives and a set that matched one file out of six is the one that goes.
+Alphabetical order was a coin toss dressed as a rule, and it only became visible
+once the budget could actually be reached. `tests/map.test.ts` holds it.
+
 ## Freshness: the gate that stops a rule set describing something else
 
 Carried from the Rust predecessor on 2026-08-17, after checking what that

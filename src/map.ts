@@ -89,11 +89,15 @@ export function matches(pattern: string, path: string): boolean {
   return walk(pattern.split("/"), path.split("/"));
 }
 
+type Touched = { readonly branch: string; readonly hits: number };
+
 export function branchesFor(governs: Governs, paths: readonly string[]): readonly string[] {
-  const found: string[] = [];
+  const found: Touched[] = [];
   for (const [branch, globs] of governs) {
-    const hit = paths.some((path) => globs.some((glob) => matches(glob, path)));
-    if (hit) found.push(branch);
+    const hits = paths.filter((path) => globs.some((glob) => matches(glob, path))).length;
+    if (hits > 0) found.push({ branch, hits });
   }
-  return found.sort();
+  return found
+    .sort((left, right) => right.hits - left.hits || left.branch.localeCompare(right.branch))
+    .map((held) => held.branch);
 }

@@ -9,7 +9,8 @@ export type CanonBranch = {
 };
 
 const BRANCH_NAMES: readonly string[] = ["law", "process",
-  "architecture", "rust", "doctrine",
+  "architecture", "rust", "doctrine", "security", "evidence", "frontend",
+  "sources",
 ];
 
 const TYPESCRIPT: readonly string[] = [
@@ -25,10 +26,32 @@ const TYPESCRIPT: readonly string[] = [
 
 const RUST: readonly string[] = ["**/*.rs"];
 
+const WHERE_SECRETS_LIVE: readonly string[] = [
+  "**/.env*",
+  "**/*secret*",
+  "**/*credential*",
+  "**/*auth*",
+  "**/*token*",
+  "**/config.*",
+];
+
+const WRITTEN_DOWN: readonly string[] = ["**/*.md"];
+
+const LOOKED_AT: readonly string[] = [
+  "**/*.tsx",
+  "**/*.jsx",
+  "**/*.css",
+  "**/components/**",
+  "**/pages/**",
+];
+
 export function canonGoverns(): ReadonlyMap<string, readonly string[]> {
   return new Map([
     ["law", TYPESCRIPT],
     ["rust", RUST],
+    ["security", WHERE_SECRETS_LIVE],
+    ["evidence", WRITTEN_DOWN],
+    ["frontend", LOOKED_AT],
     ["doctrine", [`${DOCTRINE_DIR}/**`]],
   ]);
 }

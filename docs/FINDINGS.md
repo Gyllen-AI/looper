@@ -22,7 +22,7 @@ is a suspicion and belongs in the notes at the bottom, not in the list.
 
 ## Open
 
-_Empty. Every pass of both audits is closed, and findings 41 to 52 with them._
+_Empty. Every pass of both audits is closed, and findings 41 to 53 with them._
 
 ## The second audit — what it covered and what it found
 
@@ -68,6 +68,27 @@ tested, and every one was tested the way it was built rather than the way it
 will be used.
 
 ## Cleared
+
+### 53 · `missing` — four subjects the canon judged and never taught — cleared
+
+Proposed by an adopting agent as issue #13, with the evidence that they are
+generic: two unrelated projects had written several of the same lines
+independently. `security` is the sharpest — looper ships a secrets gate that
+refuses commits, and shipped no doctrine at all about handling a secret. The
+others are `evidence`, `frontend`, and `sources` for reading prior work.
+
+Each landed with the map that keeps it selective, and each had to say what it
+replaces: `evidence` took the measurement line out of looper's own `process.md`,
+`sources` cut looper's own to the two lines that are only true here, and a line
+in `security` about untrusted input was deleted before it shipped because the
+canon law already says it.
+
+Measured after, on this repo: a TypeScript edit 6,520 characters, a Rust edit
+4,174, a screen 4,198, settings or a key 7,233, a document 5,004, doctrine 5,453
+— against a 9,800 budget. A turn touching all six areas is 12,557 and drops the
+least connected set, which is the second half of this finding: dropping used to
+be alphabetical, which is a coin toss dressed as a rule. Branches are now ordered
+by how much of the turn they actually govern.
 
 ### 52 · `missing` — the canon's own branches reached nobody — cleared
 
