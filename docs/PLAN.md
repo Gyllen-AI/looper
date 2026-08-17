@@ -1231,6 +1231,16 @@ never a shell line, and answers on stdout with one JSON object:
 | 5 | disarmed: the person has not armed this target |
 | anything else | unavailable, and looper says so rather than guessing |
 
+**The ceiling on one answer, 64 MB.** The picture crosses that seam as base64
+inside the JSON, and Node's default buffer for a child process is 1 MB: past it
+the child is killed and the answer is discarded, which reads as the seer being
+broken rather than the pipe being too narrow. Measured 2026-08-18 on WSL, one
+1433x1254 window: 3,060,240 bytes of JSON carrying a 2,295,098 byte PNG, which is
+an ordinary window on an ordinary display and three times over the default. A 4K
+window is roughly four times that again, so the ceiling is 64 MB — past any real
+screen, still short of a runaway. `tests/seer.test.ts` holds it with an answer the
+default would have thrown away.
+
 **Off unless somebody built it.** No capture program ships in the package —
 `files` in `package.json` carries none, and a test refuses the suite if one
 appears. With no program on disk the `see` tool is not offered at all, and every

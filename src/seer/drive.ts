@@ -2,7 +2,7 @@ import { execFileSync } from "node:child_process";
 import { existsSync } from "node:fs";
 import { join } from "node:path";
 
-import { SEER_DIR, SEER_NAME, SEER_TIMEOUT_MS } from "../config.ts";
+import { SEER_DIR, SEER_MAX_OUTPUT, SEER_NAME, SEER_TIMEOUT_MS } from "../config.ts";
 import { fieldAt, reasonFrom } from "../fields.ts";
 
 export type State = "rendering" | "minimised" | "blank" | "unknown";
@@ -84,6 +84,7 @@ export function capture(looperRoot: string, window: string): Shot {
     output = execFileSync(seerAt(looperRoot), ["--window", window], {
       encoding: "utf8",
       timeout: SEER_TIMEOUT_MS,
+      maxBuffer: SEER_MAX_OUTPUT,
       stdio: ["ignore", "pipe", "ignore"],
     });
   } catch (cause) {

@@ -183,3 +183,22 @@ test("a window that really was rendering is handed over without a warning attach
   if (seen.kind !== "shown") return;
   assert.equal(seen.said, `looked at "${A_WINDOW}".`);
 });
+
+test("a picture of a real window survives the pipe, which Node's default buffer would have thrown away", () => {
+  const root = scratch();
+  try {
+    const wide = "A".repeat(3_000_000);
+    withSeer(
+      root,
+      `printf '{"images":[{"label":"${A_WINDOW}","media":"image/png","base64":"'; printf '%s' '${wide}'; printf '","state":"rendering"}],"missing":[]}'`,
+    );
+
+    const shot = capture(root, A_WINDOW);
+    assert.equal(shot.kind, "seen");
+    if (shot.kind !== "seen") return;
+    assert.equal(shot.images.length, 1);
+    assert.equal(shot.images[0]?.base64.length, wide.length);
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});

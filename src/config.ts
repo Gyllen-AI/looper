@@ -136,6 +136,8 @@ export const SEER_TOOL = "see";
 
 export const SEER_TIMEOUT_MS = 20_000;
 
+export const SEER_MAX_OUTPUT = 64_000_000;
+
 export const SEER_NAME_LIMIT = 200;
 
 export const REPORT_PATH = ".looper/report.md";
