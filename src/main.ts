@@ -243,6 +243,11 @@ function law(asked: readonly string[]): number {
     console.error(said);
   }
   const survey = surveyProject(here(), "everything", asked);
+  if (survey.couldNotSkipIgnored.length > 0) {
+    console.error(
+      `looper: git could not say which files are ignored (${survey.couldNotSkipIgnored}), so generated files your .gitignore names were judged too. The count below is over more files than the baseline was built from.`,
+    );
+  }
   for (const named of survey.unreadable) {
     console.error(`looper: could not read ${named}; it was not judged`);
   }

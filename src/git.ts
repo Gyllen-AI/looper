@@ -65,6 +65,7 @@ export function trackedFiles(root: string): Staged {
 }
 
 export type Ignoring =
+  | { readonly kind: "no-git" }
   | { readonly kind: "unavailable"; readonly detail: string }
   | { readonly kind: "ignoring"; readonly paths: ReadonlySet<string>; readonly folders: readonly string[] };
 
@@ -77,9 +78,7 @@ const IGNORED: readonly string[] = [
 ];
 
 export function ignoredHere(root: string): Ignoring {
-  if (!existsSync(join(root, ".git"))) {
-    return { kind: "unavailable", detail: "this is not a git repository" };
-  }
+  if (!existsSync(join(root, ".git"))) return { kind: "no-git" };
   try {
     const said = ask(root, IGNORED);
     const paths = new Set<string>();

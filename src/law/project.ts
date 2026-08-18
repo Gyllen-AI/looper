@@ -20,6 +20,7 @@ export type Survey = {
   readonly files: number;
   readonly unreadable: readonly string[];
   readonly selfGoverned: readonly SelfGoverned[];
+  readonly couldNotSkipIgnored: string;
 };
 
 const SUBMODULES = ".gitmodules";
@@ -89,6 +90,7 @@ export type Walked = {
   readonly files: readonly string[];
   readonly unreadable: readonly string[];
   readonly selfGoverned: readonly SelfGoverned[];
+  readonly couldNotSkipIgnored: string;
 };
 
 type Real =
@@ -113,7 +115,7 @@ function isInside(rootReal: string, fileReal: string): boolean {
 }
 
 function askedToBeIgnored(ignoring: Ignoring, where: string, isFolder: boolean): boolean {
-  if (ignoring.kind === "unavailable") return false;
+  if (ignoring.kind !== "ignoring") return false;
   const named = isFolder ? `${where}/` : where;
   if (ignoring.paths.has(named)) return true;
   return ignoring.folders.some((folder) => named === folder || named.startsWith(folder));
@@ -192,10 +194,15 @@ export function walkProject(root: string): Walked {
 
   const rootReal = realOf(root);
   if (rootReal.kind === "unknown") {
-    return { files: [], unreadable: [`${root} (${rootReal.why})`], selfGoverned: [] };
+    return { files: [], unreadable: [`${root} (${rootReal.why})`], selfGoverned: [], couldNotSkipIgnored: "" };
   }
   walkDirectory(root, rootReal.path);
-  return { files: found, unreadable, selfGoverned };
+  return {
+    files: found,
+    unreadable,
+    selfGoverned,
+    couldNotSkipIgnored: ignoring.kind === "unavailable" ? ignoring.detail : "",
+  };
 }
 
 export function judgedFiles(root: string): readonly string[] {
@@ -215,6 +222,7 @@ function reached(root: string, reach: Reach): Walked {
     files: walked.files.filter((path) => known.has(path)),
     unreadable: walked.unreadable,
     selfGoverned: walked.selfGoverned,
+    couldNotSkipIgnored: walked.couldNotSkipIgnored,
   };
 }
 
@@ -414,5 +422,11 @@ export function surveyProject(root: string, reach: Reach, only: readonly string[
     );
   }
 
-  return { violations, files: files.length, unreadable, selfGoverned: walked.selfGoverned };
+  return {
+    violations,
+    files: files.length,
+    unreadable,
+    selfGoverned: walked.selfGoverned,
+    couldNotSkipIgnored: walked.couldNotSkipIgnored,
+  };
 }

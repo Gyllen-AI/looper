@@ -7,6 +7,7 @@ import { join } from "node:path";
 
 import { judgedFiles } from "../src/law/project.ts";
 import { ignoredHere } from "../src/git.ts";
+import { walkProject } from "../src/law/project.ts";
 
 const A_JUDGED_FILE = "const held = 1;\nexport default held;\n";
 
@@ -69,8 +70,13 @@ test("without git, everything is judged as before rather than nothing", () => {
   try {
     writeFileSync(join(root, "alone.ts"), A_JUDGED_FILE);
 
-    assert.equal(ignoredHere(root).kind, "unavailable");
+    assert.equal(ignoredHere(root).kind, "no-git");
     assert.ok(judgedFiles(root).some((path) => path.endsWith("alone.ts")));
+    assert.equal(
+      walkProject(root).couldNotSkipIgnored,
+      "",
+      "a folder that is simply not a git repository was reported as a failure, so every project without git would carry a warning about nothing being wrong",
+    );
   } finally {
     gone(root);
   }
