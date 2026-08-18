@@ -2761,7 +2761,7 @@ the server it runs under is Uvicorn.
 
 ### The rules, named before they are written
 
-Seven, taken from the failure shapes this document already listed. One is built:
+Seven, taken from the failure shapes this document already listed. Two are built:
 
 | rule | bans | state |
 |---|---|---|
@@ -2769,7 +2769,7 @@ Seven, taken from the failure shapes this document already listed. One is built:
 | `PY-ERROR:2` | answering a failure with `None` | **not built yet** |
 | `PY-ERROR:3` | `raise Exception(...)` where a named class belongs | **not built yet** |
 | `PY-TYPE:1` | a `# type: ignore` comment | **not built yet** |
-| `PY-TRUTH:1` | a mutable default argument | **not built yet** |
+| `PY-TRUTH:1` | a default argument that is a mutable container | built 2026-08-18 |
 | `PY-TRUTH:2` | `assert` used as a runtime check, which `-O` deletes | **not built yet** |
 | `PY-LAYER:1` | a star import, which launders one namespace into another | **not built yet** |
 
@@ -2800,3 +2800,19 @@ Corroboration worth recording: several findings in the adopting project already
 carried `# noqa: BLE001`, which is Ruff's own blind-except rule being switched
 off line by line. A second tool had already reached the same verdict and been
 silenced, which is the failure mode a gate exists to prevent.
+
+`PY-TRUTH:1` went second, and it is the quiet one. The same two corpora: 23
+findings in 167 files of the standard library, **none at all** in 176
+hand-written files of the adopting project. All 23 were read, not sampled, and
+none is a misread. Seven are the idiom used knowingly rather than by accident —
+a private sentinel compared by identity, a dict default that is deliberately the
+cache, a list default capturing a value for a closure — and each of those has a
+clearer spelling than the one it uses. That is the line this project draws: the
+rule is judged on whether it is decidable and hands back a legal spelling, not on
+whether every hit is a live bug.
+
+What it deliberately does not do is fire on every call in a default position.
+`def f(t=datetime.now())` has the same underlying cause — the default is built
+once at definition — but a rule that fires on every constructor would be blunt
+where this one is decidable. That is a separate rule if it is ever wanted, and
+naming the boundary here is cheaper than rediscovering it.

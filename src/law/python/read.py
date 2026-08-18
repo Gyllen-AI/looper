@@ -4,6 +4,12 @@ import sys
 
 BARE_EXCEPT = "PY-ERROR:1"
 
+MUTABLE_DEFAULT = "PY-TRUTH:1"
+
+MUTABLE_BUILDERS = frozenset(
+    {"list", "dict", "set", "bytearray", "defaultdict", "Counter", "deque", "OrderedDict"}
+)
+
 
 def does_nothing(body):
     for statement in body:
@@ -16,13 +22,41 @@ def does_nothing(body):
     return True
 
 
+def builder_name(call):
+    if isinstance(call.func, ast.Name):
+        return call.func.id
+    if isinstance(call.func, ast.Attribute):
+        return call.func.attr
+    return ""
+
+
+def is_mutable_default(node):
+    if isinstance(node, (ast.List, ast.Dict, ast.Set)):
+        return True
+    if isinstance(node, ast.Call):
+        return builder_name(node) in MUTABLE_BUILDERS
+    return False
+
+
+def defaults_of(node):
+    given = list(node.args.defaults)
+    for held in node.args.kw_defaults:
+        if held is not None:
+            given.append(held)
+    return given
+
+
 def violations_in(tree):
     found = []
     for node in ast.walk(tree):
-        if not isinstance(node, ast.ExceptHandler):
+        if isinstance(node, ast.ExceptHandler):
+            if node.type is None or does_nothing(node.body):
+                found.append({"rule": BARE_EXCEPT, "line": node.lineno})
             continue
-        if node.type is None or does_nothing(node.body):
-            found.append({"rule": BARE_EXCEPT, "line": node.lineno})
+        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.Lambda)):
+            for given in defaults_of(node):
+                if is_mutable_default(given):
+                    found.append({"rule": MUTABLE_DEFAULT, "line": given.lineno})
     return found
 
 

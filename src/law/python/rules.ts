@@ -16,4 +16,18 @@ export const PYTHON_RULES: readonly Rule[] = [
     ],
     valve: { kind: "none" },
   },
+  {
+    id: "PY-TRUTH:1",
+    category: "TRUTH",
+    pass: "fast",
+    bans: "a default argument that is a mutable container — `[]`, `{}`, `set()`, `list()`, `dict()`",
+    why:
+      "the default is built once, when the function is defined, not each time it is called. Every caller that leaves the argument out is handed the same list, so one call's append is still there on the next call, and the wrong answer appears far from the line that caused it. It reads as a fresh empty list to everyone who has not been bitten by it",
+    instead: [
+      "`def add(item, items=None): items = [] if items is None else items`",
+      "a tuple or a frozenset if it never changes: `def name(names: tuple[str, ...] = ())`",
+      "on a dataclass, `field(default_factory=list)`, which is called once per instance",
+    ],
+    valve: { kind: "none" },
+  },
 ];

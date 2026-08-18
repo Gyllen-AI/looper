@@ -22,7 +22,36 @@ is a suspicion and belongs in the notes at the bottom, not in the list.
 
 ## Open
 
-_Empty. Findings 41 to 78 are closed._
+_Empty. Findings 41 to 79 are closed._
+
+### 79 · the mutable default argument, Python's oldest trap — cleared
+
+2026-08-18, the second Python rule. `def add(item, items=[])` builds that list
+once, when the function is defined, so every caller who leaves the argument out
+shares it and one call's append is still there on the next. It reads as a fresh
+empty list to everyone who has not been bitten by it.
+
+Thirteen cases first, from the ban text. Fires on a list, dict or set written
+out, on `list()`, `dict()` and `set()`, on a method argument and on a
+keyword-only one. Silent on `None`, which is the legal spelling; on a tuple, a
+number, a string and a `frozenset`, none of which can be changed; on a list built
+inside the body; and on a name used as a default, which the rule cannot see into
+and does not guess about.
+
+**Both corpora, again.** 23 findings in 167 files of Python's own standard
+library. **None at all** in 176 hand-written files of the adopting project — this
+rule is silent on real application code. All 23 were read rather than sampled and
+none is a misread. Seven are the idiom used knowingly: `copy.deepcopy`'s
+`_nil=[]` is a sentinel compared by identity, `pkgutil`'s `m={}` is deliberately
+the cache, `cgitb`'s `lnum=[lnum]` captures a value for a closure, `difflib`
+keeps a counter across calls. Each has a clearer spelling than the one it uses,
+which is the line this project draws: a rule is judged on whether it is decidable
+and hands back a legal spelling, not on whether every hit is a live bug.
+
+**What it deliberately does not do.** `def f(t=datetime.now())` has the same
+cause — the default is built once at definition — but firing on every call in a
+default position would be blunt where this is decidable. Named here as a separate
+rule if it is ever wanted, so the boundary is not rediscovered later.
 
 ### 78 · Python is read, one rule deep — cleared
 
