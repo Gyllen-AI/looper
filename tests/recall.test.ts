@@ -1,11 +1,12 @@
 import { first } from "./helpers.ts";
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, utimesSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
 import { INJECTION_BUDGET, RECALL_TOOL } from "../src/config.ts";
+import { abandonedBefore } from "../src/atomic.ts";
 import { Recall } from "../src/recall/capability.ts";
 import { forget, matching, parseNotes, readNotes, remember } from "../src/recall/store.ts";
 
@@ -221,6 +222,65 @@ test("a note deleted for being wrong does not survive in a file beside it", () =
       false,
       "the note somebody deleted because it was wrong survived in a committed file one filename away, and it is the copy a future reader has no reason to distrust",
     );
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test("only a lock that was already dead when we arrived is swept", () => {
+  const arrived = 1_000_000;
+
+  assert.equal(
+    abandonedBefore(arrived, arrived),
+    false,
+    "a lock written at the moment we arrived was called abandoned. Nothing that happens while we wait may make a live holder's lock look dead, or two writers end up on one file.",
+  );
+  assert.equal(
+    abandonedBefore(arrived + 60_000, arrived),
+    false,
+    "a lock written after we arrived was called abandoned, which is a clock reading nobody can defend",
+  );
+  assert.equal(
+    abandonedBefore(arrived - 6_000, arrived),
+    true,
+    "a lock already six seconds old when we arrived was not swept, so one crashed process wedges recall until somebody deletes the file by hand",
+  );
+});
+
+test("waiting for a live lock never steals it, however slow the wait turns out to be", () => {
+  const root = scratch();
+  const path = join(root, ".looper", "recall.md");
+  try {
+    mkdirSync(join(root, ".looper"), { recursive: true });
+    const lock = `${path}.looper-lock`;
+    writeFileSync(lock, "");
+
+    const written = remember(root, { learned: "2026-08-18", summary: "lost", body: "x" });
+
+    assert.equal(written.kind, "busy");
+    assert.ok(
+      existsSync(lock),
+      "the lock of a process still holding it was deleted. On a loaded macOS runner the 1 second wait took 5.3 seconds, which was long enough for the old check to read a live lock as five seconds old and take it.",
+    );
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test("a lock left behind by a process that died is swept, and the write goes through", () => {
+  const root = scratch();
+  const path = join(root, ".looper", "recall.md");
+  try {
+    mkdirSync(join(root, ".looper"), { recursive: true });
+    const lock = `${path}.looper-lock`;
+    writeFileSync(lock, "");
+    const longAgo = new Date(Date.now() - 60_000);
+    utimesSync(lock, longAgo, longAgo);
+
+    const written = remember(root, { learned: "2026-08-18", summary: "after the crash", body: "x" });
+
+    assert.equal(written.kind, "added", "a lock nobody holds any more locked recall out for good");
+    assert.equal(existsSync(lock), false, "the dead lock was left on disk to be swept again next time");
   } finally {
     rmSync(root, { recursive: true, force: true });
   }

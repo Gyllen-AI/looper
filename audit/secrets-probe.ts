@@ -6,10 +6,6 @@ type Probe = {
   readonly expect: "caught" | "quiet";
 };
 
-// The vendor-shaped values are assembled at run time rather than written whole, the
-// way tests/secrets.test.ts does it. A file of realistic keys is indistinguishable from
-// a file of real ones to a scanner, and GitHub's push protection refused this very
-// commit until they were split.
 const NOTHING_ALLOWED = new Set<string>();
 
 const PROBES: readonly Probe[] = [

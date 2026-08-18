@@ -22,9 +22,9 @@ export type Held =
 
 const LOCK_SUFFIX = ".looper-lock";
 
-const LOCK_TRIES = 50;
-
 const LOCK_WAIT_MS = 20;
+
+const LOCK_PATIENCE_MS = 1000;
 
 const LOCK_STALE_MS = 5000;
 
@@ -42,16 +42,21 @@ function takeLock(path: string): boolean {
   }
 }
 
-function isStale(path: string): boolean {
+export function abandonedBefore(lockWrittenMs: number, arrivedMs: number): boolean {
+  return arrivedMs - lockWrittenMs > LOCK_STALE_MS;
+}
+
+function leftBehind(path: string, arrivedMs: number): boolean {
   if (!existsSync(path)) return false;
-  return Date.now() - statSync(path).mtimeMs > LOCK_STALE_MS;
+  return abandonedBefore(statSync(path).mtimeMs, arrivedMs);
 }
 
 export function withLock(path: string, body: () => void): Held {
   mkdirSync(dirname(path), { recursive: true });
   const lock = `${path}${LOCK_SUFFIX}`;
+  const arrived = Date.now();
 
-  for (let tries = 0; tries < LOCK_TRIES; tries += 1) {
+  do {
     if (takeLock(lock)) {
       try {
         body();
@@ -60,13 +65,13 @@ export function withLock(path: string, body: () => void): Held {
       }
       return { kind: "held" };
     }
-    if (isStale(lock)) unlinkSync(lock);
-    sleep(LOCK_WAIT_MS);
-  }
+    if (leftBehind(lock, arrived)) unlinkSync(lock);
+    else sleep(LOCK_WAIT_MS);
+  } while (Date.now() - arrived < LOCK_PATIENCE_MS);
 
   return {
     kind: "busy",
-    why: `${lock} was held by another looper for ${(LOCK_TRIES * LOCK_WAIT_MS) / 1000} seconds`,
+    why: `${lock} was held by another looper for ${LOCK_PATIENCE_MS / 1000} seconds`,
   };
 }
 

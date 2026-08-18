@@ -22,7 +22,28 @@ is a suspicion and belongs in the notes at the bottom, not in the list.
 
 ## Open
 
-_Empty. Findings 41 to 72 are closed._
+_Finding 74. Findings 41 to 73 are closed._
+
+### 74 · `blunt` — a file of deliberately key-shaped fixtures has no legal spelling
+
+Raised while fixing finding 73, on 2026-08-18, and left open on purpose.
+
+`audit/secrets-probe.ts` exists to hold eighteen shapes the commit gate must or
+must not catch, so it is a file of realistic keys by design. The values are
+assembled at run time from two halves, because a file of whole ones is
+indistinguishable from a file of real ones to any scanner and GitHub's push
+protection refuses it. Touching any of those lines re-adds them to the diff and
+the gate refuses the commit on six.
+
+Both routes the refusal names are closed here. `.looper/secrets.allow` wants the
+exact value, which is the one thing the splitting avoids. The inline
+`looper:allow-secret` marker is a comment, and `TS-DEAD:2` bans comments in this
+repo. A stricter reading with no compliant path is broken rather than strict,
+which is this project's own standard, so the gate owes that file a spelling.
+
+Not fixed yet, and worked around by keeping the diff off those lines. What it
+costs today is that a name cannot carry why the halves are split, so the reason
+lives in a commit message and here.
 
 ## The second audit — what it covered and what it found
 
@@ -68,6 +89,36 @@ tested, and every one was tested the way it was built rather than the way it
 will be used.
 
 ## Cleared
+
+### 73 · `wrong` — the wait for a lock could outlast the lock's own life, and steal it — cleared
+
+Caught by CI on the macOS runner of 2026-08-18, run 32119159687, and it is not a
+macOS fault. `withLock` waited fifty tries of twenty milliseconds — one second —
+but decided a lock was abandoned when the file was more than five seconds old,
+measured against the clock at the moment it looked. On a loaded runner the sleeps
+overshot and that one-second wait took 5,300 milliseconds, so the waiting process
+pushed the clock past the threshold itself, read a lock a live process was still
+holding as dead, deleted it and took it. Two writers on one file, which is the
+loss adopter issue #29 was filed about, arriving through the fix for it.
+
+The lock is now judged against the moment we arrived, which nothing that happens
+while we wait can move. A lock already stale when we got there is still swept —
+that is the crashed-holder path and it stays open — but one taken while we wait
+is never ours to break, and the wait is a wall clock of one second rather than a
+count of sleeps that can each run long.
+
+Reproduced without needing a loaded machine: a holder that took the lock 4,900
+milliseconds ago is alive, and the old code crosses five seconds inside its own
+one-second wait.
+
+```
+holder took the lock 4.9 seconds ago and is still alive
+  old code: held  lockStillThere=false fileWritten=true
+  new code: busy  lockStillThere=true  fileWritten=false
+```
+
+Two tests hold it: the sweep decision as arithmetic against arrival, and a live
+lock surviving the whole wait. 401 tests pass.
 
 ### 72 · `wrong` — a promise given a name and then abandoned was not a floating promise — cleared
 

@@ -112,14 +112,15 @@ function startedBy(expression: unknown): string | null {
   return held === null ? null : startedBy(held.on);
 }
 
+function beneathVoid(expression: unknown): unknown {
+  const thrownAway =
+    fieldAt(expression, "type") === "UnaryExpression" && fieldAt(expression, "operator") === "void";
+  return thrownAway ? fieldAt(expression, "argument") : expression;
+}
+
 function droppedCallName(node: Node): string | null {
   if (node.type !== "ExpressionStatement") return null;
-  let expression = node["expression"];
-  // `void save(order)` throws the promise away without saying what happens when it
-  // fails, which is the harm this rule names, not a way out of it
-  if (fieldAt(expression, "type") === "UnaryExpression" && fieldAt(expression, "operator") === "void") {
-    expression = fieldAt(expression, "argument");
-  }
+  const expression = beneathVoid(node["expression"]);
   if (saysWhatHappensOnFailure(expression)) return null;
   return startedBy(expression);
 }
