@@ -10,7 +10,7 @@ import { trackedFiles } from "./git.ts";
 import { relative } from "node:path";
 import { isHookEvent, type Payload } from "./capability.ts";
 import { DEV, INJECTION_BUDGET, namedProject, projectRoot, searchPath, type Invocation } from "./config.ts";
-import { costLines, describeStep, mapComplaints } from "./announce.ts";
+import { AFTER_INIT, costLines, describeStep, mapComplaints } from "./announce.ts";
 import { reachedFrom, runInit, type Report, type Step } from "./init.ts";
 import { totalIn, readBaseline } from "./law/baseline.ts";
 import { formatReport } from "./law/report.ts";
@@ -61,11 +61,7 @@ function readMessage(path: string | undefined): Payload {
 function printReport(report: Report): void {
   const lines = ["looper init:"];
   for (const step of report.steps) lines.push(...describeStep(step));
-  lines.push(
-    "  looper's own rules are already in force. .looper/doctrine/constitution.md",
-    "  is empty and costs nothing until you write a line; read the README beside",
-    "  it to see what belongs there.",
-  );
+  lines.push(...AFTER_INIT);
   console.log(lines.join("\n"));
 }
 

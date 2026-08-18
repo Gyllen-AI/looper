@@ -9,6 +9,15 @@ import type { Step } from "./init.ts";
 
 const DOCTRINE_PREFIX = "doctrine:";
 
+export const AFTER_INIT: readonly string[] = [
+  "  If an agent session is already open in this project, restart it. The hooks",
+  "  above were written just now, and a session that started before that does not",
+  "  have them: it will look completely normal and check nothing at all.",
+  "  From the next session on, looper's own rules are in force.",
+  "  .looper/doctrine/constitution.md is empty and costs nothing until you write a",
+  "  line; read the README beside it to see what belongs there.",
+];
+
 export function describeStep(step: Step): readonly string[] {
   if (step.kind === "created") {
     return [

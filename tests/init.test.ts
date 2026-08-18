@@ -1,6 +1,7 @@
 import { test } from "node:test";
 import { DEV, INSTALLED, LOCAL, PROJECT_DIR, gitHookEntryFor, inside, launchFor, looperHooks, projectRoot } from "../src/config.ts";
 import { reachedFrom } from "../src/init.ts";
+import { AFTER_INIT } from "../src/announce.ts";
 import assert from "node:assert/strict";
 import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync, mkdirSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -283,4 +284,17 @@ test("a backup is left only where somebody was told about it", () => {
   } finally {
     rmSync(root, { recursive: true, force: true });
   }
+});
+
+test("init says that a session already open will not have the hooks", () => {
+  const said = AFTER_INIT.join("\n");
+
+  assert.ok(
+    said.includes("restart"),
+    "the hooks are written into a file an open session read when it started, so nothing is checked in that session and everything looks normal — which is the one failure init exists to prevent, and it said the rules were already in force",
+  );
+  assert.ok(
+    said.includes("check nothing"),
+    "telling somebody to restart without saying what happens if they do not leaves it sounding optional",
+  );
 });
