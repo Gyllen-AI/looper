@@ -22,7 +22,68 @@ is a suspicion and belongs in the notes at the bottom, not in the list.
 
 ## Open
 
-_Empty. Findings 41 to 96 are closed._
+_Empty. Findings 41 to 97 are closed._
+
+### 97 · `missing` — the doctrine named `.catch(() => {})` twice and no rule caught it — cleared
+
+2026-08-18, adopter issue #45. The `law` rule set, injected on every turn in a
+TypeScript project, says an empty `catch` and a `.catch(() => {})` both delete the
+evidence, and names `.catch(() => 0)` beside it. `TS-ERROR:4` walked for
+`CatchClause` and nothing else, so the statement form fired and the method form
+did not. The adopter counted 19 in one console, 12 of them in a single file, in a
+file that reports 630 problems from other rules — so this was not a codebase
+looper was quiet about, it was this shape.
+
+**The fix.** An inline `.catch(handler)` body is the same thing as a catch clause
+and faces the same two questions: does it observe the failure through a blessed
+logger, and does the failure escape it.
+
+**Two boundaries, both measured rather than assumed.**
+
+`.catch(handleIt)`, where the handler is a name, is not judged. The body is not
+there to read, and firing on it would be a verdict on code the rule cannot see.
+
+A handler whose only act is making up a value belongs to `TS-ERROR:3`. The issue
+reported `.catch(() => 0)` and `.catch(() => null)` as also unreported; that part
+is wrong, and the probe that shows it:
+
+```
+2  return work().catch(() => []);        TS-ERROR:3
+3  return work().catch(() => 0);         TS-ERROR:3
+4  return work().catch(() => null);      TS-ERROR:3
+5  return work().catch(() => ({}));      TS-ERROR:3
+6  work().catch(() => {});               TS-ERROR:4
+7  work().catch(() => { done(); });      TS-ERROR:4
+8  work().catch(() => other());          TS-ERROR:4
+9  work().catch((c) => { throw new W(c); })   silent in both
+```
+
+Without that boundary the first four carried two verdicts for one problem. No line
+carries two now.
+
+**Run over code nobody here wrote,** which is what this repo's own `node_modules`
+cannot supply: it holds 0 TypeScript sources outside declarations. The corpus is
+npm's own global install under Node 24.19.0 — 1,122 `.js` files across ten
+packages, all read, none unreadable. They were handed to the TypeScript reader
+because this shape is plain JavaScript and the parser accepts it; `.js` is not yet
+judged by an ordinary run, which is issue #46.
+
+| | before | after |
+|---|---|---|
+| violations, all rules | 28,496 | 28,543 |
+
+**47 newly reported, 0 lost.** Judged one at a time: every one is a `.catch`
+handler that takes no parameter, so not one of them could have looked at what
+failed. **No false positives.** 26 of the 47 are `lru-cache`, which ships eight
+build variants of the same source, and 13 of those land on minified one-line
+bundles where the line number names the file rather than a place in it — a real
+hit with a location that cannot be sharper on a bundle.
+
+Before the `TS-ERROR:3` boundary the same corpus gave 86, so 39 of those were the
+double-count.
+
+**On this repo:** 7 hits, all the pre-existing `catch {}` clause form already in
+the baseline, and no `.catch` handler anywhere in looper's own source.
 
 ### 96 · `noise` — `looper law` exited 2 for problems it had just said do not block — cleared
 

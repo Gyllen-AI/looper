@@ -10,13 +10,14 @@ export const VANISHED_ERROR: Rule = {
   category: "ERROR",
   pass: "fast",
   bans:
-    "catching an error and doing nothing with it — an empty `catch {}`, or a catch that never looks at what it caught",
+    "catching an error and doing nothing with it — an empty `catch {}`, a catch that never looks at what it caught, or a `.catch(() => {})` handler written inline that never looks at what it caught",
   why:
     "a failure nobody hears about is a bug that gets reported months later as 'it was just slow that week'. There are three ways out of a catch and no fourth: throw it on, hand it to the caller, or log it and recover in the open",
   instead: [
     "catch (cause) { throw new CouldNotRead(path, cause) }",
     "catch (cause) { return { kind: 'unreadable', detail: String(cause) } }",
     "catch (cause) { logger.warn({ cause }, 'cache unreadable, counting again'); return count(source) }",
+    ".catch((cause) => { throw new CouldNotSave(id, cause) })",
   ],
   valve: {
     kind: "knob",
@@ -140,6 +141,58 @@ function observesWithin(
   return found;
 }
 
+const HANDLER_SHAPES: readonly string[] = ["ArrowFunctionExpression", "FunctionExpression"];
+
+function inlineHandlerOf(node: Node): Node | null {
+  const callee = node["callee"];
+  if (fieldAt(callee, "type") !== "MemberExpression") return null;
+  if (fieldAt(fieldAt(callee, "property"), "name") !== "catch") return null;
+  const given = node["arguments"];
+  if (!Array.isArray(given) || given.length !== 1) return null;
+  const handler: unknown = given[0];
+  if (!isNode(handler)) return null;
+  if (!HANDLER_SHAPES.includes(handler.type)) return null;
+  return handler;
+}
+
+function firstParameterName(handler: Node): string | null {
+  const params = handler["params"];
+  if (!Array.isArray(params) || params.length === 0) return null;
+  const first: unknown = params[0];
+  if (!isNode(first) || first.type !== "Identifier") return null;
+  const name = fieldAt(first, "name");
+  return typeof name === "string" ? name : null;
+}
+
+const A_MADE_UP_VALUE: readonly string[] = [
+  "StringLiteral",
+  "NumericLiteral",
+  "BooleanLiteral",
+  "NullLiteral",
+  "TemplateLiteral",
+  "ArrayExpression",
+  "ObjectExpression",
+];
+
+function answersWithAMadeUpValue(handler: Node): boolean {
+  const body = handler["body"];
+  if (!isNode(body)) return false;
+  if (body.type !== "BlockStatement") return A_MADE_UP_VALUE.includes(body.type);
+  const statements = body["body"];
+  if (!Array.isArray(statements) || statements.length !== 1) return false;
+  const only: unknown = statements[0];
+  if (!isNode(only) || only.type !== "ReturnStatement") return false;
+  const answer = only["argument"];
+  return isNode(answer) && A_MADE_UP_VALUE.includes(answer.type);
+}
+
+function handlerLetsItOut(handler: Node, caught: string): boolean {
+  const body = handler["body"];
+  if (!isNode(body)) return false;
+  if (body.type === "BlockStatement") return escapesFrom(body, caught);
+  return mentions(body, carriedNames(body, caught));
+}
+
 export const vanishedErrorCheck: Check = {
   rule: VANISHED_ERROR,
 
@@ -151,6 +204,18 @@ export const vanishedErrorCheck: Check = {
     const found: Finding[] = [];
 
     walk(parsed.root, (node) => {
+      if (node.type === "CallExpression") {
+        const handler = inlineHandlerOf(node);
+        if (handler === null) return;
+        if (answersWithAMadeUpValue(handler)) return;
+        const handlerBody = handler["body"];
+        if (!isNode(handlerBody)) return;
+        if (observesWithin(handlerBody, bindings, concessions.traceSymbols)) return;
+        const given = firstParameterName(handler);
+        if (given !== null && handlerLetsItOut(handler, given)) return;
+        found.push({ line: lineOfNode(handler) });
+        return;
+      }
       if (node.type !== "CatchClause") return;
       const body = node["body"];
       if (!isNode(body)) return;

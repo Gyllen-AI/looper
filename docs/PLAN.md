@@ -594,7 +594,7 @@ leaves the agent with nowhere to go.
 | `TS-ERROR:1` | a floating promise — a fallible call in statement position, never awaited | rewritten, and **not decidable from one file** — it runs on the slow pass, see below |
 | `TS-ERROR:2` | a discarded payload: `catch {}` binding nothing, `catch (e)` where `e` is never read, `.catch(() => …)` taking no parameter | rewritten — **not built yet** |
 | `TS-ERROR:3` | a catch arm fabricating a value: `catch { return null }`, `return []`, `return {}`, `.catch(() => [])` | carries in full, and it is **the highest-value rule in the set for TypeScript** — the dominant failure in agent-written code, and precisely syntax-decidable |
-| `TS-ERROR:4` | a caught error neither rethrown, propagated, nor observed | carries in full, with the provenance check on the blessed symbol: `logger.warn` / `logger.error` resolved through a real import of a real dependency in `package.json`, not shadowed by a local binding |
+| `TS-ERROR:4` | a caught error neither rethrown, propagated, nor observed, in a `catch` clause or in an inline `.catch(...)` handler | carries in full, with the provenance check on the blessed symbol: `logger.warn` / `logger.error` resolved through a real import of a real dependency in `package.json`, not shadowed by a local binding |
 | `TS-ERROR:5` | a project missing its deputy compiler options | rewritten, and it changes shape: the deputies are `tsconfig.json` settings rather than crate-root attributes, so the rule fires on the project, not on the file — **not built yet** |
 | `TS-ERROR:6` | an `async` callback passed to `forEach` | rewritten and narrowed. The ancestor's target (a fallible absorbed by iteration) has no TypeScript form, but `forEach(async …)` silently drops every promise it makes, is a guaranteed bug, and is decidable |
 | — | a caught unwind | moved to the `NODE` pack: the TypeScript form is `process.on('uncaughtException' \| 'unhandledRejection')` swallowing, which is server-side only |
@@ -1198,6 +1198,23 @@ project's. Absent, it is added. Equal, nothing is said. Different, those two
 fields are replaced, the previous file is kept beside it, and init prints what the
 entry was launching and what it launches now, because a repair nobody is told
 about is the same silence as the stale entry.
+
+**The rule reached one of the two places a failure is caught. Corrected
+2026-08-18, from adopter issue #45, finding 97.** `TS-ERROR:4` walked for
+`CatchClause` and nothing else, so `.catch(() => {})` — named twice in the `law`
+rule set that is injected on every turn in a TypeScript project — was caught by
+nothing. The adopter counted 19 of them in one console, 12 in a single file,
+none reported, in a file that reports 630 problems from other rules.
+
+A `.catch(handler)` body is the same thing as a catch clause: a place that
+receives the failure. It faces the same two questions the clause already faced —
+does the body observe the failure through a blessed logger, and does the failure
+escape the body. Two boundaries keep it decidable. A handler that is a bare name,
+`.catch(handleIt)`, is not judged, because its body is not there to read. And a
+handler whose only act is making up a value belongs to `TS-ERROR:3`, which
+already had it: measured, that rule fires on `.catch(() => 0)`, `null`, `false`,
+`[]` and `({})` in both the concise and block spellings, so without that boundary
+one problem was reported twice.
 
 **Init checks that the command it just wrote can actually be found. Added
 2026-08-18, from adopter issue #8.** `reachedFrom` knew two shapes, installed and
