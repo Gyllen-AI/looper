@@ -12,7 +12,7 @@ export type Mismatch = {
 
 export type Judged = {
   readonly mismatches: readonly Mismatch[];
-  readonly known: readonly Mismatch[];
+  readonly notFixedYet: readonly Mismatch[];
 };
 
 const MANIFEST = `[package]
@@ -43,7 +43,7 @@ export function judgeCases(cases: readonly RustCase[]): Judged {
 
     const said = judgeRustIn(crate, cases.map((_, at) => join(crate, "src", fileFor(at))));
     const mismatches: Mismatch[] = [];
-    const known: Mismatch[] = [];
+    const notFixedYet: Mismatch[] = [];
 
     for (const [at, held] of cases.entries()) {
       const fired = said.violations.some(
@@ -51,10 +51,10 @@ export function judgeCases(cases: readonly RustCase[]): Judged {
       );
       const got = fired ? "fires" : "silent";
       if (got === held.expect) continue;
-      if (held.upstream === undefined) mismatches.push({ held, got });
-      else known.push({ held, got });
+      if (held.notFixedYet === undefined) mismatches.push({ held, got });
+      else notFixedYet.push({ held, got });
     }
-    return { mismatches, known };
+    return { mismatches, notFixedYet };
   } finally {
     rmSync(crate, { recursive: true, force: true });
   }
@@ -65,8 +65,8 @@ export function say(judged: Judged): readonly string[] {
     ...judged.mismatches.map(
       (one) => `${one.held.rule.padEnd(22)} ${one.held.name}  (wanted ${one.held.expect}, got ${one.got})`,
     ),
-    ...judged.known.map(
-      (one) => `known miss, upstream:  ${one.held.rule.padEnd(18)} ${one.held.name}`,
+    ...judged.notFixedYet.map(
+      (one) => `not fixed yet:  ${one.held.rule.padEnd(18)} ${one.held.name}`,
     ),
   ];
 }

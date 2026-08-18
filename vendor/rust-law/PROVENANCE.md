@@ -26,7 +26,11 @@ not built and has deliberately deferred, and the law engine does not depend on
 it: its dependencies are `syn`, `proc-macro2`, `serde` and `toml`, and nothing
 else.
 
-**What we changed in the copied source, 2026-08-18.** One attribute in
+**What we have changed in it.** This is our copy and it is ours to fix. Every
+change is listed here so that whoever copies a newer lawkeeper in knows what to
+put back, and `tests/invariants.test.ts` fails until they do.
+
+One attribute in
 `src/config.rs`: `#[serde(default, deny_unknown_fields)]` on `LawConfig` became
 `#[serde(default)]`. With it, any top-level table the engine does not own — the
 `[entry]` and `[ts]` sections looper's TypeScript half reads out of the same
@@ -34,10 +38,6 @@ file — made the engine reject the whole `law.toml`, and it failed as "could no
 read law.toml" rather than as anything naming the cause. The four
 `deny_unknown_fields` on the inner tables are untouched, because there a typo
 really is a concession nobody notices: `sanctm` is still refused by name.
-
-This is a change to somebody else's code and it has a price. Whoever copies a
-newer lawkeeper in must re-apply it, and `tests/invariants.test.ts` fails until
-they do, which is the only reason that price is payable.
 
 **The one line in the manifest that is ours.** `[workspace]`, empty, at the top
 of `Cargo.toml`. Without it, a looper checked out inside a Rust project is
@@ -66,10 +66,9 @@ directory is outside the law by default — it holds somebody else's code — an
 that file is inside it only because it has to compile with the crate. A test
 judges it anyway.
 
-**What we know it does not catch.** Found by the audit of 2026-08-17 and left
-alone on purpose. Patching vendored source means owning the change forever and
-conflicting with every future copy, so these are recorded here and belong
-upstream rather than in a local diff:
+**What it does not catch yet.** Found by the audit of 2026-08-17 and by an
+adopter on 2026-08-18. These are open work, listed in `docs/FINDINGS.md` like any
+other defect in what looper enforces:
 
 - `Err(_) => "".to_string()` — `ERROR:3` names `String::new()` and an empty
   collection; this is the same empty string, built differently.
@@ -95,11 +94,11 @@ into macros: `ERROR:1`, `TYPE:5`, `LOG:2` and `ERROR:7` scan tokens and keep
 working there. It is four rules matching on typed syntax that a macro's tokens
 never become.
 
-Three of the four are held as known misses in `audit/rust-cases.ts`, so the day
-they start firing the suite says so and the cases move into the ordinary set.
-They belong upstream, like the five above.
+Three of the four are held as cases in `audit/rust-cases.ts`, marked as not fixed
+yet, so the day they start firing the suite says so and the cases move into the
+ordinary set.
 
-**Updating it.** Nothing fetches this. If the upstream project fixes something
-worth having, someone copies the new source in by hand, deliberately, and says
-so in the commit. That is the price of never downloading anything, and it is
-paid on purpose.
+**Updating it.** Nothing fetches this. If lawkeeper gains something worth having,
+someone copies the new source in by hand, deliberately, re-applies the changes
+listed above, and says so in the commit. That is the price of never downloading
+anything, and it is paid on purpose.

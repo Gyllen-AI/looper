@@ -9,5 +9,5 @@ console.log(
   "\nRUST-ERROR:9 is judged on its own, because a file that will not parse stops the whole crate being read — which is the point of that rule and the reason it cannot share a crate with the others.",
 );
 console.log(
-  `\n${PARSES.length} cases, ${judged.mismatches.length} mismatches, ${judged.known.length} known misses`,
+  `\n${PARSES.length} cases, ${judged.mismatches.length} mismatches, ${judged.notFixedYet.length} not fixed yet`,
 );

@@ -20,9 +20,9 @@ test("the known misses are still missed, so the day they are fixed is visible", 
   const judged = judgeCases(PARSES);
 
   assert.equal(
-    judged.known.length,
-    PARSES.filter((held) => held.upstream !== undefined).length,
-    "a case marked as a known miss started passing. That is good news and it means the case belongs in the ordinary set now, with its upstream note removed.",
+    judged.notFixedYet.length,
+    PARSES.filter((held) => held.notFixedYet !== undefined).length,
+    "a case marked as not fixed yet started passing. That is good news and it means the case belongs in the ordinary set now, with its note removed.",
   );
 });
 

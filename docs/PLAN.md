@@ -2505,21 +2505,33 @@ the file states. The vendored engine keeps its own `LICENSE` and
 neither, and shipping 3,900 lines of somebody else's work without saying whose
 is a different thing from what the licence permits.
 
-**What may be changed in the vendored engine, and what may not. Settled
-2026-08-18, narrowing an earlier decision.** The first answer was: nothing. Five
-known gaps in the engine's rules were left as they are and written into
-`PROVENANCE.md`, because a diff against somebody else's judgement of what code
-should look like is an argument that has to be re-won against every future copy.
-That reasoning holds, and those five are still upstream's.
+**The vendored engine is ours to fix. Settled 2026-08-18, and this reverses a
+decision taken twice, so both halves are kept.**
 
-It stopped holding for the engine's plumbing. `LawConfig` refused any table it
-did not own, so the `[entry]` and `[ts]` sections looper's own TypeScript half
-asks a project to write took the entire Rust law down — a project broken to keep
-a copy pristine that nothing was refreshing. So the line is drawn between the
-two: **rule logic goes upstream, plumbing may be changed here**, each change
-named in `PROVENANCE.md` with a test that fails if a newer copy silently undoes
-it. Two changes exist under that rule today, the empty `[workspace]` table and
-that one attribute, and both are guarded in `tests/invariants.test.ts`.
+The first answer was: change nothing. Five known gaps in the engine's rules were
+left alone and written into `PROVENANCE.md`, on the reasoning that a diff against
+somebody else's judgement is an argument re-won against every future copy. That
+was narrowed the same week — plumbing here, rule logic upstream — when one
+attribute in the settings reader took the whole Rust law down for any project
+with a TypeScript entry point.
+
+Both versions rested on something that turned out not to be true: that upstream
+is a place work goes. Checked 2026-08-18 — the project has never had an issue
+opened on it by anybody, and the one change this project sent, on 14 August, is
+still open with no review and no comment. A policy that routes defects to a place
+where nothing happens does not protect a copy; it parks the defects and tells
+every contributor to go somewhere else with them.
+
+So: **this copy is ours, and it is fixed here like any other file.** The licence
+is 0BSD and permits it outright. Three things keep that honest. Every change we
+make is listed in `PROVENANCE.md`, so whoever copies a newer lawkeeper in knows
+what to re-apply. `tests/invariants.test.ts` fails if a re-copy silently drops
+one. And the gaps that used to be filed as "upstream's" are open work in
+`docs/FINDINGS.md`, counted like every other defect in what looper enforces.
+
+The attribution stays. It costs a paragraph, the licence asks for nothing, and a
+project whose whole claim is that it can be checked does not quietly absorb
+somebody else's engine.
 
 **What was checked rather than assumed.** The repository was scanned for every
 name that must not ship: no employer, no adopter, no personal path. The only

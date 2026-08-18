@@ -22,7 +22,18 @@ is a suspicion and belongs in the notes at the bottom, not in the list.
 
 ## Open
 
-_Empty. Every pass of both audits is closed, and findings 41 to 68 with them._
+**Nine gaps in the Rust engine, reopened as ours on 2026-08-18.** They were filed
+as upstream's and are not: see finding 36. Five from the audit of 2026-08-17 —
+`Err(_) => "".to_string()` reading as a fresh empty string, `panic!("not
+implemented yet")` beside `todo!`, `Option::unwrap` through an alias,
+`Command::new("printenv")` as an environment read, and `== Delimiter::None` read
+as `Option::None`. Four from adopter issue #19 — `TYPE:4`, `TRUTH:2`, `DEAD:3`
+and `LAYER:2` all going silent inside a macro argument, where four other rules
+see through perfectly well because they scan tokens rather than typed syntax.
+
+Three of the four macro cases are in `audit/rust-cases.ts` already, marked as not
+fixed yet, so the day one starts firing the suite says so. The other six want
+cases before they want code, which is the order `CONTRIBUTING.md` sets out.
 
 ## The second audit — what it covered and what it found
 
@@ -80,7 +91,8 @@ ban texts, run against the real engine by `audit/rust-judge.ts` and by the suite
 26 of 26 agree. Their four macro blind spots are held as cases marked as known
 misses, so the day one starts firing the suite says so; they are recorded in
 `vendor/rust-law/PROVENANCE.md` beside the five from finding 36, because rule
-logic goes upstream and that policy has not changed.
+logic went upstream at the time; that policy was dropped on 2026-08-18 and these
+are open work here.
 
 Writing the corpus turned up something their report did not have: a crate with
 one unparseable file had **every other file in it silently unjudged**. Only the
@@ -648,7 +660,7 @@ check now compares what each row *says* against what the rule it names *does*,
 not merely that both exist. It caught a missing row the moment the old table was
 deleted.
 
-### 36 and 33 · gaps in the vendored engine — closed as upstream, not patched
+### 36 and 33 · gaps in the vendored engine — reopened as ours, 2026-08-18
 
 Five known misses, all in code we did not write:
 `Err(_) => "".to_string()`, `panic!("not implemented yet")`, `Option::unwrap`
@@ -665,15 +677,16 @@ it does not catch, and they belong upstream.
 Three of the five are rare enough in real Rust to argue about. Two are one word
 from a spelling the rule already catches, and are worth an issue.
 
-**This was narrowed on 2026-08-18, by finding 51, and the reasoning above still
-stands for what it was about.** Rule logic is not patched here: a diff against
-somebody else's judgement of what code should look like is a permanent argument
-with every future copy, and these five stay upstream. What changed is that the
-engine's own plumbing — the settings reader, the manifest — may be changed when
-it is what stops a real project working, on the record and with a test that
-fails if a re-copy undoes it. The two categories are not the same size, and
-treating them as one kept a project broken to protect a copy nobody was
-refreshing.
+**Narrowed on 2026-08-18 by finding 51, then dropped the same day.** The
+narrowing was: plumbing may be changed here, rule logic goes upstream. The
+dropping was: upstream is not a place work goes. Checked that day — the project
+has never had an issue opened on it by anybody, and the one change sent from here
+on 14 August is still open with no review and no comment.
+
+So these five are open work rather than somebody else's, and the reasoning above
+is kept because it was right about the cost: a change to this copy has to be
+re-applied by whoever brings a newer one in. That is paid for by listing every
+change in `PROVENANCE.md` and by a test that fails if a re-copy drops one.
 
 
 ### 39 · every Rust edit blocked, told it was not TypeScript — cleared

@@ -3,7 +3,7 @@ export type RustCase = {
   readonly name: string;
   readonly code: string;
   readonly expect: "fires" | "silent";
-  readonly upstream?: string;
+  readonly notFixedYet?: string;
 };
 
 export const RUST_CASES: readonly RustCase[] = [
@@ -57,12 +57,12 @@ export const RUST_CASES: readonly RustCase[] = [
     code: `this is not rust {{{` },
 
   { rule: "RUST-TYPE:4", name: "a cast inside a macro argument", expect: "fires",
-    upstream: "the four rules below match on typed syntax, and a macro's arguments never become that",
+    notFixedYet: "these rules match on typed syntax, and a macro's arguments never become that",
     code: `pub fn f(n: u32) { println!("{}", n as u8); }` },
   { rule: "RUST-TRUTH:2", name: "an environment read inside a macro argument", expect: "fires",
-    upstream: "same shape as the cast above",
+    notFixedYet: "same shape as the cast above",
     code: `pub fn f() { println!("{:?}", std::env::var("HOME")); }` },
   { rule: "RUST-DEAD:3", name: "todo! inside a macro argument", expect: "fires",
-    upstream: "same shape as the cast above",
+    notFixedYet: "same shape as the cast above",
     code: `pub fn f() { println!("{}", todo!()); }` },
 ];
