@@ -1168,6 +1168,21 @@ under `mcpServers`, everything else untouched, the previous version kept beside
 it. Where the file cannot be parsed it is left exactly as it is and init prints
 the block to add, because a file we cannot read is not one we may rewrite.
 
+**Merging it in once is not the same as keeping it right. Corrected 2026-08-18,
+finding 94.** The merge above tested whether an entry named `looper` was present
+and stopped there, so the entry looper itself had written with a path that does
+not work was reported as `already wired, nothing to change` and stayed that way
+through the pin bump that fixed it. `mergeSettings` had never had this problem: it
+compares the command it wants against what the file holds and rewires when it is
+missing.
+
+So looper owns two fields of its own entry, `command` and `args`, and nothing
+else: every other key in that entry, and every other server in the file, is the
+project's. Absent, it is added. Equal, nothing is said. Different, those two
+fields are replaced, the previous file is kept beside it, and init prints what the
+entry was launching and what it launches now, because a repair nobody is told
+about is the same silence as the stale entry.
+
 **Init checks that the command it just wrote can actually be found. Added
 2026-08-18, from adopter issue #8.** `reachedFrom` knew two shapes, installed and
 `node_modules/.bin`, so a looper checked out inside the project fell through to

@@ -52,6 +52,20 @@ export function describeStep(step: Step): readonly string[] {
       ...backup,
     ];
   }
+  if (step.kind === "mcp-corrected") {
+    const backup =
+      step.backup.kind === "kept"
+        ? [`             your previous version is kept at ${step.backup.path}`]
+        : [];
+    return [
+      `  corrected  ${step.path} (looper's own entry only, everything else left alone)`,
+      step.was.kind === "read"
+        ? `             it was launching  ${step.was.line}`
+        : `             its entry could not be read as a launch`,
+      `             it now launches   ${step.now}`,
+      ...backup,
+    ];
+  }
   if (step.kind === "gate-wired") return [`  created  ${step.path}`];
   if (step.kind === "gate-already") {
     return [`  the ${step.hook} check was already in place`];
