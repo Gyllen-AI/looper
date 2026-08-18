@@ -22,7 +22,61 @@ is a suspicion and belongs in the notes at the bottom, not in the list.
 
 ## Open
 
-_Empty. Findings 41 to 104 are closed._
+_Empty. Findings 41 to 105 are closed._
+
+### 105 · `wrong` — init could add a hook but never repair its own — cleared
+
+2026-08-19, found by trying to apply finding 104's fix to this repo and watching
+it fail to arrive.
+
+Finding 104 moved every hook to `bin/looper.js`, the one entry that survives a
+broken import and can still tell the agent. That changed what `init` **writes**.
+It did nothing for a project already wired, and this repo is one: its
+`.claude/settings.json` still said
+
+```
+node "$CLAUDE_PROJECT_DIR/src/main.ts" hook PreToolUse
+```
+
+so the protection reached every future adopter and not the project that wrote it.
+The same session then broke its own imports again, and again only the human saw
+the hook errors.
+
+**Running `init` made it worse.** `mergeSettings` adds a hook beside whatever is
+already there and never over it, which is right for a hook the project wrote and
+wrong for a stale one of looper's own. Every event ended up with two:
+
+```
+PreToolUse: node ".../src/main.ts" hook PreToolUse
+            node ".../bin/looper.js" hook PreToolUse
+```
+
+looper ran twice on every tool call.
+
+This is finding 94 in a second place. That one taught `mergeMcp` that looper owns
+its own entry and nothing else; `mergeSettings` never learned it.
+
+**The fix.** looper recognises a hook it could have written — the same tail it
+writes, `inject` or `hook <Event>`, and a program ending in one of the four
+spellings it can produce, `bin/looper.js`, `src/main.ts`, `.bin/looper` or the
+bare `looper` — and replaces it. Anything else in that event is untouched, which
+the test checks by name.
+
+**And it says so**, because finding 94's other half was that a repair nobody is
+told about is the same silence as the stale entry:
+
+```
+merged .claude/settings.json (looper's own hooks were rewired; everything else was left alone)
+       wired  node ".../bin/looper.js" hook PreToolUse
+       replaced an older looper hook: node ".../src/main.ts" hook PreToolUse
+```
+
+One hook per event afterwards, verified by reading the file back.
+
+**A note on how it was found.** Writing the test pushed `tests/init.test.ts` to
+501 lines and the cap refused the commit — during a conversation about whether
+the cap earns its place. The tests for how looper wires itself moved to
+`tests/wiring.test.ts`, which is a subject of its own.
 
 ### 104 · `missing` — a broken looper announced itself to the human and not to the agent — cleared
 

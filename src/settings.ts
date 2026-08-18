@@ -128,8 +128,74 @@ function placedInGroups(
   return [...next, groupFor(spec)];
 }
 
+const OUR_ENTRY_ENDS: readonly string[] = [
+  "bin/looper.js",
+  "src/main.ts",
+  ".bin/looper",
+  "looper",
+];
+
+function tailOf(command: string): string {
+  const at = command.lastIndexOf('"');
+  return at === -1 ? command.slice(command.indexOf(" ") + 1) : command.slice(at + 1).trim();
+}
+
+function programOf(command: string): string {
+  const at = command.lastIndexOf('"');
+  if (at === -1) return command.split(" ")[0] === undefined ? "" : command.split(" ")[0];
+  const opened = command.indexOf('"');
+  return command.slice(opened + 1, at);
+}
+
+function isOneWeWrote(command: string, wanted: string): boolean {
+  if (tailOf(command) !== tailOf(wanted)) return false;
+  const program = programOf(command);
+  return OUR_ENTRY_ENDS.some((ending) => program.endsWith(ending));
+}
+
+function ourOlderHooksIn(groups: readonly JsonValue[], wanted: string): readonly string[] {
+  const found: string[] = [];
+  for (const group of groups) {
+    if (!isJsonObject(group)) continue;
+    const entries = group[HOOKS_KEY];
+    if (!isJsonArray(entries)) continue;
+    for (const entry of entries) {
+      if (!isJsonObject(entry)) continue;
+      const command = entry[COMMAND_KEY];
+      if (typeof command === "string" && command !== wanted && isOneWeWrote(command, wanted)) {
+        found.push(command);
+      }
+    }
+  }
+  return found;
+}
+
+function withoutOurOlderHooks(groups: readonly JsonValue[], wanted: string): readonly JsonValue[] {
+  const kept: JsonValue[] = [];
+  for (const group of groups) {
+    if (!isJsonObject(group)) {
+      kept.push(group);
+      continue;
+    }
+    const entries = group[HOOKS_KEY];
+    if (!isJsonArray(entries)) {
+      kept.push(group);
+      continue;
+    }
+    const held = entries.filter((entry) => {
+      if (!isJsonObject(entry)) return true;
+      const command = entry[COMMAND_KEY];
+      return !(typeof command === "string" && isOneWeWrote(command, wanted));
+    });
+    if (held.length === 0) continue;
+    kept.push({ ...group, [HOOKS_KEY]: held });
+  }
+  return kept;
+}
+
 function withHookWired(root: JsonObject, spec: HookSpec): JsonObject {
-  const groups = placedInGroups(eventGroups(root, spec.event), spec);
+  const standing = withoutOurOlderHooks(eventGroups(root, spec.event), spec.command);
+  const groups = placedInGroups(standing, spec);
   const existingHooks = root[HOOKS_KEY];
   const hooks: JsonObject = isJsonObject(existingHooks) ? existingHooks : {};
   return { ...root, hooks: { ...hooks, [spec.event]: groups } };
@@ -235,13 +301,17 @@ export function mergeSettings(
   let root: JsonObject = startedEmpty ? {} : parseSettings(existing.text);
 
   const wired: string[] = [];
+  const rewired: string[] = [];
   for (const spec of wanted) {
     if (carriesCommand(eventGroups(root, spec.event), spec.command)) continue;
+    for (const older of ourOlderHooksIn(eventGroups(root, spec.event), spec.command)) {
+      rewired.push(older);
+    }
     root = withHookWired(root, spec);
     wired.push(spec.command);
   }
 
   if (wired.length === 0) return { kind: "unchanged" };
-  if (startedEmpty) return { kind: "created", text: serialise(root), wired };
-  return { kind: "merged", text: serialise(root), wired };
+  if (startedEmpty) return { kind: "created", text: serialise(root), wired, rewired };
+  return { kind: "merged", text: serialise(root), wired, rewired };
 }
