@@ -2761,14 +2761,14 @@ the server it runs under is Uvicorn.
 
 ### The rules, named before they are written
 
-Seven, taken from the failure shapes this document already listed. Four are built:
+Seven, taken from the failure shapes this document already listed. Five are built:
 
 | rule | bans | state |
 |---|---|---|
 | `PY-ERROR:1` | a bare `except:`, and an `except` whose body does nothing — `pass` or `...` | built 2026-08-18 |
 | `PY-ERROR:2` | answering a failure with a made-up value inside an `except` | built 2026-08-18 |
 | `PY-ERROR:3` | `raise Exception(...)` where a named class belongs | **not built yet** |
-| `PY-TYPE:1` | a `# type: ignore` comment | **not built yet** |
+| `PY-TYPE:1` | `# type: ignore` on a line, `# mypy: ignore-errors` on a file | built 2026-08-18 |
 | `PY-TRUTH:1` | a default argument that is a mutable container | built 2026-08-18 |
 | `PY-TRUTH:2` | `assert` outside a test file, whatever it is checking | built 2026-08-18 |
 | `PY-LAYER:1` | a star import, which launders one namespace into another | **not built yet** |
@@ -2844,6 +2844,20 @@ carrying `# noqa: BLE001`. Two are worth naming: a command-line program that
 prints the problem and returns exit code 2. The caller genuinely can tell, so the
 rule owes that case a spelling rather than a refusal, and `raise SystemExit(2)`
 is it — honest from anywhere in the program, and it does not pretend to be data.
+
+`PY-TYPE:1` needed something the other four did not: a comment is thrown away by
+the syntax tree, so the reader runs Python's `tokenize` beside `ast`. Both are in
+the standard library, so the cost is still nothing. It is the quietest rule here
+and the most clearly right — 1 finding in 167 files of the standard library, 8 in
+176 hand-written files of the adopting project, all nine read, none a misread.
+Prose that merely mentions the marker stays silent, because the check reads the
+start of the comment rather than searching it.
+
+The eight are each an annotation that has stopped being true while still reading
+as though it were: a `Callable` assigned `None`, a union never narrowed, an
+attribute the type does not declare. One is the optional-import idiom,
+`ZoneInfo = None` under an `except ImportError`, and even that has an honest
+spelling in `ZoneInfo: type | None`.
 
 What `PY-TRUTH:1` deliberately does not do is fire on every call in a default position.
 `def f(t=datetime.now())` has the same underlying cause — the default is built

@@ -1,6 +1,8 @@
 import ast
+import io
 import json
 import sys
+import tokenize
 
 BARE_EXCEPT = "PY-ERROR:1"
 
@@ -9,6 +11,8 @@ MUTABLE_DEFAULT = "PY-TRUTH:1"
 ASSERT_AS_A_CHECK = "PY-TRUTH:2"
 
 MADE_UP_ANSWER = "PY-ERROR:2"
+
+SILENCED_CHECKER = "PY-TYPE:1"
 
 MUTABLE_BUILDERS = frozenset(
     {"list", "dict", "set", "bytearray", "defaultdict", "Counter", "deque", "OrderedDict"}
@@ -140,6 +144,27 @@ def violations_in(tree, in_a_test_file):
     return found
 
 
+def silences_the_checker(text):
+    said = text.lstrip("#").strip()
+    if said.startswith("type:"):
+        return said[len("type:") :].strip().startswith("ignore")
+    if said.startswith("mypy:"):
+        return "ignore-errors" in said
+    return False
+
+
+def silenced_lines(source):
+    found = []
+    reader = io.StringIO(source).readline
+    try:
+        for token in tokenize.generate_tokens(reader):
+            if token.type == tokenize.COMMENT and silences_the_checker(token.string):
+                found.append(token.start[0])
+    except (tokenize.TokenError, IndentationError, SyntaxError):
+        return found
+    return found
+
+
 def judge(path):
     with open(path, "r", encoding="utf-8") as handle:
         source = handle.read()
@@ -147,7 +172,9 @@ def judge(path):
         tree = ast.parse(source, filename=path)
     except SyntaxError as error:
         return {"unreadable": {"file": path, "detail": f"line {error.lineno}: {error.msg}"}}
-    hits = violations_in(tree, is_a_test_file(path))
+    hits = list(violations_in(tree, is_a_test_file(path)))
+    for line in silenced_lines(source):
+        hits.append({"rule": SILENCED_CHECKER, "line": line})
     return {"violations": [dict(hit, file=path) for hit in hits]}
 
 

@@ -61,4 +61,19 @@ export const PYTHON_RULES: readonly Rule[] = [
     ],
     valve: { kind: "none" },
   },
+  {
+    id: "PY-TYPE:1",
+    category: "TYPE",
+    pass: "fast",
+    bans: "`# type: ignore` on a line, and `# mypy: ignore-errors` on a file",
+    why:
+      "Python's annotations only mean something because a checker reads them, so silencing the checker is not a small local exception — it is the annotation on that line quietly ceasing to be true while still reading as though it were. The comment stays after the code around it changes, and the next person believes the annotation, because that is the part written in words they understand. `# mypy: ignore-errors` does it to a whole file at once",
+    instead: [
+      "make the annotation true: `def total(rows: list[int]) -> int:`",
+      "narrow it where the value arrives, and the checker stops complaining on its own: `if row is None: raise Missing()`",
+      "for something from outside, validate it into a Pydantic model and the type is earned rather than claimed",
+      "if the checker is genuinely wrong about a library, say so where that is true — a stub, or `[[tool.mypy.overrides]]` naming the module — rather than on your own line",
+    ],
+    valve: { kind: "none" },
+  },
 ];

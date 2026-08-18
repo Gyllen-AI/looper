@@ -67,9 +67,10 @@ Compiler settings are part of the stack, not a preference:
 
 An adopter ships Python behind a TypeScript front end, which is the condition
 `docs/PLAN.md` sets for reading a language at all. Seven rules are named there
-and four are built and enforced on every edit and every commit: the swallowed
-error, the made-up answer inside an `except`, the mutable default argument, and
-`assert` outside a test file. The other three are named and open.
+and five are built and enforced on every edit and every commit: the swallowed
+error, the made-up answer inside an `except`, the mutable default argument,
+`assert` outside a test file, and the silenced type checker. The other two are
+named and open.
 
 | job | tool |
 |---|---|

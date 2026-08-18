@@ -22,7 +22,34 @@ is a suspicion and belongs in the notes at the bottom, not in the list.
 
 ## Open
 
-_Empty. Findings 41 to 81 are closed._
+_Empty. Findings 41 to 82 are closed._
+
+### 82 · silencing the type checker, which is the annotation quietly ceasing to be true — cleared
+
+2026-08-18, the fifth Python rule and the quietest. Python's annotations only
+mean anything because a checker reads them, so `# type: ignore` is not a small
+local exception: it is that line's annotation ceasing to be true while still
+reading as though it were, to everyone who comes after.
+
+**It needed something the other four did not.** A comment is thrown away by the
+syntax tree, so the reader now runs Python's `tokenize` beside `ast`. Both are in
+the standard library, so the cost is still nothing at all.
+
+Seven cases first. Fires on `# type: ignore`, on `# type: ignore[arg-type]`, and
+on `# mypy: ignore-errors`, which does it to a whole file at once. Silent on the
+old-style `# type: int`, which says what a thing is rather than refusing to
+check; silent on an honest annotation; silent on a string containing the words;
+and silent on prose that merely mentions the marker, because the check reads the
+start of the comment rather than searching it.
+
+**Both corpora, and every hit read.** 1 in 167 files of the standard library, 8 in
+176 hand-written files of the adopting project. Nine of nine, none a misread. Each
+of the eight is an annotation that has stopped being true: a `Callable` assigned
+`None`, a union never narrowed, an attribute the declared type does not have, a
+variable reassigned to a different shape. One is the optional-import idiom —
+`ZoneInfo = None` under an `except ImportError` — and even that has an honest
+spelling in `ZoneInfo: type | None`, which is why the rule keeps its verdict and
+hands the spelling back instead.
 
 ### 81 · the made-up answer that hides a failure, in Python — cleared
 
