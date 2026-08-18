@@ -1268,6 +1268,14 @@ for, so a Python docstring is a string rather than a comment and prose inside on
 still counts. That is the deliberate limit, and it is the same one the adopter's
 own suggestion of "identifiers and string literals" would have drawn.
 
+**Every judging path asks what the file is first. Corrected 2026-08-18, issue
+#56, finding 102.** The commit gate was the one path that judged without a role,
+so a rule scoped to the backend half of a project applied to an interface file
+there and nowhere else. Which rules run is part of asking what a file is before
+asking what is wrong with it, and a gate that answers it differently from the
+survey is two laws wearing one name. The shape is read once per commit rather than
+once per file.
+
 **A file is read as bytes; only a list is read as lines. Corrected 2026-08-18,
 from adopter issue #44, finding 100.** One helper in `src/git.ts` ran git and
 returned `output.split("\n").filter((line) => line.length > 0)`. Dropping empty

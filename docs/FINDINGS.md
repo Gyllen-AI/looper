@@ -22,7 +22,45 @@ is a suspicion and belongs in the notes at the bottom, not in the list.
 
 ## Open
 
-_Empty. Findings 41 to 101 are closed._
+_Empty. Findings 41 to 102 are closed._
+
+### 102 · `wrong` — the commit gate judged by a different law than `looper law` — cleared
+
+2026-08-18, issue #56. Found while investigating finding 100 and deliberately not
+fixed with it, because it is a different defect and a fix without a failing test
+would only have agreed with itself.
+
+`judgeStaged` was the one judging path that never passed a role:
+
+```ts
+{ file: path, text: held.text }
+```
+
+The edit gate forty lines below passes `roleOf(shapeOf(root), relative)`, and so
+does the survey behind `looper law`. In `belongsHere`, `role === undefined` means
+**every** rule applies, including the ones scoped to one half of a project. Two
+rules declare `onlyFor: "backend"` — `NODE:1` and the injection rule — so on an
+interface file the commit gate applied them and `looper law` did not.
+
+The design says plainly that a rule about database queries never fires on a user
+interface that has no database. At commit time it did.
+
+**The fixture that was missing.** This went unfixed for a day because a faithful
+test needs a project where `roleOf` answers `interface`, and it was not obvious
+what makes one. `shapeOf` gives it: a `Cargo.toml` and a `package.json` whose
+dependencies declare no server framework reads as `mixed`, and a mixed project
+whose TypeScript declares no server is the interface.
+
+With that, the test states the invariant rather than the symptom — the gate and
+the survey reach the same rule ids for the same file — and it names what went
+wrong before the change:
+
+```
++   'NODE:1'
+```
+
+**The fix** passes the role, computing the shape once outside the loop rather than
+per file.
 
 ### 101 · `blunt` — arguing with a rule was refused over a word in a comment — cleared
 
