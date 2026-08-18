@@ -86,6 +86,19 @@ upstream rather than in a local diff:
 The last three are rare enough in real Rust to argue about. The first two are
 one word from a spelling the rule already catches.
 
+**Four more, found by an adopter and reproduced here, 2026-08-18.** `TYPE:4`
+(`as`), `TRUTH:2` (`std::env`), `DEAD:3` (`todo!`) and `LAYER:2` (a `crate::`
+path) all go silent inside a macro argument — `format!`, `assert_eq!`,
+`tracing::info!`, or any `macro_rules!` that passes its argument through. The
+same expression on its own line fires. It is not that a syntax reader cannot see
+into macros: `ERROR:1`, `TYPE:5`, `LOG:2` and `ERROR:7` scan tokens and keep
+working there. It is four rules matching on typed syntax that a macro's tokens
+never become.
+
+Three of the four are held as known misses in `audit/rust-cases.ts`, so the day
+they start firing the suite says so and the cases move into the ordinary set.
+They belong upstream, like the five above.
+
 **Updating it.** Nothing fetches this. If the upstream project fixes something
 worth having, someone copies the new source in by hand, deliberately, and says
 so in the commit. That is the price of never downloading anything, and it is

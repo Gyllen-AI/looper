@@ -52,7 +52,8 @@ paste it. If you are not, delete it and nothing has left your machine.
 Fork it. Then, in this order, because the order is the whole discipline:
 
 1. **Write the cases first, from the rule's own ban text**, in
-   `audit/cases.ts` — what must fire and what must stay silent. Before you touch
+   `audit/cases.ts` — or `audit/rust-cases.ts` for a Rust rule, which is judged
+   by the real engine in a temporary crate — what must fire and what must stay silent. Before you touch
    any code. A test written by reading the implementation can only ever agree
    with the implementation, which is how ten rules here shipped saying less than
    they did.

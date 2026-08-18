@@ -22,7 +22,7 @@ is a suspicion and belongs in the notes at the bottom, not in the list.
 
 ## Open
 
-_Empty. Every pass of both audits is closed, and findings 41 to 67 with them._
+_Empty. Every pass of both audits is closed, and findings 41 to 68 with them._
 
 ## The second audit — what it covered and what it found
 
@@ -68,6 +68,25 @@ tested, and every one was tested the way it was built rather than the way it
 will be used.
 
 ## Cleared
+
+### 68 · `missing` — nothing in `audit/` spoke Rust, and a crate died in silence — cleared
+
+Adopter issue #19, whose closing line is the finding: *the reason this went
+unnoticed is that nothing in `audit/` speaks Rust.* 156 cases, every one
+TypeScript, while 28 rules judge a Rust project.
+
+There is a Rust corpus now — `audit/rust-cases.ts`, written from the rules' own
+ban texts, run against the real engine by `audit/rust-judge.ts` and by the suite.
+26 of 26 agree. Their four macro blind spots are held as cases marked as known
+misses, so the day one starts firing the suite says so; they are recorded in
+`vendor/rust-law/PROVENANCE.md` beside the five from finding 36, because rule
+logic goes upstream and that policy has not changed.
+
+Writing the corpus turned up something their report did not have: a crate with
+one unparseable file had **every other file in it silently unjudged**. Only the
+bad file was named. That is finding 37's shape one level up — the per-file
+verdict was fixed, the per-crate silence was not — and `looper law` now says how
+many other files went unjudged with it.
 
 ### 67 · `wrong` — a note deleted for being wrong survived beside the corrected one — cleared
 

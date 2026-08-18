@@ -307,7 +307,7 @@ function withoutRepeatedOpening(detail: string): string {
 
 const COULD_NOT_PARSE = /could not read (\S+) as Rust: [^(]*\(line (\d+)\)/;
 
-function refusedCrate(root: string, detail: string): RustSaid {
+function refusedCrate(root: string, detail: string, files: readonly string[]): RustSaid {
   const held = COULD_NOT_PARSE.exec(detail);
   const known = rustRuleFor("ERROR:9");
   if (held === null || known.kind === "unknown") {
@@ -315,15 +315,22 @@ function refusedCrate(root: string, detail: string): RustSaid {
   }
   const file = required(held[1], "the file the Rust reader named");
   const line = Number(required(held[2], "the line the Rust reader named"));
+  const rest = files.filter((one) => relative(root, one) !== relative(root, file));
+
   return {
     violations: [{ rule: known.rule, file: relative(root, file), line }],
-    unreadable: [],
+    unreadable:
+      rest.length === 0
+        ? []
+        : [
+            `${rest.length} other file(s) in the same crate (the Rust reader stops at the crate, so nothing else in it was judged)`,
+          ],
   };
 }
 
 function judgedCrate(root: string, crate: string, files: readonly string[]): RustSaid {
   const said = judgeRust(looperRoot(), crate, []);
-  if (said.kind !== "found") return refusedCrate(root, said.detail);
+  if (said.kind !== "found") return refusedCrate(root, said.detail, files);
 
   const violations: Violation[] = [];
   const unknown: string[] = [];

@@ -1,2 +1,2 @@
 [entry]
-files = ["src/main.ts", "audit/evasion.ts", "audit/dup-scan.ts"]
+files = ["src/main.ts", "audit/evasion.ts", "audit/dup-scan.ts", "audit/rust-evasion.ts"]
