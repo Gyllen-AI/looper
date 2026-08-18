@@ -272,7 +272,7 @@ function law(asked: readonly string[]): number {
   if (survey.violations.length === 0) {
     if (survey.unreadable.length > 0) {
       console.log(
-        `looper: ${survey.files} files, and nothing to fix in the ones it could read. ${survey.unreadable.length} could not be read, named above — those were not judged at all, which is not the same as being clean.`,
+        `looper: ${survey.files} files, and nothing to fix in the ones it could read. ${survey.unjudged} could not be read, named above — those were not judged at all, which is not the same as being clean.`,
       );
       return 0;
     }

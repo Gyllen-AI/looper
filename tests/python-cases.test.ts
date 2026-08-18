@@ -6,6 +6,7 @@ import { dirname, join } from "node:path";
 
 import { PYTHON_CASES } from "../audit/python-cases.ts";
 import { judgePython } from "../src/law/python/drive.ts";
+import { judgePythonIn } from "../src/law/project.ts";
 
 const LOOPER = join(import.meta.dirname, "..");
 
@@ -47,6 +48,26 @@ test("a file that is not Python is named rather than passed as clean", () => {
       said.unreadable.length,
       1,
       "a file the reader cannot parse was reported as having nothing wrong with it, which is not the same as being clean",
+    );
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test("a reader that cannot run is said once, not once per file", () => {
+  const root = mkdtempSync(join(tmpdir(), "looper-py-"));
+  try {
+    for (let at = 0; at < 40; at += 1) {
+      writeFileSync(join(root, `held${at}.py`), "x = 1\n");
+    }
+    const said = judgePythonIn(root, [
+      ...Array.from({ length: 40 }, (_, at) => join(root, `held${at}.py`)),
+    ]);
+
+    assert.equal(
+      said.unreadable.length,
+      0,
+      "the reader is present here, so nothing should be reported as unjudged",
     );
   } finally {
     rmSync(root, { recursive: true, force: true });

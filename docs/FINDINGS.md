@@ -22,7 +22,49 @@ is a suspicion and belongs in the notes at the bottom, not in the list.
 
 ## Open
 
-_Empty. Findings 41 to 84 are closed._
+_Empty. Findings 41 to 85 are closed._
+
+### 85 · the Python half on a real project, and two defects only size could show — cleared
+
+2026-08-18. Every Python rule so far had been measured by running the reader
+directly over a list of files. That is not the same as adopting a project, and
+the difference showed two things immediately.
+
+**The corpus.** Python's own standard library, copied into a fresh repository and
+adopted properly: 2,767 `.py` files, 574 of them distinct and the rest duplicated
+to push the file count up.
+
+| what | number |
+|---|---|
+| `looper law` over 2,767 files | 4.7 seconds |
+| `looper init`, reading every file and building the baseline | 4.9 seconds |
+| problems recorded as outstanding | 2,050 |
+| length of the argument list to the reader | 56 KB against a 2 MB limit |
+
+**Defect one, and it was mine from this morning.** When the reader is missing,
+`judgePythonIn` named every unjudged file — which was right for one file and
+printed **2,770 identical lines** for a project. A missing reader is one failure
+about the whole run; a file that will not parse is a failure about that file. It
+says the count once now, and still names the file when there is only one.
+
+**Defect two came out of fixing the first.** The closing line counts what could
+not be read, and it was counting *notes* rather than files, so a grouped note
+turned 2,769 unjudged files into the number 3. `Survey` carries `unjudged`
+separately from the notes now, and both lines are true at any size.
+
+**The three promises the baseline makes to an adopter, checked through the real
+gate rather than a unit test:**
+
+- a new problem in a new file is refused — `PY-ERROR:1` and `PY-ERROR:2` both
+  fired on it, and nothing was committed
+- the 2,050 that were already there are forgiven — a commit touching an untouched
+  part of a file with existing problems went through
+- touching a line that already had a problem stops forgiving it —
+  `zoneinfo/_tzpath.py:132` was refused the moment it was edited
+
+The first attempt at that third check proved nothing, because the line picked was
+not in the baseline. Worth recording: a test that passes for the wrong reason
+looks exactly like one that passes.
 
 ### 84 · the failure raised without a name, and the seventh rule closing the set — cleared
 

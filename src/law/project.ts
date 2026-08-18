@@ -4,12 +4,12 @@ import { dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
 import { JUDGED_EXTENSIONS, LAW_PATH, OUTSIDE_THE_LAW, PYTHON_EXTENSION, RUST_EXTENSION } from "../config.ts";
 import { ignoredHere, trackedFiles, type Ignoring } from "../git.ts";
 import { readConcessions } from "./concessions.ts";
+import { required } from "../present.ts";
 import { judge } from "./engine.ts";
 import { CHECKS } from "./checks.ts";
 import { checksAdoptedIn } from "./adopted.ts";
 import type { Violation } from "./rule.ts";
 import { reasonFrom } from "../fields.ts";
-import { required } from "../present.ts";
 import { commandsUnder, judgeRust } from "./rust/drive.ts";
 import { crossingsIn } from "./rust/boundary.ts";
 import { roleOf, shapeOf, type Shape } from "./shape.ts";
@@ -21,6 +21,7 @@ export type Survey = {
   readonly violations: readonly Violation[];
   readonly files: number;
   readonly unreadable: readonly string[];
+  readonly unjudged: number;
   readonly selfGoverned: readonly SelfGoverned[];
   readonly couldNotSkipIgnored: string;
 };
@@ -381,16 +382,22 @@ function under(root: string, paths: readonly string[], file: string): boolean {
 type PythonSaid = {
   readonly violations: readonly Violation[];
   readonly unreadable: readonly string[];
+  readonly unjudged: number;
 };
 
 export function judgePythonIn(root: string, files: readonly string[]): PythonSaid {
-  if (files.length === 0) return { violations: [], unreadable: [] };
+  if (files.length === 0) return { violations: [], unreadable: [], unjudged: 0 };
 
   const said = judgePython(looperRoot(), files);
   if (said.kind !== "found") {
+    const many =
+      files.length === 1
+        ? relative(root, required(files[0], "the one Python file"))
+        : `${files.length} Python files`;
     return {
       violations: [],
-      unreadable: files.map((path) => `${relative(root, path)} (${said.detail})`),
+      unreadable: [`${many} (${said.detail})`],
+      unjudged: files.length,
     };
   }
 
@@ -406,7 +413,7 @@ export function judgePythonIn(root: string, files: readonly string[]): PythonSai
     }
     violations.push({ rule: known, file: relative(root, hit.file), line: hit.line });
   }
-  return { violations, unreadable };
+  return { violations, unreadable, unjudged: said.unreadable.length };
 }
 
 export function surveyProject(root: string, reach: Reach, only: readonly string[]): Survey {
@@ -464,6 +471,7 @@ export function surveyProject(root: string, reach: Reach, only: readonly string[
     violations,
     files: files.length,
     unreadable,
+    unjudged: unreadable.length - pythonSaid.unreadable.length + pythonSaid.unjudged,
     selfGoverned: walked.selfGoverned,
     couldNotSkipIgnored: walked.couldNotSkipIgnored,
   };
