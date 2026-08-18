@@ -22,7 +22,54 @@ is a suspicion and belongs in the notes at the bottom, not in the list.
 
 ## Open
 
-_Empty. Findings 41 to 100 are closed._
+_Empty. Findings 41 to 101 are closed._
+
+### 101 · `blunt` — arguing with a rule was refused over a word in a comment — cleared
+
+2026-08-18, adopter issue #60, filed thirteen minutes after finding 100 shipped,
+by somebody who went straight back to using the route it had opened.
+
+`--tried` is the sentence the person types about what they tried. It is checked
+word by word against the project and refused if a word looks like a name from
+their code. Two things made it too tight.
+
+The rule's own id collides. Arguing with `TS-TRUTH:1` means writing about it, and
+`TRUTH` is in the id:
+
+```
+looper refused to write the report, because it would have carried something
+from your code: TRUTH.
+```
+
+And the match came from comment prose. In their project `TRUTH` is not an
+identifier anywhere — it appears in comments, in capitals, as an ordinary English
+word. So any word anybody ever wrote in a comment became unusable. Their project
+is meanwhile deleting every comment because `TS-DEAD:2` says to, and the words in
+those comments kept blocking reports until the deletion finished.
+
+**Reproduced here** on a scratch project holding one `?? 0` and one Python file
+whose only occurrence of `TRUTH` is a `#` comment. Same rule, same file, same
+line, only the sentence differing: the one naming `TRUTH` was refused and the one
+avoiding it was written.
+
+**The fix.** The reported rule's id is never a leak, because the report prints it
+in its own `rule:` field. And the vocabulary is built from each file with comments
+removed — `#` for Python, `//` and `/* */` elsewhere — with quotes tracked so a
+marker inside a string is not a comment.
+
+**Measured after, both directions:**
+
+| sentence | before | after |
+|---|---|---|
+| names `TRUTH`, which is only in a comment | refused | written |
+| names `tenantLedgerRef`, a real identifier | refused | refused |
+
+**The limit, deliberately.** String literals stay in the vocabulary: a secret in a
+string is exactly what this guard is for. A Python docstring is a string rather
+than a comment, so an ordinary word living only in a docstring is still refused —
+measured, with a rule id that does not cover it. That is the same line the
+adopter's own suggestion of "identifiers and string literals" would have drawn,
+and it is written down here rather than discovered.
 
 ### 100 · `wrong` — the commit gate judged every staged file with its blank lines deleted — cleared
 

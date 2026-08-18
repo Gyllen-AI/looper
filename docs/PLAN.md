@@ -1199,6 +1199,24 @@ fields are replaced, the previous file is kept beside it, and init prints what t
 entry was launching and what it launches now, because a repair nobody is told
 about is the same silence as the stale entry.
 
+**A comment names nothing, so it is not part of the vocabulary. Corrected
+2026-08-18, from adopter issue #60, finding 101.** The sentence somebody types
+under `--tried` is checked against every word in every judged file, and refused if
+a word looks like it came from their code. The vocabulary was built from the whole
+file text, comments included, so an ordinary English word written in a comment
+became a word nobody could use while arguing with a rule. The word that broke it
+was `TRUTH`, from `TS-TRUTH:1` — the one word that sentence cannot avoid.
+
+Two things. The reported rule's own id is never a leak, because the report already
+prints it in its `rule:` field. And the vocabulary is built from the file with its
+comments removed, per language: `#` for Python, `//` and `/* */` elsewhere, with
+quotes tracked so a marker inside a string is not a comment.
+
+**String literals stay in.** A secret in a string is exactly what this guard is
+for, so a Python docstring is a string rather than a comment and prose inside one
+still counts. That is the deliberate limit, and it is the same one the adopter's
+own suggestion of "identifiers and string literals" would have drawn.
+
 **A file is read as bytes; only a list is read as lines. Corrected 2026-08-18,
 from adopter issue #44, finding 100.** One helper in `src/git.ts` ran git and
 returned `output.split("\n").filter((line) => line.length > 0)`. Dropping empty
