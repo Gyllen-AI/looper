@@ -166,7 +166,6 @@ export const PYTHON_TIMEOUT_MS = 60_000;
 
 export const STACK_PATH = "CURRENTSTACK.md";
 
-
 export const HOOK_TIMEOUT_SECONDS = 30;
 
 export const COMMIT_GATE_TIMEOUT_SECONDS = 300;
