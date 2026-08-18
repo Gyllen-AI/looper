@@ -35,14 +35,18 @@ jobs:
           rust=$(git diff -U0 "$range" -- 'vendor/rust-law/src/**' \
                  | grep -E '^[+-][^+-]' \
                  | grep -E 'Rule::|fn judge|violations\.push|help_for|bans' || true)
+          python=$(git diff -U0 "$range" -- 'src/law/python/read.py' \
+                   | grep -E '^[+-][^+-]' \
+                   | grep -E 'PY-|isinstance|frozenset' || true)
           cases=$(git diff --name-only "$range" \
-                  | grep -E '^audit/(cases|rust-cases)\.ts$' || true)
+                  | grep -E '^audit/(cases|rust-cases|python-cases)\.ts$' || true)
 
-          if { [ -n "$said" ] || [ -n "$rust" ]; } && [ -z "$cases" ]; then
+          if { [ -n "$said" ] || [ -n "$rust" ] || [ -n "$python" ]; } && [ -z "$cases" ]; then
             echo "This changes what a rule says:"
-            echo "$said$rust" | sed 's/^/  /' | head -20
+            echo "$said$rust$python" | sed 's/^/  /' | head -20
             echo
-            echo "and neither audit/cases.ts nor audit/rust-cases.ts moved with it."
+            echo "and none of audit/cases.ts, audit/rust-cases.ts or audit/python-cases.ts"
+            echo "moved with it."
             echo "A rule's cases are written first,"
             echo "from its own ban text: what must fire and what must stay silent."
             echo "A test written after the code can only agree with the code."
