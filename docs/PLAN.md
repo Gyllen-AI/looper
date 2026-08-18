@@ -1897,6 +1897,53 @@ written as permanent law, which makes every later session steer around a pothole
 filled months ago. A note earns its place by helping the next session, not by
 having surprised the last one.
 
+### Chunk 1d — `decisions`, the rules a project set aside on purpose
+
+**Built 2026-08-18, from an adopting project that had grown the same thing by
+hand.** They kept a ledger of every place the doctrine or a rule in `law.toml`
+was deliberately ignored, with seven entries in it: a credential that reached git
+history and was not rotated, a vendor API built ahead of the legal answer, holding
+every customer's server password, an anti-cheat recorder running inside somebody
+else's game process. Their own summary of why it exists is the argument for
+putting it here: **most of these are security or legal questions nobody on the
+team is qualified to answer.**
+
+`recall` is the wrong home for them. A note is a fact somebody worked out. A
+decision is a rule that was broken knowingly, whose safety is an open question,
+and the difference matters because the two want opposite treatment: a note is
+true until something teaches you otherwise, and a decision stops being true the
+moment the code under it moves.
+
+**So an entry names the files it rests on, and looper hashes them.** Every later
+session is told which entries the ground has shifted under. That is the whole
+mechanism and it is deliberately small: looper never edits the prose, because
+what an entry says is a judgement and no tool refreshes a judgement. What a tool
+can do is refuse to let the document be trusted blindly, which is the failure
+every stale design document has in common.
+
+Four standings, and each is said differently on purpose. **Watched**: the files
+hash as they did when somebody read it. **Moved**: they do not, so the entry
+carries `READ IT AGAIN` with both hashes. **Gone**: a file it rests on no longer
+exists, which is louder than moved because a rename can hide a rewrite. And
+**unwatchable**: the entry rests on a decision rather than on code, names no
+files, and says so rather than being counted as fresh. The adopting project had
+one of those and it is the oldest open item they have, which is exactly the entry
+a hash would have quietly reported as fine.
+
+**`reread` is the only way a hash is re-recorded**, and the tool says what that
+means: a claim that a person read the entry again and it still says something
+true. Running it without reading is how the document starts lying. Nothing
+re-records itself, and no gate blocks on a moved entry, because a decision that
+has rotted is a thing to think about rather than a thing to fix in the next
+commit.
+
+**Where the constants live is a finding of its own.** `src/config.ts` was 497
+lines against its own 500 cap, so adding a path, a tool name and a priority
+tripped `TS-DECOMPOSITION:1`. The cap was not widened. The decisions module names
+its own file and tool, which is defensible on its merits since nothing outside it
+needs them, and it leaves a note for whoever adds the next capability: that file
+is full.
+
 ### Chunk 2 — the law engine, language-neutral half
 
 Everything about the law that is not a parser: the rule and category and
