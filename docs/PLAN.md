@@ -1180,6 +1180,28 @@ may sit behind a command somebody has to know to type. And whatever shape it
 picks, it then checks: the file exists, or the command is in a directory on PATH.
 When it is not, init says so in the report rather than reporting success.
 
+**And the check has to name the path that actually gets written. Corrected
+2026-08-18, finding 93.** The check above proved `vendor/looper/bin/looper.js` was
+there, and `.mcp.json` was then written with
+`$CLAUDE_PROJECT_DIR/vendor/looper/bin/looper.js`, which is a different filename.
+For every adopter with looper checked out inside the project the server never
+started, so `doctrine`, `recall` and `see` were absent from the session while the
+hooks ran normally and nothing said a word.
+
+There are two contexts here and they are not interchangeable. A hook command is a
+shell line the agent runs with `CLAUDE_PROJECT_DIR` in the environment, so it
+carries the variable and quotes it. An `.mcp.json` argument is argv: no shell, no
+expansion, and the agent's own `${VAR}` form reads an environment that this
+variable is not in, because the agent sets it for hooks and not for the config it
+expands. So the git hook and the MCP entry are both written root-relative through
+one helper, `fromRoot`, which returns the same string `entryReach` checked.
+
+What that costs, kept rather than dropped: a relative path resolves against the
+directory the agent was started in, so a session started in a subdirectory of the
+project gets no server. An absolute path would close that and cannot be used,
+because `.mcp.json` is committed and a machine-specific path in it breaks every
+other clone.
+
 **A hook the project already wrote is never overwritten.** A shell script cannot
 be merged the way a settings file can, so init leaves it exactly as it is,
 reports the gate as **not wired**, and prints the one line to add. Reporting a

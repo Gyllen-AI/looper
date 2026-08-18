@@ -22,7 +22,75 @@ is a suspicion and belongs in the notes at the bottom, not in the list.
 
 ## Open
 
-_Empty. Findings 41 to 92 are closed._
+_Empty. Findings 41 to 93 are closed._
+
+### 93 · `missing` — the `.mcp.json` entry was written with a shell variable, so the tools never appeared — cleared
+
+2026-08-18. From an adopter running looper as a submodule under `vendor/`. Their
+sessions had no `doctrine`, no `recall` and no `see`, and nothing anywhere said
+so: the injection hook ran, `looper status` reported its contributors and what it
+had dropped, and the tools were simply absent. Every session that project has ever
+run acted on whatever the router guessed, with no way to pull a rule set by name.
+
+Two things were wrong and only the second is looper's.
+
+`claude mcp get looper` answered `Status: ⏸ Pending approval`. A project-scoped
+server needs a trust answer before it is ever started, and that one is the
+adopter's to give.
+
+Once given, it still could not start. init had written
+
+```json
+{ "command": "node", "args": ["$CLAUDE_PROJECT_DIR/vendor/looper/bin/looper.js", "serve"] }
+```
+
+An argv entry is handed to the process exactly as written. There is no shell to
+expand `$CLAUDE_PROJECT_DIR`; the agent's own expansion is `${VAR}` read from the
+environment; and `CLAUDE_PROJECT_DIR` is not in the environment it reads, because
+the agent sets that variable for hooks and not for the config it expands.
+Measured, three projects holding the same server, one spelling each:
+
+| args | result |
+|---|---|
+| `$CLAUDE_PROJECT_DIR/vendor/looper/bin/looper.js` | `✘ Failed to connect — CONNECTION_CLOSED` |
+| `${CLAUDE_PROJECT_DIR}/vendor/looper/bin/looper.js` | `✘ Missing environment variables: CLAUDE_PROJECT_DIR` |
+| `vendor/looper/bin/looper.js` | `✔ Connected` |
+
+The server was never at fault. Run by hand it answers `initialize` and lists
+`doctrine`, `recall` and `see`.
+
+**This document already held the lesson, one context over.** *Only a real verdict
+refuses* records the git hook shipping with the agent hook's entry path, "which
+resolves through an environment variable Claude Code sets and a shell does not",
+so every commit was refused because node could not find a file. That was fixed for
+git in `gitHookEntryFor` and left standing in `launchFor`. `launchFor` even had the
+right answer for one of its four kinds: `local` is written `./node_modules/.bin/looper`,
+root-relative, while `dev` and `inside` carried the variable.
+
+**`entryReach` proved a path that nothing used.** Init checks that
+`vendor/looper/bin/looper.js` exists and then writes
+`$CLAUDE_PROJECT_DIR/vendor/looper/bin/looper.js` into the argv, which is a
+different filename. The check this document offers as the answer to adopter issue
+#8, that init checks the command it just wrote can actually be found, was true of
+the hooks and false of the MCP entry.
+
+**Why no test caught it.** `tests/launch.test.ts` already knew the category: it
+asserts that no argv entry carries a quote character, because "quoting belongs in
+a shell command line, never in an argument list". A variable is the same mistake
+one step further, and nothing asserted its absence.
+
+**The fix.** `launchFor` writes the root-relative path `gitHookEntryFor` already
+writes, for every kind. The path `entryReach` checks and the path written into
+`.mcp.json` are now the same string, and a test asserts that they are, so the two
+cannot drift apart again.
+
+**What it costs, said plainly.** A relative path resolves against the working
+directory the agent spawns the server in, which is where the agent was started.
+Started in a subdirectory, the server does not launch: same project, same file,
+run two levels down, `CONNECTION_CLOSED`. `local` has always had this and the git
+hook has it too, since git runs hooks from the repository root. An absolute path
+would close it and cannot be had, because `.mcp.json` is committed and shared and
+a machine-specific path in it breaks every other clone.
 
 ### 92 · `missing` — the escape hatch read one of the three languages — cleared
 

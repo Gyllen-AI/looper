@@ -251,9 +251,9 @@ export function commitMessageScript(entry: string): string {
 export const HOOK_MARKER = "looper hook PreCommit";
 
 export function gitHookEntryFor(invocation: Invocation): string {
-  if (invocation.kind === "dev") return "node ./src/main.ts";
+  if (invocation.kind === "dev") return `node ${fromRoot(DEV_ENTRY)}`;
   if (invocation.kind === "local") return LOCAL_FROM_ROOT;
-  if (invocation.kind === "inside") return `node ./${scriptUnder(invocation.at)}`;
+  if (invocation.kind === "inside") return `node ${fromRoot(scriptUnder(invocation.at))}`;
   return INSTALLED_ENTRY;
 }
 
@@ -325,13 +325,13 @@ export type Launch = { readonly command: string; readonly args: readonly string[
 
 export function launchFor(invocation: Invocation): Launch {
   if (invocation.kind === "dev") {
-    return { command: "node", args: [`${DEV_SCRIPT}`] };
+    return { command: "node", args: [fromRoot(DEV_ENTRY)] };
   }
   if (invocation.kind === "local") {
     return { command: LOCAL_FROM_ROOT, args: [] };
   }
   if (invocation.kind === "inside") {
-    return { command: "node", args: [`$CLAUDE_PROJECT_DIR/${scriptUnder(invocation.at)}`] };
+    return { command: "node", args: [fromRoot(scriptUnder(invocation.at))] };
   }
   return { command: INSTALLED_ENTRY, args: [] };
 }
@@ -440,6 +440,10 @@ export const SHIM = "bin/looper.js";
 
 export function scriptUnder(at: string): string {
   return `${at}/${SHIM}`;
+}
+
+function fromRoot(relative: string): string {
+  return `./${relative}`;
 }
 
 export function entryFor(invocation: Invocation): string {
