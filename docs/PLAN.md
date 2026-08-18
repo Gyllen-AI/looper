@@ -1375,6 +1375,29 @@ from evidence instead of repeating this one. What would change the answer is a
 signal for intent that Python actually carries — not a cleverer reading of the
 same shapes.
 
+**`main.ts` is a dispatcher and nothing else. Split 2026-08-19.** It had reached
+exactly 500 lines, sitting on the cap, holding twenty-four top-level functions —
+the argument reader, every command, and the helpers each one needed. It was the
+one file the line cap had genuinely caught, and the file this session grepped
+four separate times because nothing about its name predicted where anything was.
+
+Each command is its own file under `src/commands/`, named after the command.
+`main.ts` keeps the argument reading and the dispatch, and is thirty-seven lines.
+
+**The split broke `TS-LOG:1` in thirty-six places, and that was correct.**
+`main.ts` was the declared entry file, so its printing was legal; the same code in
+a command file is a library deciding for every caller. The entry list was not
+widened to make it pass — the rule's own advice says to hand it back and let the
+entry point decide what to print. So a command takes an `Out` with `say` and
+`warn`, `main.ts` builds that from `console`, and it is the only file that names
+`console` at all. `serve` streams a protocol and takes the same `Out`, so nothing
+needed an exception.
+
+One more fell out of it: `valueAfter` was private and returned `string |
+undefined`, which `TS-TYPE:2` refuses once it is exported. It returns a named
+`Given` now — `{ kind: "given", value }` or `{ kind: "none" }` — which is the
+spelling that rule asks for.
+
 **looper owns its own hooks and repairs them; everything else in that file is the
 project's. Corrected 2026-08-19, finding 105.** `mergeSettings` added a hook
 beside whatever was there and never over it. That is right for a hook somebody
