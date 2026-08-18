@@ -1195,6 +1195,19 @@ may sit behind a command somebody has to know to type. And whatever shape it
 picks, it then checks: the file exists, or the command is in a directory on PATH.
 When it is not, init says so in the report rather than reporting success.
 
+**Three shapes was still one short: the project that is looper. Corrected
+2026-08-18, finding 95.** The shapes above are all ways of reaching looper from
+somewhere else. Running init in looper's own repo matched none of them and fell
+to `installed`, so the entry it wrote launched a bare `looper` that is not on
+PATH there, and its own MCP server never started. The fourth shape, `dev`, whose
+launch is the root-relative `./src/main.ts`, existed and could only be reached by
+typing `--dev`.
+
+So `reachedFrom` asks first whether the root is itself a looper checkout, by the
+same test it already applies to subfolders, and answers `dev` when it is. No
+adopting project can reach this branch, because an adopting project's root is not
+a looper checkout. The flag stays as an override and stops being the only door.
+
 **And the check has to name the path that actually gets written. Corrected
 2026-08-18, finding 93.** The check above proved `vendor/looper/bin/looper.js` was
 there, and `.mcp.json` was then written with

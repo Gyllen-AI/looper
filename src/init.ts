@@ -5,6 +5,7 @@ import { writeAtomically, writeKeepingPrior, type Backup } from "./atomic.ts";
 import {
   AGENT_DIR,
   whereTheUserLives,
+  DEV,
   DEV_ENTRY,
   INSTALLED,
   LOCAL,
@@ -277,6 +278,7 @@ function survey(root: string): Step {
 }
 
 export function reachedFrom(root: string): Invocation {
+  if (isLooperCheckout(root)) return DEV;
   if (existsSync(join(root, LOCAL_BIN))) return LOCAL;
   const found = checkoutUnder(root);
   if (found.kind === "found") return inside(found.at);
