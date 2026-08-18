@@ -1316,6 +1316,23 @@ from evidence instead of repeating this one. What would change the answer is a
 signal for intent that Python actually carries — not a cleverer reading of the
 same shapes.
 
+**There is one entry, and it cannot fail. Added 2026-08-19, issue #74, finding
+104.** looper fails open when a capability cannot reach a verdict, and that was
+already true. It did not hold when looper itself could not be **loaded**: the hook
+process died on its own import graph, the human saw a hook error in the terminal,
+and the agent saw nothing at all and kept writing.
+
+An announcement about a crash has to live somewhere the crash cannot reach, which
+means somewhere that imports almost nothing. `bin/looper.js` is that place — two
+Node built-ins, then everything else. It loads the rest inside a `try`, and on
+failure writes a real hook answer through `additionalContext`, the channel the
+agent reads, saying that nothing is being checked and that a verdict is absent
+rather than clean. It still exits 0.
+
+So every invocation kind now points at that one file. `dev` pointed at
+`src/main.ts` directly, which is how this repo ran and why the gap was found here
+rather than reported by somebody depending on it.
+
 **`config.ts` holds what looper runs by, and `stubs.ts` holds what it writes
 out. Split 2026-08-18, issue #67.** The file had reached 497 lines against its own
 500 cap, so the decisions capability could not put its path there and put it in

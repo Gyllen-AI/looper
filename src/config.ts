@@ -294,8 +294,6 @@ export function inside(at: string): Invocation {
   return { kind: "inside", at };
 }
 
-const DEV_SCRIPT = "$CLAUDE_PROJECT_DIR/src/main.ts";
-
 const INSTALLED_ENTRY = "looper";
 
 export const LOOPER_COMMAND = INSTALLED_ENTRY;
@@ -352,6 +350,8 @@ const LOCAL_FROM_ROOT = "./node_modules/.bin/looper";
 export const LOCAL_BIN = "node_modules/.bin/looper";
 
 export const SHIM = "bin/looper.js";
+
+const DEV_SCRIPT = `$CLAUDE_PROJECT_DIR/${SHIM}`;
 
 export function scriptUnder(at: string): string {
   return `${at}/${SHIM}`;
