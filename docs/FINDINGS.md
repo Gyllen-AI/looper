@@ -22,8 +22,33 @@ is a suspicion and belongs in the notes at the bottom, not in the list.
 
 ## Open
 
-_Empty. Findings 41 to 102 are closed._
+_Empty. Findings 41 to 103 are closed._
 
+### 103 · `noise` — a size cap had started deciding where facts live — cleared
+
+2026-08-18, issue #67, from reviewing the decisions capability in #65.
+`src/config.ts` was 497 lines against its own 500 cap, so that capability could
+not put its path beside every other project-visible path and kept it in its own
+module. It said so in the open and did not widen the cap, which was the right call
+— a cap widened to fit stops meaning anything. But the reason a fact lived
+somewhere had become "the other file was full", and that reason was invisible from
+either file.
+
+**The split, named in one sentence:** the prose looper writes into a project is
+not a setting. Eight stubs and headers moved to `src/stubs.ts`, and `config.ts`
+went from 497 lines to 402 with the cap untouched.
+
+**The sanctum stayed one file**, which is the constraint that made this worth care
+rather than a quick move: nothing that turns a missing value into a default went
+anywhere, so the canon's sentence about `src/config.ts` is still true.
+
+`DECISIONS_PATH`, `DECISIONS_TOOL` and `DECISIONS_PRIORITY` came back beside their
+siblings, and the re-export that briefly kept the old import path working went out
+with them — one home means one place to import from, or it is two homes wearing
+one name. That re-export was in the first version of this change and was taken out
+before it shipped.
+
+`npm test`: 472 pass, 0 fail. `looper law` on this repo: exit 0.
 ### 102 · `wrong` — the commit gate judged by a different law than `looper law` — cleared
 
 2026-08-18, issue #56. Found while investigating finding 100 and deliberately not

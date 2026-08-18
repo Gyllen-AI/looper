@@ -1,3 +1,4 @@
+import { CONSTITUTION_STUB, DOCTRINE_README_STUB, MAP_STUB, SECRETS_ALLOW_STUB } from "./stubs.ts";
 import { chmodSync, existsSync, readFileSync, readdirSync } from "node:fs";
 import { dirname, join } from "node:path";
 
@@ -16,14 +17,10 @@ import {
   scriptUnder,
   LOCAL_BIN,
   CONSTITUTION_PATH,
-  CONSTITUTION_STUB,
   DOCTRINE_README_PATH,
-  DOCTRINE_README_STUB,
   MAP_PATH,
-  MAP_STUB,
   MCP_PATH,
   SECRETS_ALLOW_PATH,
-  SECRETS_ALLOW_STUB,
   mcpStub,
   SETTINGS_PATH,
   looperHooks,
@@ -41,7 +38,10 @@ import {
 } from "./config.ts";
 import { countsOf, totalIn, writeBaseline } from "./law/baseline.ts";
 import { surveyProject } from "./law/project.ts";
-import { BASELINE_PATH, STACK_PATH } from "./config.ts";
+import {
+  BASELINE_PATH,
+  STACK_PATH,
+} from "./config.ts";
 import { stackOf } from "./stack/read.ts";
 import { stackDocument } from "./stack/write.ts";
 import { mergeMcp, mergeSettings } from "./settings.ts";

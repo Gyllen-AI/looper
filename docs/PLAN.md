@@ -1276,6 +1276,26 @@ asking what is wrong with it, and a gate that answers it differently from the
 survey is two laws wearing one name. The shape is read once per commit rather than
 once per file.
 
+**`config.ts` holds what looper runs by, and `stubs.ts` holds what it writes
+out. Split 2026-08-18, issue #67.** The file had reached 497 lines against its own
+500 cap, so the decisions capability could not put its path there and put it in
+its own module instead. A size limit had started deciding where facts live, and
+the reason was invisible from either file.
+
+The line is nameable in one sentence: **the prose looper writes into a project is
+not a setting.** `CONSTITUTION_STUB`, `MAP_STUB`, `DOCTRINE_README_STUB`,
+`ADOPTED_HEADER`, `RECALL_HEADER`, `SECRETS_ALLOW_STUB`, `BASELINE_HEADER` and
+`DECISIONS_HEADER` are documents a person reads; they moved. `config.ts` went to
+402 lines with the cap untouched at 500.
+
+**The sanctum is still one file.** Nothing that turns a missing value into a
+default moved — `stubs.ts` is template literals and nothing else — so the sentence
+about `src/config.ts` stays true rather than being quietly widened to two.
+
+`DECISIONS_PATH`, `DECISIONS_TOOL` and `DECISIONS_PRIORITY` came back to
+`config.ts` beside every other project-visible path, and the re-export that would
+have given them two import paths went out with them: one home means one place to
+import from, or it is two homes wearing one name.
 **A file is read as bytes; only a list is read as lines. Corrected 2026-08-18,
 from adopter issue #44, finding 100.** One helper in `src/git.ts` ran git and
 returned `output.split("\n").filter((line) => line.length > 0)`. Dropping empty
