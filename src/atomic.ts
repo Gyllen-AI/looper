@@ -100,17 +100,27 @@ function discard(temp: string): void {
   if (existsSync(temp)) unlinkSync(temp);
 }
 
-export function writeAtomically(path: string, text: string): Written {
+function written(path: string, text: string, keeping: boolean): Written {
   const temp = `${path}${TEMP_SUFFIX}`;
   try {
     mkdirSync(dirname(path), { recursive: true });
     const backup = keepPrior(path);
     flushToDisk(temp, text);
     renameSync(temp, path);
-    return { path, backup };
+    if (keeping) return { path, backup };
+    if (backup.kind === "kept") unlinkSync(backup.path);
+    return { path, backup: { kind: "none" } };
   } catch (cause) {
     discard(temp);
     const detail = reasonFrom(cause);
     throw new AtomicWriteFailed(path, detail);
   }
+}
+
+export function writeAtomically(path: string, text: string): Written {
+  return written(path, text, false);
+}
+
+export function writeKeepingPrior(path: string, text: string): Written {
+  return written(path, text, true);
 }

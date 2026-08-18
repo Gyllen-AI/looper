@@ -22,7 +22,7 @@ is a suspicion and belongs in the notes at the bottom, not in the list.
 
 ## Open
 
-_Empty. Every pass of both audits is closed, and findings 41 to 66 with them._
+_Empty. Every pass of both audits is closed, and findings 41 to 67 with them._
 
 ## The second audit — what it covered and what it found
 
@@ -68,6 +68,33 @@ tested, and every one was tested the way it was built rather than the way it
 will be used.
 
 ## Cleared
+
+### 67 · `wrong` — a note deleted for being wrong survived beside the corrected one — cleared
+
+Adopter issue #27. `writeAtomically` copied the prior file to
+`<path>.looper-backup` before every write, nothing deleted it, and `init` wrote
+no ignore rule — so the residue was committed by the next `git add -A`. Their
+measurement on the file that matters:
+
+```
+recall.md holds: ['## 2026-08-18 — the wrong fact', '## 2026-08-18 — a second fact']
+backup holds:    ['## 2026-08-18 — the wrong fact']
+```
+
+`recall.md`'s own header says to delete an entry the moment it stops being true.
+The backup made that impossible: a wrong note, in a committed file, that a future
+reader has no reason to distrust — which is precisely what that header exists to
+prevent.
+
+The backup exists to survive a crash between write and rename and has no job
+afterwards, so it is deleted once the rename succeeds. The two merges `init`
+reports — `.claude/settings.json` and `.mcp.json` — keep theirs, because there the
+kept copy is the point and the path is printed to the person. Verified end to
+end: two notes written, one deleted, nothing anywhere in the project still holds
+it.
+
+Their audit of `adopt` and the baseline in the same batch found nothing, which is
+worth recording too.
 
 ### 66 · `wrong` — one empty file removed a directory from the law, in silence — cleared
 

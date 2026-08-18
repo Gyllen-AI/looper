@@ -2,7 +2,7 @@ import { test } from "node:test";
 import { DEV, INSTALLED, LOCAL, PROJECT_DIR, gitHookEntryFor, inside, launchFor, looperHooks, projectRoot } from "../src/config.ts";
 import { reachedFrom } from "../src/init.ts";
 import assert from "node:assert/strict";
-import { mkdtempSync, readFileSync, rmSync, writeFileSync, mkdirSync } from "node:fs";
+import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync, mkdirSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -259,6 +259,27 @@ test("with nothing named, the nearest project above is chosen and said out loud"
 
     assert.equal(rooted.root, root, "running from a subdirectory judged a different project than the one it is in");
     assert.ok(rooted.how.length > 0, "status has to be able to say which root was chosen, or the wrong one is invisible");
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test("a backup is left only where somebody was told about it", () => {
+  const root = scratch();
+  try {
+    writeFileSync(join(root, ".mcp.json"), JSON.stringify({ mcpServers: {} }));
+    mkdirSync(join(root, ".claude"), { recursive: true });
+    writeFileSync(join(root, ".claude", "settings.json"), JSON.stringify({ hooks: {} }));
+
+    const report = runInit(root, INSTALLED, NO_PATH);
+    const kept = report.steps
+      .filter((step) => step.kind === "merged")
+      .map((step) => step.path);
+
+    for (const path of kept) {
+      assert.ok(existsSync(`${path}.looper-backup`), `${path} was merged and its previous version was not kept`);
+    }
+    assert.ok(kept.length > 0, "nothing was merged, so this test is not exercising what it was written for");
   } finally {
     rmSync(root, { recursive: true, force: true });
   }

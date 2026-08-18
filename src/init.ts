@@ -1,7 +1,7 @@
 import { chmodSync, existsSync, readFileSync, readdirSync } from "node:fs";
 import { join } from "node:path";
 
-import { writeAtomically, type Backup } from "./atomic.ts";
+import { writeAtomically, writeKeepingPrior, type Backup } from "./atomic.ts";
 import {
   DEV_ENTRY,
   INSTALLED,
@@ -178,7 +178,7 @@ function wireSettings(root: string, invocation: Invocation): Step {
 
   if (outcome.kind === "unchanged") return { kind: "already-wired", path };
 
-  const written = writeAtomically(path, outcome.text);
+  const written = writeKeepingPrior(path, outcome.text);
   if (outcome.kind === "created") {
     return { kind: "created", path, wired: outcome.wired };
   }
@@ -199,7 +199,7 @@ function wireMcp(root: string, invocation: Invocation): Step {
     return { kind: "mcp-unreadable", path, why: outcome.why, block: mcpStub(invocation) };
   }
 
-  const written = writeAtomically(path, outcome.text);
+  const written = writeKeepingPrior(path, outcome.text);
   if (outcome.kind === "created") {
     return { kind: "created", path, wired: [MCP_TOOLS] };
   }

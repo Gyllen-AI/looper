@@ -1125,8 +1125,16 @@ property 2 above.
   governance layer would be absent while the output looked clean. That failure is
   easy to ship and nearly invisible afterwards, which is why init is a merge from
   the first line of code rather than a later fix.
-- **Atomic with backup.** Temp file alongside, fsync, rename, keep the prior
-  version. A half-written settings file breaks the whole session.
+- **Atomic, and the prior version kept only where somebody is told.** Temp file
+  alongside, fsync, rename. A half-written settings file breaks the whole
+  session, so the copy exists to survive a crash between write and rename — and
+  after the rename it has no job. **Corrected 2026-08-18, from adopter issue
+  #27:** it used to be left behind by every write, committed by the next `git add
+  -A`, and for `.looper/recall.md` that meant a note somebody deleted for being
+  wrong survived in a committed file one filename away, which is the copy a
+  future reader has no reason to distrust. The two merges init reports to the
+  person keep theirs, and they are named in the output. Everything else deletes
+  it.
 - **Idempotent.** Twice is indistinguishable from once, which is what makes it
   safe to call from inside a session.
 

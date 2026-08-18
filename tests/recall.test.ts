@@ -1,7 +1,7 @@
 import { first } from "./helpers.ts";
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -204,6 +204,23 @@ test("a write that cannot take the lock says so instead of reporting success", (
       "the note was reported as written while another process held the file. A note the agent believes it wrote, that nobody has, is the one failure recall exists to prevent.",
     );
     assert.deepEqual([...readNotes(root)], []);
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test("a note deleted for being wrong does not survive in a file beside it", () => {
+  const root = scratch();
+  try {
+    remember(root, { learned: "2026-08-18", summary: "the wrong fact", body: "x" });
+    remember(root, { learned: "2026-08-18", summary: "a second fact", body: "y" });
+    forget(root, "the wrong fact");
+
+    assert.equal(
+      existsSync(join(root, ".looper", "recall.md.looper-backup")),
+      false,
+      "the note somebody deleted because it was wrong survived in a committed file one filename away, and it is the copy a future reader has no reason to distrust",
+    );
   } finally {
     rmSync(root, { recursive: true, force: true });
   }
