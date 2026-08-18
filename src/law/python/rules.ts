@@ -77,6 +77,22 @@ export const PYTHON_RULES: readonly Rule[] = [
     valve: { kind: "none" },
   },
   {
+    id: "PY-SECURITY:1",
+    category: "SECURITY",
+    pass: "fast",
+    bans:
+      "handing the operating system a command built by pasting values into it — `os.system`, `os.popen`, `subprocess.getoutput` and `getstatusoutput`, and `subprocess` called with `shell=True`",
+    why:
+      "the text goes to a shell, and a shell reads punctuation as instructions. A value holding a semicolon stops being a filename and becomes a second command, running with everything your program may do. It does not take an attacker: a file somebody named `report;rm -rf ~.csv` is enough. Python makes this the path of least resistance, because `shell=True` is one keyword away and the argument-list form needs the command split up",
+    instead: [
+      "`subprocess.run([\"convert\", source, target], check=True)` — the arguments stay arguments and are never read as instructions",
+      "a pipeline is two `Popen` calls joined by `stdout`, not one string with a `|` in it",
+      "if a shell feature is genuinely needed, build the line only from words you wrote, never from one that arrived",
+      "`shlex.quote` is a repair for a design that already went wrong; an argument list needs no quoting at all",
+    ],
+    valve: { kind: "none" },
+  },
+  {
     id: "PY-LOG:1",
     category: "LOG",
     pass: "fast",

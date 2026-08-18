@@ -20,6 +20,14 @@ UNNAMED_FAILURE = "PY-ERROR:3"
 
 PRINTS_ITS_OWN_OUTPUT = "PY-LOG:1"
 
+A_BUILT_COMMAND = "PY-SECURITY:1"
+
+ALWAYS_A_SHELL = frozenset({"system", "popen", "getoutput", "getstatusoutput"})
+
+SHELL_ON_REQUEST = frozenset({"run", "call", "check_call", "check_output", "Popen"})
+
+PASTING_METHODS = frozenset({"format", "join"})
+
 TERMINAL_WRITES = frozenset({"write", "writelines"})
 
 TERMINAL_HANDLES = frozenset({"stdout", "stderr"})
@@ -53,6 +61,42 @@ def is_a_terminal_handle(held):
     if not isinstance(held, ast.Attribute) or held.attr not in TERMINAL_HANDLES:
         return False
     return isinstance(held.value, ast.Name) and held.value.id == "sys"
+
+
+def is_pasted(held):
+    if isinstance(held, ast.JoinedStr):
+        return any(isinstance(one, ast.FormattedValue) for one in held.values)
+    if isinstance(held, ast.BinOp):
+        return isinstance(held.op, (ast.Add, ast.Mod))
+    if isinstance(held, ast.Call) and isinstance(held.func, ast.Attribute):
+        return held.func.attr in PASTING_METHODS
+    return False
+
+
+def asks_for_a_shell(node):
+    for given in node.keywords:
+        if given.arg != "shell":
+            continue
+        return not (isinstance(given.value, ast.Constant) and given.value.value is False)
+    return False
+
+
+def hands_the_system_a_line(node):
+    if not isinstance(node.func, ast.Attribute):
+        return False
+    called = node.func.attr
+    if called in ALWAYS_A_SHELL:
+        return True
+    if called not in SHELL_ON_REQUEST:
+        return False
+    return asks_for_a_shell(node)
+
+
+def builds_a_command(node):
+    if not hands_the_system_a_line(node):
+        return False
+    given = node.args[0] if node.args else None
+    return is_pasted(given)
 
 
 def writes_to_the_terminal(node):
@@ -178,6 +222,8 @@ def violations_in(tree, in_a_test_file, is_where_it_starts):
     found = []
     for node in ast.walk(tree):
         if isinstance(node, ast.Call):
+            if builds_a_command(node):
+                found.append({"rule": A_BUILT_COMMAND, "line": node.lineno})
             if not is_where_it_starts and writes_to_the_terminal(node):
                 found.append({"rule": PRINTS_ITS_OWN_OUTPUT, "line": node.lineno})
             continue
