@@ -15,14 +15,17 @@ export type Changed =
   | { readonly kind: "unavailable"; readonly detail: string }
   | { readonly kind: "paths"; readonly paths: readonly string[] };
 
-function ask(root: string, args: readonly string[]): readonly string[] {
-  const output = execFileSync("git", [...args], {
+function askWhole(root: string, args: readonly string[]): string {
+  return execFileSync("git", [...args], {
     cwd: root,
     encoding: "utf8",
     timeout: GIT_TIMEOUT_MS,
     stdio: ["ignore", "pipe", "ignore"],
   });
-  return output.split("\n").filter((line) => line.length > 0);
+}
+
+function ask(root: string, args: readonly string[]): readonly string[] {
+  return askWhole(root, args).split("\n").filter((line) => line.length > 0);
 }
 
 export type Staged =
@@ -151,7 +154,7 @@ export function stagedFiles(root: string): Staged {
 
 export function stagedText(root: string, path: string): StagedText {
   try {
-    return { kind: "text", text: ask(root, ["show", `:${path}`]).join("\n") };
+    return { kind: "text", text: askWhole(root, ["show", `:${path}`]) };
   } catch (cause) {
     const detail = reasonFrom(cause);
     return { kind: "unreadable", detail };

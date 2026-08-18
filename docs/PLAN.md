@@ -1199,6 +1199,19 @@ fields are replaced, the previous file is kept beside it, and init prints what t
 entry was launching and what it launches now, because a repair nobody is told
 about is the same silence as the stale entry.
 
+**A file is read as bytes; only a list is read as lines. Corrected 2026-08-18,
+from adopter issue #44, finding 100.** One helper in `src/git.ts` ran git and
+returned `output.split("\n").filter((line) => line.length > 0)`. Dropping empty
+lines is right for everything that helper was written for — a config value, a
+list of paths, the lines of a diff. `stagedText` used it to read a **file**, so
+the commit gate judged every staged file with its blank lines deleted, and every
+line below a blank was numbered wrong by the count of blanks above it.
+
+Reading content and reading a list are two different jobs and now have two
+different helpers. Nothing else moved: a blank added line reaches a diff as `+`,
+which is one character long and survives the filter, so the additions reader that
+counts lines for the secrets scan was never affected.
+
 **And the escape hatch has to open widest where the verdict is worst. Corrected
 2026-08-18, from finding 99.** `shapeAt` refused unless an enclosing node began
 on exactly the line given, so `looper report` — the one route the law offers when

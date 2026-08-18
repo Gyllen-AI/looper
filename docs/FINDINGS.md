@@ -22,7 +22,74 @@ is a suspicion and belongs in the notes at the bottom, not in the list.
 
 ## Open
 
-_Empty. Findings 41 to 99 are closed, and one is open._
+_Empty. Findings 41 to 100 are closed._
+
+### 100 · `wrong` — the commit gate judged every staged file with its blank lines deleted — cleared
+
+2026-08-18, adopter issue #44, reported from a 3,749-line TSX file during a
+cleanup of a project with 2,391 baseline problems. The gate refused a commit and
+named lines that did not hold what the rule described; `looper law` on the
+byte-identical staged content named different lines, and those were right every
+time.
+
+**It was cracked by the artifact, not by reading.** The adopter ran `looper report`
+on one of the cited lines and sent back the anonymised shape:
+
+```
+VariableDeclaration (kind=const)
+  VariableDeclarator
+    ArrayPattern
+      Identifier (name1)
+      Identifier (name2)
+    CallExpression
+      Identifier (name3)
+      BooleanLiteral (value-removed)
+```
+
+That is `const [a, b] = f(<boolean>)`. `REPORT_DEPTH` is 6 and the tree is 4 deep,
+so it is the whole statement, not a truncated one. `TS-TRUTH:1` bans `??`, `||`,
+`??=` and `||=`, and there is no logical operator anywhere in it — so that verdict
+is impossible for that line. Checked here: `looper law` on that shape answers
+`nothing to fix`, and the rule reports the exact line of the operator rather than
+the line the statement starts on.
+
+**The cause.** `ask` in `src/git.ts` ended with
+
+```ts
+return output.split("\n").filter((line) => line.length > 0);
+```
+
+which is correct for everything it was written for — a config value, a list of
+paths, the lines of a diff. `stagedText` used it to read a file:
+
+```ts
+text: ask(root, ["show", `:${path}`]).join("\n")
+```
+
+So every blank line was deleted before judging, and every line below one was
+numbered wrong by the count of blanks above it. Measured on a nine-line fixture:
+
+```
+lines on disk:       9
+lines the gate sees: 4
+the ?? 0 is on line 5 on disk, and line 2 in what the gate judges
+```
+
+**Every symptom in the report follows.** The token stream was identical in all
+their measurements because blank lines produce no tokens. The offset was not
+constant because it is the number of blanks above each violation. The wrong lines
+shrank with the diff because a smaller diff promotes fewer baselined violations
+out of the baseline. And `looper law` was right every time because it reads the
+file from disk.
+
+One detail in the report is *not* explained by this and is probably a coincidence:
+they matched a cited 1020 to a `?? 0` at 1018. This mechanism cites a line lower
+than the real one, never higher, so that pair is a near-match by eye rather than
+the corresponding violation.
+
+**The fix.** Reading content and reading a list are two jobs and now have two
+helpers. Two tests, both failing before: the staged text equals the file on disk,
+and the gate names the line the problem is actually on.
 
 ### 99 · `missing` — `looper report` refused the line it was most needed for — cleared for two of three languages
 
