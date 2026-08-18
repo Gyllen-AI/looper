@@ -14,7 +14,8 @@ without a warning from anything. These are rules, not preferences.
   enters, then the type is earned rather than claimed.
 - No comments. Names, types and tests carry the meaning, and they are the parts
   that cannot quietly drift out of date. Reasons go in the commit message, longer
-  explanations in a document beside the code.
+  explanations in a document beside the code. One exception, because a program
+  reads it and it cannot go stale: `looper:allow-secret` after code on the line.
 - Nothing from outside is pasted into a query, a shell command or a page the
   browser sees, and nothing is used before it is checked. Whoever sent it chose
   what it says. A parameter, an argument array and a schema at the edge are all

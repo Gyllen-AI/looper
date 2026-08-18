@@ -22,9 +22,31 @@ is a suspicion and belongs in the notes at the bottom, not in the list.
 
 ## Open
 
-_Finding 74. Findings 41 to 73 are closed._
+_Finding 75. Findings 41 to 74 are closed._
 
-### 74 · `blunt` — a file of deliberately key-shaped fixtures has no legal spelling
+### 75 · `missing` — a strict tsconfig that nothing runs
+
+Found on 2026-08-18 while fixing finding 74, and left open.
+
+`src/law/ts/comment.ts` used the bare name `Comment` with no import for its two
+helpers. The only `Comment` in scope would be the browser's, and `tsconfig.json`
+sets `lib: ["es2023"]` with no DOM, so that name resolves to nothing. It was
+wrong for as long as it has been there and no check said so.
+
+What I saw: the file, the tsconfig, and `package.json`, which has one dependency,
+`@babel/parser`, and no devDependencies. What follows from that rather than from a
+measurement: nothing ever runs `tsc`, so `strict`, `noUncheckedIndexedAccess`,
+`exactOptionalPropertyTypes` and the rest are settings with nothing behind them.
+`audit/**` is not even in `include`. I did not run a typechecker, because there
+is none installed to run.
+
+Fixed in passing here — `comment.ts` now imports looper's own `Comment` — but the
+cause is untouched: a document claiming eleven strictness settings that no
+command enforces. Installing TypeScript is a dependency, and this project says a
+dependency is argued in `docs/PLAN.md` first, so that argument has to happen
+before the fix does.
+
+### 74 · `blunt` — a file of deliberately key-shaped fixtures has no legal spelling — cleared
 
 Raised while fixing finding 73, on 2026-08-18, and left open on purpose.
 
@@ -41,9 +63,25 @@ exact value, which is the one thing the splitting avoids. The inline
 repo. A stricter reading with no compliant path is broken rather than strict,
 which is this project's own standard, so the gate owes that file a spelling.
 
-Not fixed yet, and worked around by keeping the diff off those lines. What it
-costs today is that a name cannot carry why the halves are split, so the reason
-lives in a commit message and here.
+Fixed by giving the marker a spelling this repo can write. `TS-DEAD:2` already
+let one comment through — a `/// <reference` line — on the principle that a
+comment a program reads cannot go stale, which is the rule's whole reason. The
+`looper:allow-secret` marker is read by looper on every commit, so it joins it,
+under the narrowest reading that works: a `//` comment whose text is exactly the
+marker and nothing else, with code before it on the same line. The marker alone
+on a line does nothing for the commit gate, prose that merely mentions it is
+prose, and `/* looper:allow-secret */` is not it. Four cases hold those.
+
+Nine lines in `audit/secrets-probe.ts` are marked — the nine the gate actually
+refuses, not all twelve that are key-shaped, because the fewest exemptions is the
+stricter reading. `tests/invariants.test.ts` now fails if either gate starts
+refusing that file again, and fails if the markers are deleted, which was checked
+by deleting them.
+
+Run over code nobody here wrote: 336 TypeScript files, 6 belonging to a project
+and 330 third-party libraries under its `node_modules`, holding 2,345 comments.
+The old rule and the new one found the same 2,345. No comment anywhere became
+invisible.
 
 ## The second audit — what it covered and what it found
 

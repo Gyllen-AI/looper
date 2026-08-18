@@ -1,5 +1,7 @@
 import type { Check, Finding, Subject } from "../engine.ts";
 import type { Rule } from "../rule.ts";
+import { ALLOW_MARKER } from "../../config.ts";
+import type { Comment } from "./parse.ts";
 import { parseSource } from "./parse.ts";
 
 export const COMMENT: Rule = {
@@ -14,6 +16,7 @@ export const COMMENT: Rule = {
     "an explanation becomes a name: renameOrdersOlderThanAYear() needs no comment above it",
     "the reason you did it goes in the commit message, where it is dated and attached to the change",
     "longer background goes in a .md file beside the code, which looper never asks you to keep in your head",
+    "the one exception is a line looper itself reads: `looper:allow-secret` after code on the same line, which the commit gate checks on every commit and so cannot quietly stop being true",
   ],
   valve: { kind: "none" },
 };
@@ -29,15 +32,27 @@ function isLicenceHeader(comment: Comment): boolean {
   return A_LICENCE.test(comment.value);
 }
 
+function isAllowance(comment: Comment, lines: readonly string[]): boolean {
+  if (comment.kind !== "line" || comment.value.trim() !== ALLOW_MARKER) return false;
+  if (comment.loc === null) return false;
+  const line = lines[comment.loc.start.line - 1];
+  if (line === undefined) return false;
+  return line.slice(0, comment.loc.start.column).trim().length > 0;
+}
+
 export const commentCheck: Check = {
   rule: COMMENT,
 
   run(subject: Subject): readonly Finding[] {
     const parsed = parseSource(subject.file, subject.text);
     if (parsed.kind === "unreadable") return [];
+    const lines = subject.text.split("\n");
 
     return parsed.comments
-      .filter((comment) => !isDirective(comment) && !isLicenceHeader(comment))
+      .filter(
+        (comment) =>
+          !isDirective(comment) && !isLicenceHeader(comment) && !isAllowance(comment, lines),
+      )
       .map((comment) => ({ line: comment.loc === null ? 0 : comment.loc.start.line }));
   },
 };

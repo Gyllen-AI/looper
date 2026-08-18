@@ -8,9 +8,12 @@ export type Node = {
   readonly [key: string]: unknown;
 };
 
+export type Where = { readonly start: { readonly line: number; readonly column: number } };
+
 export type Comment = {
+  readonly kind: "line" | "block";
   readonly value: string;
-  readonly loc: { readonly start: { readonly line: number } } | null;
+  readonly loc: Where | null;
 };
 
 export type Parsed =
@@ -87,14 +90,29 @@ export function lineOfNode(node: Node): number {
   return node.loc.start.line;
 }
 
-function isComment(value: unknown): value is Comment {
-  if (value === null || typeof value !== "object") return false;
-  return typeof fieldAt(value, "value") === "string";
+function whereOf(held: unknown): Where | null {
+  const start = fieldAt(fieldAt(held, "loc"), "start");
+  const line = fieldAt(start, "line");
+  const column = fieldAt(start, "column");
+  if (typeof line !== "number" || typeof column !== "number") return null;
+  return { start: { line, column } };
+}
+
+function commentOf(held: unknown): Comment | null {
+  const said = fieldAt(held, "value");
+  if (typeof said !== "string") return null;
+  const kind = fieldAt(held, "type") === "CommentLine" ? "line" : "block";
+  return { kind, value: said, loc: whereOf(held) };
 }
 
 function commentsIn(held: unknown): readonly Comment[] {
   if (!Array.isArray(held)) return [];
-  return held.filter(isComment);
+  const found: Comment[] = [];
+  for (const item of held) {
+    const comment = commentOf(item);
+    if (comment !== null) found.push(comment);
+  }
+  return found;
 }
 
 export function isNode(value: unknown): value is Node {

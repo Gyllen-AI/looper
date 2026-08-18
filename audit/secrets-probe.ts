@@ -10,17 +10,17 @@ const NOTHING_ALLOWED = new Set<string>();
 
 const PROBES: readonly Probe[] = [
   { name: "AWS access key id", expect: "caught", text: `const id = "${"AKIA".concat("3XQZ7RTPLM4WNBVC")}";` },
-  { name: "AWS secret access key", expect: "caught", text: `const secret = "${"wJalrXUtnFEMI".concat("/K7MDENG/bPxRfiCYzQ4tHgLp2V")}";` },
+  { name: "AWS secret access key", expect: "caught", text: `const secret = "${"wJalrXUtnFEMI".concat("/K7MDENG/bPxRfiCYzQ4tHgLp2V")}";` }, // looper:allow-secret
   { name: "GitHub personal token", expect: "caught", text: `const token = "${"ghp".concat("_16C7e42F292c6912E7710c838347Ae178B4a")}";` },
   { name: "Google API key", expect: "caught", text: `const key = "${"AIza".concat("SyD-1234567890abcdefghijklmnopqrstu")}";` },
-  { name: "Slack bot token", expect: "caught", text: `const slack = "${"xoxb".concat("-123456789012-1234567890123-AbCdEfGhIjKlMnOpQrStUvWx")}";` },
-  { name: "Stripe live key", expect: "caught", text: `const stripe = "${"sk".concat("_live_51H8xQeK7bYzAbCdEfGhIjKlMnOpQrStUvWxYz")}";` },
-  { name: "OpenAI key", expect: "caught", text: `const openai = "${"sk".concat("-proj-AbCdEfGhIjKlMnOpQrStUvWxYz1234567890AbCdEfGh")}";` },
-  { name: "private key block", expect: "caught", text: `-----BEGIN RSA PRIVATE KEY-----\nMIIEowIBAAKCAQEA\n-----END RSA PRIVATE KEY-----` },
-  { name: "password in a connection string", expect: "caught", text: `const url = "postgres://admin:hunter2istheworst@db.internal:5432/app";` },
-  { name: "password assigned", expect: "caught", text: `const password = "S3cret-Passw0rd-Not-Guessable";` },
-  { name: "a Meta long-lived token", expect: "caught", text: `const meta = "${"EAA".concat("aBcDeFgHi1ZBxKZBoZBqZAZCwZDZD8yQZBvZC0ZAmZBhZC9ZBkZBnZBpZC2ZBsZByZBvZCZAZDaBcDeFgHiJkLmNoPqRsTu")}";` },
-  { name: "a JSON web token", expect: "caught", text: `const jwt = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIn0.dozjgNryP4J3jVmNHl0w5N_XgL0n3I9PlFUP0THsR8U";` },
+  { name: "Slack bot token", expect: "caught", text: `const slack = "${"xoxb".concat("-123456789012-1234567890123-AbCdEfGhIjKlMnOpQrStUvWx")}";` }, // looper:allow-secret
+  { name: "Stripe live key", expect: "caught", text: `const stripe = "${"sk".concat("_live_51H8xQeK7bYzAbCdEfGhIjKlMnOpQrStUvWxYz")}";` }, // looper:allow-secret
+  { name: "OpenAI key", expect: "caught", text: `const openai = "${"sk".concat("-proj-AbCdEfGhIjKlMnOpQrStUvWxYz1234567890AbCdEfGh")}";` }, // looper:allow-secret
+  { name: "private key block", expect: "caught", text: `-----BEGIN RSA PRIVATE KEY-----\nMIIEowIBAAKCAQEA\n-----END RSA PRIVATE KEY-----` }, // looper:allow-secret
+  { name: "password in a connection string", expect: "caught", text: `const url = "postgres://admin:hunter2istheworst@db.internal:5432/app";` }, // looper:allow-secret
+  { name: "password assigned", expect: "caught", text: `const password = "S3cret-Passw0rd-Not-Guessable";` }, // looper:allow-secret
+  { name: "a Meta long-lived token", expect: "caught", text: `const meta = "${"EAA".concat("aBcDeFgHi1ZBxKZBoZBqZAZCwZDZD8yQZBvZC0ZAmZBhZC9ZBkZBnZBpZC2ZBsZByZBvZCZAZDaBcDeFgHiJkLmNoPqRsTu")}";` }, // looper:allow-secret
+  { name: "a JSON web token", expect: "caught", text: `const jwt = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIn0.dozjgNryP4J3jVmNHl0w5N_XgL0n3I9PlFUP0THsR8U";` }, // looper:allow-secret
 
   { name: "a git sha", expect: "quiet", text: `const commit = "3a7ff890f1c2d3e4a5b6c7d8e9f0a1b2c3d4e5f6";` },
   { name: "a uuid", expect: "quiet", text: `const id = "7636aea1-01bb-41d7-8f7e-06063ffac28a";` },

@@ -4,7 +4,9 @@ import { readFileSync, readdirSync, statSync, existsSync } from "node:fs";
 import { execFileSync } from "node:child_process";
 import { join } from "node:path";
 
-import { SERVER_VERSION } from "../src/config.ts";
+import { ALLOW_MARKER, SERVER_VERSION } from "../src/config.ts";
+import { commentCheck } from "../src/law/ts/comment.ts";
+import { scanText } from "../src/secrets/capability.ts";
 
 const ROOT = join(import.meta.dirname, "..");
 
@@ -332,4 +334,24 @@ test("the install line points at the repository this actually is", () => {
       `${file} tells a stranger to install from somewhere that is not ${slug}. The first command in a README is the one that has to work.`,
     );
   }
+});
+
+test("the file of deliberately key-shaped fixtures has a spelling both gates accept", () => {
+  const at = "audit/secrets-probe.ts";
+  const text = readFileSync(join(ROOT, at), "utf8");
+
+  assert.deepEqual(
+    [...scanText(ROOT, text, at)],
+    [],
+    "the commit gate refuses the one file whose whole purpose is to hold key-shaped values, and neither route it offers works here: the allow-list wants the exact value, which is what assembling them from halves avoids, and the marker is a comment",
+  );
+  assert.deepEqual(
+    [...commentCheck.run({ file: at, text, root: ROOT })],
+    [],
+    "TS-DEAD:2 refuses the markers that make the commit gate quiet, so the two rules cancel each other and the file cannot be written at all",
+  );
+  assert.ok(
+    text.includes(ALLOW_MARKER),
+    "the markers are gone, so this test now passes for the wrong reason and would keep passing if the gate stopped working",
+  );
 });
