@@ -22,7 +22,53 @@ is a suspicion and belongs in the notes at the bottom, not in the list.
 
 ## Open
 
-_Empty. Findings 41 to 95 are closed._
+_Empty. Findings 41 to 96 are closed._
+
+### 96 · `noise` — `looper law` exited 2 for problems it had just said do not block — cleared
+
+2026-08-18, adopter issue #47, from a project with 2,391 baseline problems across
+65 files. The command printed
+
+```
+All 2391 of these were already here before looper arrived ... They do not block a
+commit until you touch the line they are on.
+2
+```
+
+and the 2 is the same answer it gives when something is blocking, so nothing that
+reads an exit code can tell the two apart. The adopter wanted `looper law` in the
+single command their project runs before every commit and in CI beside the type
+check, and could not: it would be red from the first day of the cleanup until the
+last of 2,391 problems was gone, and a check that is always red is not a check.
+
+**The fix.** The exit code answers one question, *is anything blocking*. 0 when
+every problem found is in the baseline, 2 when one is not.
+
+The counts in the message were wrong in the same place and are corrected by the
+same change. They were `older = min(baseline total, found)` and `yours = found -
+older` — a subtraction over totals, which calls a new problem old whenever an old
+one in the same file was fixed in the same pass. Both now come from
+`againstBaseline`, which asks of each violation whether that file and that rule
+are recorded.
+
+**Measured on this repo**, which carries 13 baseline problems and nothing new:
+
+```
+$ node src/main.ts law > /dev/null ; echo $?
+0
+$ cp probe.ts src/probe-new.ts ; node src/main.ts law > /dev/null ; echo $?
+2
+```
+
+Two tests run the built command in a scratch adopted project and read its status.
+The first fails before the change.
+
+**Left alone deliberately.** The commit gate has its own `separate` in
+`src/law/capability.ts`, which is the same split plus the touched-lines rule. It
+keys on the path it was given rather than on each violation's own `file`, and the
+Rust and Python readers build their violations elsewhere, so whether the two keys
+always agree is unverified. Folding them together on that assumption is how a gate
+breaks quietly; the duplication stays until somebody measures it.
 
 ### 95 · `missing` — looper's own project was reached as an installed command, so its tools never started — cleared
 
