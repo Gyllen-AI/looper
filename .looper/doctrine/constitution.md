@@ -9,7 +9,10 @@ they cost tokens every turn.
 - Where two readings are defensible, build the stricter one, and do it without
   asking. Budget, convention and comfort are not arguments, and finding a gap
   then asking permission to close it is the same failure wearing manners.
-- Nothing load-bearing sits behind a command they must know to type.
+- **The only input is a sentence.** No command, no file name, no order of steps,
+  no knowing a step exists: looper does it on an ordinary turn and says what it
+  did. Replaces "nothing load-bearing sits behind a command they must know to
+  type", which finding 88 satisfied while shipping a rule only `init` reached.
 - Nothing belonging to any adopting organisation enters this repo.
 
 Ask for a rule set by name with the `doctrine` tool: `sources` before reading

@@ -22,7 +22,31 @@ is a suspicion and belongs in the notes at the bottom, not in the list.
 
 ## Open
 
-_Empty. Findings 41 to 88 are closed._
+_Empty. Findings 41 to 89 are closed._
+
+### 89 · the rule that would have caught finding 88, written after it did not — cleared
+
+2026-08-18. The project constitution said "nothing load-bearing sits behind a
+command they must know to type", and on the same day I shipped `STACK:1`, a rule
+that could only ever fire in a project where somebody re-ran `looper init`. The
+line was satisfied in letter — I was not asking a person to type anything, an
+agent would — and the thing was still unreachable, because an agent only runs a
+command it knows exists.
+
+The replacement says what the old one meant: **the only input is a sentence.** No
+command, no file name, no order of steps, and no knowing that a step exists.
+looper does it on an ordinary turn and says what it did.
+
+It replaces rather than joins, because this half of the doctrine is paid on every
+message and a line that restates a line already there costs the same as a real
+one. Measured after the change: 9,513 characters of a 9,800 ceiling on a turn
+that pulls several branches, against 9,657 for the first draft of the same rule,
+which is why it was cut before it shipped.
+
+**What it cannot do is gate anything.** There is no mechanical check for "a person
+had to know something", and this project does not describe barriers that are not
+wired — so this is a design rule that lives in the doctrine and is enforced by
+being read, which is the honest description of it.
 
 ### 88 · a rule that could only reach people who type commands — cleared
 
