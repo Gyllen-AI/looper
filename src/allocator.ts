@@ -2,9 +2,12 @@ import { INJECTION_SEPARATOR } from "./config.ts";
 import type { Capability, InjectContext, Injection } from "./capability.ts";
 import { reasonFrom } from "./fields.ts";
 
+export type Weighed = { readonly source: string; readonly chars: number };
+
 export type Allocation = {
   readonly text: string;
   readonly contributors: readonly string[];
+  readonly weighed: readonly Weighed[];
   readonly dropped: readonly string[];
   readonly overflowed: boolean;
   readonly chars: number;
@@ -54,6 +57,7 @@ export function allocate(
 
   const parts: string[] = [];
   const contributors: string[] = [];
+  const weighed: Weighed[] = [];
   const dropped: string[] = [];
   let used = 0;
   let overflowed = false;
@@ -65,6 +69,7 @@ export function allocate(
     if (parts.length === 0) {
       parts.push(injection.text);
       contributors.push(injection.source);
+      weighed.push({ source: injection.source, chars: width });
       used = width;
       overflowed = width > context.budget;
       continue;
@@ -72,6 +77,7 @@ export function allocate(
     if (projected <= context.budget) {
       parts.push(injection.text);
       contributors.push(injection.source);
+      weighed.push({ source: injection.source, chars: width });
       used = projected;
       continue;
     }
@@ -83,6 +89,7 @@ export function allocate(
     if (projected <= context.budget) break;
     const last = parts.pop();
     const name = contributors.pop();
+    weighed.pop();
     if (last === undefined || name === undefined) break;
     used -= last.length + INJECTION_SEPARATOR.length;
     dropped.push(name);
@@ -95,6 +102,7 @@ export function allocate(
     allocation: {
       text,
       contributors,
+      weighed,
       dropped,
       overflowed: overflowed || text.length > context.budget,
       chars: text.length,

@@ -175,6 +175,16 @@ export const SECRETS_ALLOW_PATH = ".looper/secrets.allow";
 
 export const ALLOW_MARKER = "looper:allow-secret";
 
+export const SECRETS_ALLOW_STUB = `# Values looper is allowed to see in this repository, one per line, each with the
+# reason above it. This file is the review: adding a line here is a decision
+# somebody can read in a diff, which is why there is no flag to skip the check.
+#
+# It starts empty, and empty is the right size. A value belongs here only when it
+# is genuinely safe to publish — a documented example key, a fixture that was
+# never issued. A real credential is taken out of the file and changed at whoever
+# issued it, because every clone already has the old one.
+`;
+
 export const SKIP_SUFFIXES: readonly string[] = [
   ".png", ".jpg", ".jpeg", ".gif", ".webp", ".ico", ".pdf", ".woff", ".woff2",
   "package-lock.json", "pnpm-lock.yaml", "yarn.lock",

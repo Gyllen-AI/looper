@@ -27,13 +27,33 @@ test("a fresh project gets a doctrine tree it can actually use", () => {
     const report = runInit(root, INSTALLED, NO_PATH);
     const made = pathsOf(report.steps, "scaffolded");
 
-    assert.equal(made.length, 3);
-    for (const tail of ["constitution.md", "map.toml", "README.md"]) {
+    assert.equal(made.length, 4);
+    for (const tail of ["constitution.md", "map.toml", "README.md", "secrets.allow"]) {
       assert.ok(made.some((path) => path.endsWith(tail)), `${tail} was not created`);
     }
     assert.ok(
       pathsOf(report.steps, "created").some((path) => path.endsWith(".mcp.json")),
       "the MCP file is wired rather than scaffolded, because a project that already has one still needs looper's server added to it",
+    );
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test("the file the secrets gate names is one init actually creates", () => {
+  const root = scratch();
+  try {
+    runInit(root, INSTALLED, NO_PATH);
+    const written = readFileSync(join(root, ".looper/secrets.allow"), "utf8");
+
+    assert.ok(
+      written.includes("This file is the review"),
+      "the gate tells somebody to add a value to a file that does not exist, with no header saying that every line in it is a decision a reviewer will read",
+    );
+    assert.deepEqual(
+      written.split("\n").filter((line) => line.trim().length > 0 && !line.startsWith("#")),
+      [],
+      "it must arrive empty. A scaffolded allowance with anything in it is an invitation, and an empty one is a review waiting to happen.",
     );
   } finally {
     rmSync(root, { recursive: true, force: true });
@@ -98,7 +118,7 @@ test("twice is indistinguishable from once", () => {
     const second = runInit(root, INSTALLED, NO_PATH);
 
     assert.deepEqual([...pathsOf(second.steps, "scaffolded")], []);
-    assert.equal(pathsOf(second.steps, "yours-already").length, 3);
+    assert.equal(pathsOf(second.steps, "yours-already").length, 4);
     assert.equal(pathsOf(second.steps, "already-wired").length, 2);
   } finally {
     rmSync(root, { recursive: true, force: true });

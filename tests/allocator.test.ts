@@ -117,3 +117,16 @@ test("the cost is reported in characters", () => {
   const run = allocate([new Speaker("router", 0, "AAAAA")], CONTEXT);
   assert.equal(run.allocation.chars, 5);
 });
+
+test("what each rule set cost is reported, because the author cannot cut what they cannot see", () => {
+  const run = allocate(
+    [new Speaker("first", 0, "a".repeat(100)), new Speaker("second", 10, "b".repeat(250))],
+    { root: ".", budget: 9800 },
+  );
+
+  assert.deepEqual(
+    run.allocation.weighed.map((held) => `${held.source}:${held.chars}`),
+    ["first:100", "second:250"],
+    "the widths are what the doctrine author needs to decide what to cut, and estimating them by hand with wc is the job looper is supposed to be doing",
+  );
+});

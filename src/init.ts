@@ -19,6 +19,8 @@ import {
   MAP_PATH,
   MAP_STUB,
   MCP_PATH,
+  SECRETS_ALLOW_PATH,
+  SECRETS_ALLOW_STUB,
   mcpStub,
   SETTINGS_PATH,
   looperHooks,
@@ -85,6 +87,7 @@ const STUBS: readonly Stub[] = [
   { path: CONSTITUTION_PATH, body: CONSTITUTION_STUB },
   { path: MAP_PATH, body: MAP_STUB },
   { path: DOCTRINE_README_PATH, body: DOCTRINE_README_STUB },
+  { path: SECRETS_ALLOW_PATH, body: SECRETS_ALLOW_STUB },
 ];
 
 function readExisting(path: string): Existing {

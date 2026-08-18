@@ -2,7 +2,9 @@
 import { readFileSync } from "node:fs";
 import { createInterface } from "node:readline";
 
-import { allocate, type Allocation } from "./allocator.ts";
+import { allocate, type Allocation, type Weighed } from "./allocator.ts";
+import { canonBranch } from "./canon.ts";
+import { readProjectBranch } from "./doctrine.ts";
 import { isHookEvent, type Payload } from "./capability.ts";
 import { DEV, INJECTION_BUDGET, searchPath, type Invocation } from "./config.ts";
 import { describeStep } from "./announce.ts";
@@ -101,6 +103,26 @@ function inject(): number {
   return 0;
 }
 
+const DOCTRINE_PREFIX = "doctrine:";
+
+function halvesOf(source: string): string {
+  if (!source.startsWith(DOCTRINE_PREFIX)) return "";
+  const name = source.slice(DOCTRINE_PREFIX.length);
+  const canon = canonBranch(name);
+  const mine = readProjectBranch(process.cwd(), name);
+  const ours = canon.kind === "found" ? canon.body.length : 0;
+  const yours = mine.kind === "present" ? mine.text.length : 0;
+  if (yours === 0) return "   all of it looper's";
+  if (ours === 0) return "   all of it yours";
+  return `   looper ${ours}, yours ${yours}`;
+}
+
+function costLines(weighed: readonly Weighed[]): readonly string[] {
+  return weighed.map(
+    (held) => `    ${String(held.chars).padStart(6)}  ${held.source}${halvesOf(held.source)}`,
+  );
+}
+
 function status(): number {
   const allocation = currentAllocation();
   const outstanding = totalIn(readBaseline(process.cwd()));
@@ -108,7 +130,8 @@ function status(): number {
     `looper status`,
     `  injection budget   ${INJECTION_BUDGET} chars`,
     `  used this turn     ${allocation.chars} chars`,
-    `  contributors       ${describeList(allocation.contributors)}`,
+    `  contributors`,
+    ...costLines(allocation.weighed),
     `  dropped            ${describeList(allocation.dropped)}`,
     `  left to fix        ${outstanding === 0 ? "nothing" : `${outstanding} from before looper arrived`}`,
   ];

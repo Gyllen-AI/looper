@@ -54,7 +54,7 @@ export function isABranchName(name: string): boolean {
   return !name.includes("..");
 }
 
-function readProjectBranch(root: string, name: string): ProjectHalf {
+export function readProjectBranch(root: string, name: string): ProjectHalf {
   if (!isABranchName(name)) return { kind: "absent" };
   const path = join(root, DOCTRINE_DIR, `${name}.md`);
   if (!existsSync(path)) return { kind: "absent" };

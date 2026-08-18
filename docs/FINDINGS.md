@@ -22,7 +22,7 @@ is a suspicion and belongs in the notes at the bottom, not in the list.
 
 ## Open
 
-_Empty. Every pass of both audits is closed, and findings 41 to 54 with them._
+_Empty. Every pass of both audits is closed, and findings 41 to 57 with them._
 
 ## The second audit — what it covered and what it found
 
@@ -68,6 +68,45 @@ tested, and every one was tested the way it was built rather than the way it
 will be used.
 
 ## Cleared
+
+### 57 · `blunt` — the secrets gate could not see the name a real project uses — cleared
+
+Adopter issue #21, measured on their repository: 119 lines flagged out of 688,138
+scanned, zero real secrets. Underscore is a word character, so `\b` never matched
+between `rcon_` and `password` — every credential name that had been thought
+about worked and every one that had not was invisible. A `TODO` in a comment
+excused the whole line, so the likeliest line in any codebase to carry a
+credential was the one line skipped. A single-case value was never random enough
+to look at, which is exactly what thirty-two hex characters are. Unquoted
+assignments, where `.env` files live, were not read at all.
+
+The widenings were run over foreign code before shipping, twice failing first:
+24 lines of `@babel/parser` on `tokens = file.tokens.map(…)`, then looper's own
+`FRESHNESS_BYPASS`, because bypass ends in pass. Shipped: `node_modules`, `src`
+and `vendor` zero, `tests/` only the nineteen deliberate fixtures. It then
+refused the commit that added the new fixtures, and refused the command that
+tried to pardon and commit in one breath, because that command carried them too.
+
+### 56 · `missing` — init named a file it never created — cleared
+
+Adopter issue #18. The secrets gate tells somebody to write a value into
+`.looper/secrets.allow`, and `init` scaffolded the constitution, the map and the
+doctrine README but not that. So the first person to hit a false positive created
+it from an error message, without the header every other file looper writes
+carries. It is scaffolded now, empty, with the header saying that each line in it
+is a review somebody will read later. Their own counter-argument — that an empty
+allowance is better than an inviting one — is answered by the file arriving with
+nothing in it and a test that fails if it ever arrives with anything.
+
+### 55 · `missing` — status could not say what a rule set costs — cleared
+
+Adopter issue #16. `looper status` reported the total and what was dropped, so
+the person writing doctrine could see that something was crowded out and not
+what to cut. When two branches were being dropped on their project every turn,
+finding the cause meant running `wc -c` and doing arithmetic against the canon.
+It now prints a line per set with its width, and for a branch, how much of it is
+looper's and how much is theirs — because only one of those halves is the
+author's to cut.
 
 ### 54 · `wrong` — the line reporting a drop was not paid for — cleared
 
