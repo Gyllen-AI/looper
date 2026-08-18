@@ -1,8 +1,16 @@
+import { existsSync } from "node:fs";
+import { join } from "node:path";
 import { test } from "node:test";
 import { createHash } from "node:crypto";
 import assert from "node:assert/strict";
 
-import { canonBranchNames, canonBranches, canonConstitution } from "../src/canon.ts";
+import {
+  canonBranchNames,
+  canonBranches,
+  canonConstitution,
+  canonGoverns,
+  pulledByName,
+} from "../src/canon.ts";
 import { assembleConstitution } from "../src/doctrine.ts";
 
 const FOREIGN_VOCABULARY: readonly string[] = [
@@ -79,4 +87,30 @@ test("every declared branch has a body", () => {
     [...canonBranchNames()],
   );
   for (const branch of branches) assert.ok(branch.body.length > 0);
+});
+
+test("every canon branch has a file, and a rule about when it arrives", () => {
+  const named = canonBranchNames();
+  const routed = canonGoverns();
+
+  const withoutAFile = named.filter(
+    (name) => !existsSync(join(import.meta.dirname, "..", "src", "canon", `${name}.md`)),
+  );
+  assert.deepEqual(withoutAFile, [], "a branch is named and its file does not exist");
+
+  const neverArrives = named.filter(
+    (name) => !routed.has(name) && !pulledByName().includes(name),
+  );
+  assert.deepEqual(
+    neverArrives,
+    [],
+    "these branches exist, nothing in canonGoverns says when they arrive, and they are not in the list of ones fetched by name. So they are written and never read. Python was in that state for the length of an afternoon: seven rules enforcing a standard the agent was never told.",
+  );
+
+  const routedNowhere = [...routed.keys()].filter((name) => !named.includes(name));
+  assert.deepEqual(
+    routedNowhere,
+    [],
+    "these are routed to files that do not exist, so touching that code loads nothing and says nothing",
+  );
 });

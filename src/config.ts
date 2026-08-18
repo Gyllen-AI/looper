@@ -62,8 +62,8 @@ export const MAP_STUB = `# Ties each doctrine branch to the code it governs. A b
 # The canon ships its own half under the same names, and yours is added to it.
 #
 # looper already knows its own: the TypeScript law arrives when you touch a .ts
-# file, the Rust law when you touch a .rs file, and these doctrine rules when you
-# edit this folder. Naming a branch here replaces what looper knows for that one
+# file, the Rust law when you touch a .rs file, the Python law when you touch a
+# .py file, and these doctrine rules when you edit this folder. Naming a branch here replaces what looper knows for that one
 # branch, and leaves the rest alone.
 #
 # [governs]
