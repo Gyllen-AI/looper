@@ -1199,6 +1199,23 @@ fields are replaced, the previous file is kept beside it, and init prints what t
 entry was launching and what it launches now, because a repair nobody is told
 about is the same silence as the stale entry.
 
+**JavaScript is a language this project judges, and was not one. Corrected
+2026-08-18, from adopter issue #46, finding 98.** `JUDGED_EXTENSIONS` listed
+`.ts`, `.tsx`, `.mts`, `.cts`, `.rs` and `.py`. A `.mjs` was walked past by the
+survey, so no rule read it — and because `STACK:1` is handed the same list, the
+one rule whose whole job is noticing a language arrive never saw it either. Both
+halves of that report have one cause and one fix: `.js`, `.jsx`, `.mjs` and
+`.cjs` are judged.
+
+Nothing else had to change. `lawFor` already routes anything that is not Rust or
+Python to the TypeScript reader, and `languageOf` already knew all four
+extensions mean JavaScript. The list was the only place that disagreed.
+
+`.mjs` is what somebody reaches for precisely when they need something that runs
+before or outside the TypeScript build — which is often the part that decides how
+everything else runs. The adopter's example configured the build of an entire
+Next.js console.
+
 **The rule reached one of the two places a failure is caught. Corrected
 2026-08-18, from adopter issue #45, finding 97.** `TS-ERROR:4` walked for
 `CatchClause` and nothing else, so `.catch(() => {})` — named twice in the `law`

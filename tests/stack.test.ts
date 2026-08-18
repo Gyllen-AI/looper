@@ -9,6 +9,8 @@ import { languagesListedIn, stackOf } from "../src/stack/read.ts";
 import { stackDocument } from "../src/stack/write.ts";
 import { undeclaredLanguagesIn } from "../src/law/stack.ts";
 import { writeStackIfAbsent } from "../src/law/capability.ts";
+import { surveyProject } from "../src/law/project.ts";
+import type { Violation } from "../src/law/rule.ts";
 
 function project(): string {
   return mkdtempSync(join(tmpdir(), "looper-stack-"));
@@ -16,6 +18,10 @@ function project(): string {
 
 function judged(root: string, file: string): number {
   return undeclaredLanguagesIn(root, [file]).length;
+}
+
+function surveyStatus(root: string): readonly Violation[] {
+  return surveyProject(root, "everything", []).violations;
 }
 
 test("a project's stack is measured, never guessed", () => {
@@ -148,6 +154,46 @@ test("a record somebody already has is never rewritten", () => {
     writeFileSync(join(root, STACK_PATH), "| language | how looper knows |\n|---|---|\n| Rust | ours |\n");
     assert.equal(writeStackIfAbsent(root), "");
     assert.ok(readFileSync(join(root, STACK_PATH), "utf8").includes("ours"));
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test("a JavaScript file arriving in a project that never chose JavaScript is judged and said out loud", () => {
+  const root = project();
+  try {
+    writeFileSync(join(root, "package.json"), "{}");
+    mkdirSync(join(root, "src"), { recursive: true });
+    writeFileSync(join(root, "src", "one.ts"), "export const a = 1;\n");
+    writeFileSync(join(root, STACK_PATH), stackDocument(stackOf(root), "2026-08-18"));
+
+    writeFileSync(join(root, "deploy.mjs"), "export const run = () => {};\n");
+
+    assert.equal(
+      surveyStatus(root).some((held) => held.rule.id === "STACK:1" && held.file === "deploy.mjs"),
+      true,
+      "a language nobody chose entered the project through a file extension the survey does not walk, so nothing ever saw it",
+    );
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test("a JavaScript file is judged by the same law as a TypeScript one", () => {
+  const root = project();
+  try {
+    writeFileSync(join(root, "package.json"), "{}");
+    mkdirSync(join(root, "src"), { recursive: true });
+    writeFileSync(
+      join(root, "src", "build.mjs"),
+      "export async function work() { return 1; }\nexport function a() { try { work(); } catch {} }\n",
+    );
+
+    assert.equal(
+      surveyStatus(root).some((held) => held.rule.id === "TS-ERROR:4"),
+      true,
+      "a swallowed failure in a .mjs file was not a verdict, because the file was never read",
+    );
   } finally {
     rmSync(root, { recursive: true, force: true });
   }

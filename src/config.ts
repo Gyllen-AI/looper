@@ -121,7 +121,18 @@ followed. The same rule as a general principle is skimmed.
 
 export const LAW_PATH = "law.toml";
 
-export const JUDGED_EXTENSIONS: readonly string[] = [".ts", ".tsx", ".mts", ".cts", ".rs", ".py"];
+export const JUDGED_EXTENSIONS: readonly string[] = [
+  ".ts",
+  ".tsx",
+  ".mts",
+  ".cts",
+  ".js",
+  ".jsx",
+  ".mjs",
+  ".cjs",
+  ".rs",
+  ".py",
+];
 
 export const RUST_EXTENSION = ".rs";
 
