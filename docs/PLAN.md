@@ -1408,8 +1408,21 @@ with the change rather than the conclusion. Measured on a clean fork changing a
 rule: 9,577 characters, nothing dropped.
 
 And the half a document cannot do: `.github/workflows/evidence.yml` refuses a
-pull request that changes `src/law/` without touching `audit/cases.ts`, and says
-why. The third step — the foreign-corpus run — is deliberately not mechanised,
+change to **what a rule says** — a `bans:`, `instead:` or `id:` line under
+`src/law/` — when `audit/cases.ts` is untouched, and says why.
+
+**It was written as a path prefix and that was wrong. Corrected 2026-08-18, by
+the first fork to hit it.** `^src/law/` matches `src/law/capability.ts`, which is
+gate wiring rather than a rule, so the fix that made the commit gate stop reading
+Rust as TypeScript would have been refused for not adding a case it had no case
+to add. A gate that refuses correct work for a reason that is not true is the
+failure this repo calls blunt, and it had shipped inside our own contribution
+path. It now reads the diff rather than the path: verified against real history,
+that gate-wiring fix passes, and a constructed commit changing one rule's ban
+text is refused until `audit/cases.ts` moves with it.
+
+It runs on pushes to `main` as well as pull requests, because a gate the
+maintainers walk around is not a gate. The third step — the foreign-corpus run — is deliberately not mechanised,
 because no machine here can check that somebody read fifty thousand lines of
 somebody else's code. It goes in the pull request in their own words, and it is
 what decides whether the rule is taken.

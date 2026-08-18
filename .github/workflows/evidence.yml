@@ -1,6 +1,8 @@
 name: a rule change carries its cases
 
 on:
+  push:
+    branches: [main]
   pull_request:
 
 jobs:
@@ -10,15 +12,31 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      - name: a change to the law must change the cases with it
+      - name: a change to what a rule says must change the cases with it
+        env:
+          BASE_REF: ${{ github.base_ref }}
+          BEFORE: ${{ github.event.before }}
+          EVENT: ${{ github.event_name }}
         run: |
-          base="origin/${{ github.base_ref }}"
-          changed=$(git diff --name-only "$base"...HEAD)
-          rules=$(echo "$changed" | grep -E '^src/law/' || true)
-          cases=$(echo "$changed" | grep -E '^audit/cases\.ts$' || true)
-          if [ -n "$rules" ] && [ -z "$cases" ]; then
-            echo "This pull request changes what looper enforces:"
-            echo "$rules" | sed 's/^/  /'
+          if [ "$EVENT" = "pull_request" ]; then
+            range="origin/$BASE_REF...HEAD"
+          else
+            range="$BEFORE..HEAD"
+          fi
+          if ! git rev-parse --verify --quiet "${range%%.*}^{commit}" >/dev/null; then
+            echo "no commit to compare against ($range), so nothing was checked."
+            echo "This check reads a diff; it cannot read one that does not exist."
+            exit 0
+          fi
+
+          said=$(git diff -U0 "$range" -- 'src/law/**' \
+                 | grep -E '^[+-][^+-]' \
+                 | grep -E 'bans:|instead:|id: "' || true)
+          cases=$(git diff --name-only "$range" | grep -E '^audit/cases\.ts$' || true)
+
+          if [ -n "$said" ] && [ -z "$cases" ]; then
+            echo "This changes what a rule says:"
+            echo "$said" | sed 's/^/  /' | head -20
             echo
             echo "and audit/cases.ts is untouched. A rule's cases are written first,"
             echo "from its own ban text: what must fire and what must stay silent."
@@ -27,4 +45,4 @@ jobs:
             echo "CONTRIBUTING.md, 'Changing a rule, or adding one', has the order."
             exit 1
           fi
-          echo "no rule changed, or the cases changed with it"
+          echo "no rule text changed, or the cases changed with it"
