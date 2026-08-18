@@ -20,6 +20,30 @@ function governsIn(source: string, section: string): Governs {
   return governs;
 }
 
+export type MapComplaint = { readonly branch: string; readonly why: string };
+
+export function unheardIn(
+  governs: Governs,
+  known: readonly string[],
+  matchedBy: (globs: readonly string[]) => boolean,
+): readonly MapComplaint[] {
+  const said: MapComplaint[] = [];
+  for (const [branch, globs] of governs) {
+    if (globs.length === 0) continue;
+    if (!known.includes(branch)) {
+      said.push({
+        branch,
+        why: "there is no rule set by that name, so the area it names has no rules at all",
+      });
+      continue;
+    }
+    if (globs.length > 0 && !matchedBy(globs)) {
+      said.push({ branch, why: "nothing in this project matches what it governs" });
+    }
+  }
+  return said;
+}
+
 export function withCanonDefaults(project: Governs, canon: Governs): Governs {
   const merged = new Map<string, readonly string[]>(project);
   for (const [branch, paths] of canon) {

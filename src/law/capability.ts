@@ -32,6 +32,8 @@ import type { Violation } from "./rule.ts";
 import type { Touched } from "../git.ts";
 import { fieldAt, reasonFrom } from "../fields.ts";
 
+const EVERYTHING: readonly string[] = [];
+
 const LAW_EVENTS: readonly HookEvent[] = [
   "PostToolUse",
   "PreToolUse",
@@ -246,7 +248,7 @@ export function shrinkBaseline(root: string): Outcome {
   const recorded = readBaseline(root);
   if (totalIn(recorded) === 0) return { kind: "pass" };
 
-  const shrink = shrinkToward(recorded, countsOf(surveyProject(root, "everything").violations));
+  const shrink = shrinkToward(recorded, countsOf(surveyProject(root, "everything", EVERYTHING).violations));
   if (shrink.kind === "unchanged") return { kind: "pass" };
 
   writeBaseline(root, shrink.baseline);

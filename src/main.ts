@@ -4,7 +4,10 @@ import { createInterface } from "node:readline";
 
 import { allocate, type Allocation, type Weighed } from "./allocator.ts";
 import { canonBranch } from "./canon.ts";
-import { readProjectBranch } from "./doctrine.ts";
+import { listBranches, readProjectBranch } from "./doctrine.ts";
+import { matches, readMap, unheardIn } from "./map.ts";
+import { trackedFiles } from "./git.ts";
+import { relative } from "node:path";
 import { isHookEvent, type Payload } from "./capability.ts";
 import { DEV, INJECTION_BUDGET, searchPath, type Invocation } from "./config.ts";
 import { describeStep } from "./announce.ts";
@@ -123,6 +126,17 @@ function costLines(weighed: readonly Weighed[]): readonly string[] {
   );
 }
 
+function mapComplaints(): readonly string[] {
+  const map = readMap(process.cwd());
+  if (map.kind === "absent") return [];
+  const tracked = trackedFiles(process.cwd());
+  const files = tracked.kind === "unavailable" ? [] : tracked.paths;
+  const said = unheardIn(map.governs, listBranches(process.cwd()), (globs) =>
+    files.length === 0 || files.some((file) => globs.some((glob) => matches(glob, file))),
+  );
+  return said.map((held) => `  ${held.branch} governs nothing that arrives: ${held.why}`);
+}
+
 function status(): number {
   const allocation = currentAllocation();
   const outstanding = totalIn(readBaseline(process.cwd()));
@@ -135,6 +149,10 @@ function status(): number {
     `  dropped            ${describeList(allocation.dropped)}`,
     `  left to fix        ${outstanding === 0 ? "nothing" : `${outstanding} from before looper arrived`}`,
   ];
+  const unheard = mapComplaints();
+  if (unheard.length > 0) {
+    lines.push(`  rule sets that will never arrive`, ...unheard);
+  }
   if (allocation.overflowed) {
     lines.push(
       `  the first contributor alone is over budget, so it was kept and the ceiling exceeded`,
@@ -204,11 +222,11 @@ function serve(): number {
   return 0;
 }
 
-function law(): number {
+function law(asked: readonly string[]): number {
   for (const said of misspelledIn(readConcessions(process.cwd()), knownRuleIds())) {
     console.error(said);
   }
-  const survey = surveyProject(process.cwd(), "everything");
+  const survey = surveyProject(process.cwd(), "everything", asked);
   for (const named of survey.unreadable) {
     console.error(`looper: could not read ${named}; it was not judged`);
   }
@@ -438,7 +456,7 @@ function usage(): void {
       "  looper hook <event>     dispatch an agent hook",
       "  looper status           what looper injects, and what it costs per turn",
       "  looper serve            the MCP server, on stdin and stdout",
-      "  looper law              judge every file in the project",
+      "  looper law [path...]    judge every file, or only what is under these paths",
       "  looper adopt            propose a rule this project should follow",
       "  looper report           say a looper rule is wrong, without sending anything",
     ].join("\n"),
@@ -453,7 +471,7 @@ function run(argv: readonly string[]): number {
   if (command === "hook") return hook(rest);
   if (command === "status") return status();
   if (command === "serve") return serve();
-  if (command === "law") return law();
+  if (command === "law") return law(rest);
   if (command === "adopt") return adopt(rest);
   if (command === "report") return report(rest);
   usage();

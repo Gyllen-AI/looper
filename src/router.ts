@@ -40,6 +40,11 @@ export class Router implements Capability {
       },
     ];
 
+    const unreachable = this.unreachable(context.root);
+    if (unreachable.length > 0) {
+      injections.push({ source: this.name, priority: ROUTER_PRIORITY, text: unreachable });
+    }
+
     for (const name of this.signalled(context.root)) {
       const branch = assembleBranch(context.root, name);
       if (branch.kind === "nowhere") continue;
@@ -51,6 +56,12 @@ export class Router implements Capability {
     }
 
     return injections;
+  }
+
+  unreachable(root: string): string {
+    const changed = changedPaths(root);
+    if (changed.kind !== "unavailable") return "";
+    return `looper: the rule sets tied to what you touched were not loaded (${changed.detail}). Only the constitution below is in force, which is a fraction of this project's rules.`;
   }
 
   signalled(root: string): readonly string[] {

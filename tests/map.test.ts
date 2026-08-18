@@ -2,7 +2,7 @@ import { required } from "../src/present.ts";
 import { test } from "node:test";
 import assert from "node:assert/strict";
 
-import { branchesFor, matches, parseMap, withCanonDefaults } from "../src/map.ts";
+import { branchesFor, matches, parseMap, unheardIn, withCanonDefaults } from "../src/map.ts";
 import { canonGoverns } from "../src/canon.ts";
 import { TomlMalformed } from "../src/errors.ts";
 
@@ -104,4 +104,22 @@ test("the canon's own map is filled in only where the project said nothing", () 
   assert.ok(merged.has("rust"), "a branch the project never mentioned did not get the canon's default");
   assert.deepEqual([...branchesFor(merged, ["src/a.ts"])], [], "the canon default fired for a branch the project had claimed");
   assert.deepEqual([...branchesFor(merged, ["crates/a/src/main.rs"])], ["architecture", "rust"].filter((name) => merged.has(name)));
+});
+
+test("a branch nobody can hear is said out loud", () => {
+  const governs = parseMap('[governs]\nfronend = ["ui/**"]\nfrontend = ["interface/**"]\n');
+  const said = unheardIn(governs, ["frontend", "law"], (globs) => globs.includes("ui/**"));
+
+  assert.deepEqual(
+    said.map((held) => held.branch),
+    ["fronend", "frontend"],
+    "a typo leaves an area with no rules at all, and a glob that matches nothing is how a map rots after a rename — on the day the code it governs moves, which is the day it matters most",
+  );
+  assert.ok(said[0]?.why.includes("no rule set by that name"));
+  assert.ok(said[1]?.why.includes("nothing in this project matches"));
+});
+
+test("a branch that governs everything it should is not complained about", () => {
+  const governs = parseMap('[governs]\nlaw = ["src/**"]\n');
+  assert.deepEqual([...unheardIn(governs, ["law"], () => true)], []);
 });

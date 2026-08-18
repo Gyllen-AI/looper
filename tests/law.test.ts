@@ -1,9 +1,11 @@
 import { parseToml, stringsAt, tableIn } from "../src/toml.ts";
 import { judgedFiles, surveyProject } from "../src/law/project.ts";
+
+const EVERYTHING: readonly string[] = [];
 import { test } from "node:test";
 import assert from "node:assert/strict";
 
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -204,7 +206,7 @@ test("a project with nothing the law can read is told that, not told it is clean
   const root = mkdtempSync(join(tmpdir(), "looper-nolang-"));
   try {
     writeFileSync(join(root, "README.md"), "# infra\n");
-    const survey = surveyProject(root, "everything");
+    const survey = surveyProject(root, "everything", EVERYTHING);
     assert.equal(survey.files, 0);
     assert.deepEqual([...survey.violations], []);
   } finally {
@@ -227,7 +229,7 @@ function projectHolding(where: string, marker: string): string {
 test("a directory with its own law.toml is judged by that law, not by this project's", () => {
   const root = projectHolding("tools/looper", "law.toml");
   try {
-    const survey = surveyProject(root, "everything");
+    const survey = surveyProject(root, "everything", EVERYTHING);
 
     assert.deepEqual(
       survey.violations.map((held) => held.file),
@@ -252,11 +254,52 @@ test("a submodule is left to its own law even when it has no law.toml", () => {
     );
 
     assert.deepEqual(
-      surveyProject(root, "everything").violations.map((held) => held.file),
+      surveyProject(root, "everything", EVERYTHING).violations.map((held) => held.file),
       [],
       "somebody else's repository, checked out inside this one, is not this project's code to judge",
     );
   } finally {
     rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test("a directory that is another name for one already read does not loop forever", () => {
+  const root = mkdtempSync(join(tmpdir(), "looper-loop-"));
+  try {
+    mkdirSync(join(root, "src"), { recursive: true });
+    writeFileSync(join(root, "src/a.ts"), "export const a = 1;\n");
+    symlinkSync(".", join(root, "src", "loop"), "dir");
+
+    const survey = surveyProject(root, "everything", EVERYTHING);
+
+    assert.equal(survey.files, 1);
+    assert.ok(
+      survey.unreadable.some((said) => said.includes("already read")),
+      "a symlink loop must be named and stepped over. One `ln -s . src/loop` used to end looper law and looper init in a raw Node stack trace, on the day somebody first meets the tool.",
+    );
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test("a file that points out of the project is not judged, and says so", () => {
+  const root = mkdtempSync(join(tmpdir(), "looper-outside-"));
+  const elsewhere = mkdtempSync(join(tmpdir(), "looper-elsewhere-"));
+  try {
+    mkdirSync(join(root, "src"), { recursive: true });
+    writeFileSync(join(elsewhere, "theirs.ts"), SWALLOWS);
+    symlinkSync(join(elsewhere, "theirs.ts"), join(root, "src", "linked.ts"));
+
+    const survey = surveyProject(root, "everything", EVERYTHING);
+
+    assert.deepEqual(
+      survey.violations.map((held) => held.file),
+      [],
+      "a link out of the tree was followed and somebody else's file was judged as this project's",
+    );
+    assert.ok(survey.unreadable.some((said) => said.includes("outside this project")));
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+    rmSync(elsewhere, { recursive: true, force: true });
   }
 });

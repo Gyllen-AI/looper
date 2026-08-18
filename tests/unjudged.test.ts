@@ -9,6 +9,8 @@ import { Law } from "../src/law/capability.ts";
 import { dispatchHook } from "../src/registry.ts";
 import { surveyProject } from "../src/law/project.ts";
 
+const EVERYTHING: readonly string[] = [];
+
 const BROKEN = `export function find( {
   try {
     return db.get(id);
@@ -40,7 +42,7 @@ test("a file that cannot be read as TypeScript is never called clean", () => {
   const root = project();
   try {
     writeFileSync(join(root, "src/broken.ts"), BROKEN);
-    const survey = surveyProject(root, "everything");
+    const survey = surveyProject(root, "everything", EVERYTHING);
 
     assert.notEqual(
       survey.violations.length,

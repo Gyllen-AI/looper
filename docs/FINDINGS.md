@@ -22,7 +22,7 @@ is a suspicion and belongs in the notes at the bottom, not in the list.
 
 ## Open
 
-_Empty. Every pass of both audits is closed, and findings 41 to 57 with them._
+_Empty. Every pass of both audits is closed, and findings 41 to 60 with them._
 
 ## The second audit — what it covered and what it found
 
@@ -68,6 +68,43 @@ tested, and every one was tested the way it was built rather than the way it
 will be used.
 
 ## Cleared
+
+### 60 · `wrong` — a symlink loop killed the walk, and a link out of the tree was judged as ours — cleared
+
+Adopter issue #24. One `ln -s . src/loop` ended `looper law` and `looper init`
+in a raw Node stack trace, at the moment somebody first meets the tool — and it
+does not take a hostile project, only a `current -> .` deploy link. They offered
+two fixes and left the choice; both were taken, because neither alone is right.
+The walk now remembers directories by their real path, so a loop is stepped over
+and named once rather than either crashing or listing itself forever, and every
+`readdir` and `stat` failure is recorded the way `shape.ts` always did.
+
+Their related question is answered in the stricter direction: a file whose real
+path is outside the project is no longer judged, and is named as skipped. A
+governance tool that reads a file outside the tree it was pointed at, and reports
+the verdict under a name inside it, is doing something nobody asked for.
+
+### 59 · `missing` — the doctrine map could be wrong three ways in silence — cleared
+
+Adopter issue #20, and their framing is the finding: the map was the one part of
+looper that could be wrong without anybody hearing about it, while the law says so
+for a misspelled rule id, the secrets gate says so for a file it cannot read, and
+the freshness hook says so when git is missing.
+
+`looper status` now names a branch the project mapped with no document behind it
+— the typo case, where an area silently has no rules — and a glob of theirs that
+matches nothing in the project, which is how a map rots after a rename. Only what
+the project itself wrote is checked: telling a TypeScript project that the Rust
+set matches nothing is noise, and noise is how the useful line gets skipped. The
+injection path now carries the same sentence the freshness gate already had when
+git cannot be read, because a fraction of the rules arriving with no word about
+it is worse than none arriving at all.
+
+### 58 · `missing` — the law could not be pointed at a path — cleared
+
+Adopter issue #17. `looper law` judged everything or nothing, and on their
+repository that is nine seconds for a question usually about one crate. It takes
+paths now. Measured here: the whole project 753 ms, one directory 144 ms.
 
 ### 57 · `blunt` — the secrets gate could not see the name a real project uses — cleared
 

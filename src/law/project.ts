@@ -1,5 +1,5 @@
-import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
-import { dirname, join, relative } from "node:path";
+import { existsSync, readFileSync, readdirSync, realpathSync, statSync } from "node:fs";
+import { dirname, isAbsolute, join, relative, resolve } from "node:path";
 
 import { JUDGED_EXTENSIONS, LAW_PATH, OUTSIDE_THE_LAW, RUST_EXTENSION } from "../config.ts";
 import { trackedFiles } from "../git.ts";
@@ -63,38 +63,109 @@ export function underAnotherLaw(root: string, path: string): boolean {
   return anyAncestorGoverns(root, parts, submodulesOf(root));
 }
 
-export function judgedFiles(root: string): readonly string[] {
-  const found: string[] = [];
-  const submodules = submodulesOf(root);
+export type Walked = {
+  readonly files: readonly string[];
+  readonly unreadable: readonly string[];
+};
 
-  function walkDirectory(dir: string): void {
-    for (const entry of readdirSync(dir)) {
+type Real =
+  | { readonly kind: "real"; readonly path: string }
+  | { readonly kind: "unknown"; readonly why: string };
+
+function realOf(path: string): Real {
+  try {
+    return { kind: "real", path: realpathSync(path) };
+  } catch (cause) {
+    return { kind: "unknown", why: reasonFrom(cause) };
+  }
+}
+
+function isInside(rootReal: string, fileReal: string): boolean {
+  const inside = relative(rootReal, fileReal);
+  return !inside.startsWith("..") && !isAbsolute(inside);
+}
+
+export function walkProject(root: string): Walked {
+  const found: string[] = [];
+  const unreadable: string[] = [];
+  const submodules = submodulesOf(root);
+  const seen = new Set<string>();
+
+  function walkDirectory(dir: string, rootReal: string): void {
+    const held = realOf(dir);
+    if (held.kind === "unknown") {
+      unreadable.push(`${relative(root, dir)} (${held.why})`);
+      return;
+    }
+    const real = held.path;
+    if (seen.has(real)) {
+      unreadable.push(`${relative(root, dir)} (another name for a directory already read)`);
+      return;
+    }
+    seen.add(real);
+
+    let entries: readonly string[] = [];
+    try {
+      entries = readdirSync(dir);
+    } catch (cause) {
+      unreadable.push(`${relative(root, dir)} (${reasonFrom(cause)})`);
+      return;
+    }
+
+    for (const entry of entries) {
       if (OUTSIDE_THE_LAW.includes(entry)) continue;
       const path = join(dir, entry);
-      if (statSync(path).isDirectory()) {
-        const inside = relative(root, path).split(/[\\/]/);
-        if (anyAncestorGoverns(root, inside, submodules)) continue;
-        walkDirectory(path);
+
+      let stat;
+      try {
+        stat = statSync(path);
+      } catch (cause) {
+        unreadable.push(`${relative(root, path)} (${reasonFrom(cause)})`);
         continue;
       }
-      if (JUDGED_EXTENSIONS.some((suffix) => entry.endsWith(suffix))) found.push(path);
+
+      if (stat.isDirectory()) {
+        const inside = relative(root, path).split(/[\\/]/);
+        if (anyAncestorGoverns(root, inside, submodules)) continue;
+        walkDirectory(path, rootReal);
+        continue;
+      }
+      if (!JUDGED_EXTENSIONS.some((suffix) => entry.endsWith(suffix))) continue;
+      const where = realOf(path);
+      if (where.kind === "unknown") {
+        unreadable.push(`${relative(root, path)} (${where.why})`);
+        continue;
+      }
+      if (!isInside(rootReal, where.path)) {
+        unreadable.push(`${relative(root, path)} (it points outside this project)`);
+        continue;
+      }
+      found.push(path);
     }
   }
 
-  walkDirectory(root);
-  return found;
+  const rootReal = realOf(root);
+  if (rootReal.kind === "unknown") {
+    return { files: [], unreadable: [`${root} (${rootReal.why})`] };
+  }
+  walkDirectory(root, rootReal.path);
+  return { files: found, unreadable };
+}
+
+export function judgedFiles(root: string): readonly string[] {
+  return walkProject(root).files;
 }
 
 export type Reach = "everything" | "already-tracked";
 
-function reached(root: string, reach: Reach): readonly string[] {
-  const everything = judgedFiles(root);
-  if (reach === "everything") return everything;
+function reached(root: string, reach: Reach): Walked {
+  const walked = walkProject(root);
+  if (reach === "everything") return walked;
 
   const tracked = trackedFiles(root);
-  if (tracked.kind === "unavailable") return everything;
+  if (tracked.kind === "unavailable") return walked;
   const known = new Set(tracked.paths.map((path) => join(root, path)));
-  return everything.filter((path) => known.has(path));
+  return { files: walked.files.filter((path) => known.has(path)), unreadable: walked.unreadable };
 }
 
 export type RustSaid = { readonly violations: readonly Violation[]; readonly unreadable: readonly string[] };
@@ -232,12 +303,22 @@ function judgedCrate(root: string, crate: string, files: readonly string[]): Rus
   return { violations, unreadable: unknown };
 }
 
-export function surveyProject(root: string, reach: Reach): Survey {
+function under(root: string, paths: readonly string[], file: string): boolean {
+  if (paths.length === 0) return true;
+  return paths.some((asked) => {
+    const wanted = resolve(root, asked);
+    return file === wanted || file.startsWith(`${wanted}/`);
+  });
+}
+
+export function surveyProject(root: string, reach: Reach, only: readonly string[]): Survey {
   const concessions = readConcessions(root);
   const checks = [...CHECKS, ...checksAdoptedIn(root)];
   const violations: Violation[] = [];
   const unreadable: string[] = [];
-  const files = reached(root, reach);
+  const walked = reached(root, reach);
+  const files = walked.files.filter((path) => under(root, only, path));
+  unreadable.push(...walked.unreadable);
 
   const shape = shapeOf(root);
   const answered = commandsAnswering(root, shape);

@@ -42,6 +42,8 @@ import { BASELINE_PATH } from "./config.ts";
 import { mergeMcp, mergeSettings } from "./settings.ts";
 import type { Existing } from "./types.ts";
 
+const EVERYTHING: readonly string[] = [];
+
 export type Step =
   | {
       readonly kind: "created";
@@ -244,7 +246,7 @@ function messageGate(root: string, invocation: Invocation): Step {
 }
 
 function survey(root: string): Step {
-  const found = surveyProject(root, "already-tracked");
+  const found = surveyProject(root, "already-tracked", EVERYTHING);
   if (found.violations.length === 0) {
     return { kind: "surveyed-clean", files: found.files };
   }

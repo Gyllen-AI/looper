@@ -13,6 +13,8 @@ import { bansTheEngineDeclares } from "../src/law/rust/engine-words.ts";
 import { crossingsIn } from "../src/law/rust/boundary.ts";
 import { answeringFor } from "../src/law/project.ts";
 
+const EVERYTHING: readonly string[] = [];
+
 const GUILTY_RUST = `fn read_setting(name: &str) -> String {
     std::env::var(name).unwrap()
 }
@@ -73,7 +75,7 @@ test("a Tauri repo is read as a Rust backend with a TypeScript interface", () =>
 test("the two halves are judged by their own law and never by each other's", () => {
   const root = tauriProject();
   try {
-    const survey = surveyProject(root, "everything");
+    const survey = surveyProject(root, "everything", EVERYTHING);
     const said = survey.violations.map((held) => `${held.rule.id} ${held.file}`);
 
     assert.ok(
@@ -97,7 +99,7 @@ test("the same TypeScript in a project that serves is judged as a backend", () =
     writeFileSync(join(root, "package.json"), '{"name":"a","dependencies":{"hono":"4"}}');
     writeFileSync(join(root, "src", "App.tsx"), SQL_IN_TSX);
 
-    const survey = surveyProject(root, "everything");
+    const survey = surveyProject(root, "everything", EVERYTHING);
     assert.ok(
       survey.violations.some((held) => held.rule.id === "DATA:1"),
       "the query rule did not fire on a project that declares a server",
@@ -218,7 +220,7 @@ test("the boundary is judged across both halves of a real project", () => {
     writeFileSync(join(root, "src-tauri", "src", "main.rs"), COMMANDS);
     writeFileSync(join(root, "src", "App.tsx"), BOTH_HALVES);
 
-    const survey = surveyProject(root, "everything");
+    const survey = surveyProject(root, "everything", EVERYTHING);
     const crossed = survey.violations.filter((held) => held.rule.id === "TAURI:1");
     assert.equal(crossed.length, 1, "the renamed command was not caught across the two halves");
     assert.equal(crossed[0]?.file, "src/App.tsx");
@@ -302,7 +304,7 @@ test("a Tauri app inside a cargo workspace is still a Tauri app", () => {
 test("the boundary and the split both work on a nested layout", () => {
   const root = workspaceTauri();
   try {
-    const survey = surveyProject(root, "everything");
+    const survey = surveyProject(root, "everything", EVERYTHING);
     const said = survey.violations.map((held) => `${held.rule.id} ${held.file}`);
 
     assert.ok(
@@ -322,13 +324,13 @@ test("the boundary and the split both work on a nested layout", () => {
 test("one file that will not parse does not make its whole crate report clean", () => {
   const root = rustCrate(GUILTY_ONE_LINER);
   try {
-    const before = surveyProject(root, "everything").violations.map((held) => held.rule.id);
+    const before = surveyProject(root, "everything", EVERYTHING).violations.map((held) => held.rule.id);
     assert.ok(before.includes("RUST-ERROR:1"), "the fixture does not violate anything");
 
     writeFileSync(join(root, "src", "lib.rs"), "mod a;\nmod broken;\n");
     writeFileSync(join(root, "src", "broken.rs"), "pub fn g( {\n");
 
-    const after = surveyProject(root, "everything").violations;
+    const after = surveyProject(root, "everything", EVERYTHING).violations;
     assert.notEqual(after.length, 0, "a crate with an unreadable file reported nothing to fix");
 
     const said = after.map((held) => `${held.rule.id} ${held.file}`);
