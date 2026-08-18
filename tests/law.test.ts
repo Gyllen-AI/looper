@@ -320,6 +320,29 @@ test("a directory that is another name for one already read does not loop foreve
   }
 });
 
+test("a Python virtualenv is not walked, and says nothing about the aliases inside it", () => {
+  const root = mkdtempSync(join(tmpdir(), "looper-venv-"));
+  try {
+    mkdirSync(join(root, "src"), { recursive: true });
+    writeFileSync(join(root, "src/a.ts"), "export const a = 1;\n");
+    // what every Python venv on Linux looks like: lib64 is another name for lib
+    mkdirSync(join(root, ".venv", "lib"), { recursive: true });
+    symlinkSync("lib", join(root, ".venv", "lib64"), "dir");
+    writeFileSync(join(root, ".venv", "lib", "vendored.ts"), "export const v = 1;\n");
+
+    const survey = surveyProject(root, "everything", EVERYTHING);
+
+    assert.equal(survey.files, 1, "a dependency directory nobody wrote was judged as this project's code");
+    assert.deepEqual(
+      survey.unreadable,
+      [],
+      "a venv's lib64 was announced as unread on every run. It cannot be acted on — the person did not write that directory and cannot change it — and the words were untrue as well: lib was read, and the files in it judged, under its real name.",
+    );
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
 test("a file that points out of the project is not judged, and says so", () => {
   const root = mkdtempSync(join(tmpdir(), "looper-outside-"));
   const elsewhere = mkdtempSync(join(tmpdir(), "looper-elsewhere-"));
