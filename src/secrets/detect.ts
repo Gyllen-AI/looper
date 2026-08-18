@@ -18,6 +18,7 @@ const VENDOR: readonly (readonly [RegExp, string])[] = [
   [/AIza[0-9A-Za-z_-]{35}/, "a Google API key"],
   [/SG\.[A-Za-z0-9_-]{20,}\.[A-Za-z0-9_-]{20,}/, "a SendGrid key"],
   [/npm_[A-Za-z0-9]{36}/, "an npm token"],
+  [/\bEAA[A-Za-z0-9]{60,}/, "a Meta access token"],
 ];
 
 const PRIVATE_KEY = /-----BEGIN [A-Z ]*PRIVATE KEY-----/;

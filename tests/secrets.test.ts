@@ -52,6 +52,15 @@ test("vendor-shaped keys are caught by their shape, not by a list of names", () 
   assert.deepEqual([...kinds(`k = "${STRIPE}${BODY}"`)], ["a Stripe live key"]);
 });
 
+test("a Meta access token is caught by its shape", () => {
+  const META = "EAA".concat("BcDeFgHi1ZBxKZBoZBqZAZCwZDZD8yQZBvZC0ZAmZBhZC9ZBkZBnZBpZC2ZBsZByZBvZCZAZDaBcDeFgHiJkLmNoPqRsTuVwXyZ");
+  assert.deepEqual([...kinds(`token = "${META}"`)], ["a Meta access token"]);
+});
+
+test("a long word starting with the same three letters is not a Meta token", () => {
+  assert.deepEqual([...kinds('const name = "EAAsomething";')], []);
+});
+
 test("a database address carrying its password is caught", () => {
   assert.equal(kinds("DATABASE_URL=postgres://app:Tr0ub4dor3@db:5432/shop").length, 1);
   assert.equal(kinds("redis://user:s3cret@cache:6379").length, 1);
