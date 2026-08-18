@@ -80,6 +80,8 @@ test("a password with a full stop in it is caught", () => {
 test("a credential read out of an object is not a value", () => {
   assert.deepEqual([...kinds("const token = config.apiToken")], []);
   assert.deepEqual([...kinds("const apiKey = settings.google.apiKey")], []);
+  assert.deepEqual([...kinds("_token = data.session?.access_token ?? null;")], []);
+  assert.deepEqual([...kinds("_token = live?.access_token ?? null;")], []);
 });
 
 test("a database address carrying its password is caught", () => {

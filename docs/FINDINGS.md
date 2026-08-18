@@ -46,6 +46,48 @@ command enforces. Installing TypeScript is a dependency, and this project says a
 dependency is argued in `docs/PLAN.md` first, so that argument has to happen
 before the fix does.
 
+### 76 · `wrong` — a password with a full stop in it, and a credential word with more name after it — cleared
+
+Contributed as PR #40 from a project that had adopted looper, found by pointing
+the scanner at its own `.env` line by line. Two holes, both real, both verified
+here against that file.
+
+A named credential's unquoted value was matched as `[^\s"';,()\[\]{}.]{12,}` —
+no full stop allowed — so `SUPABASE_DB_PASSWORD=` followed by fifteen characters
+with a dot in them matched only up to the dot, fell under the twelve-character
+floor, and read as nothing at all. The dot was excluded to keep
+the `config.apiToken` read quiet, which is a credential being read out of an
+object rather than being one. Dots are allowed in a value now and that exemption
+is explicit instead: an unquoted value that is nothing but a dotted path of
+identifiers is code. Quoted values are exempt from the exemption, because
+`"s3cret.value.here"` in quotes is a literal.
+
+Separately, `SECRET_KEY=` never matched, because the word boundary after the
+credential word cannot land on an underscore. A credential word may be followed
+by more name, and the suffix must start with a separator, which keeps
+`tokenizer` and `authorName` out.
+
+**What the review added.** The contribution arrived without the third thing this
+project asks for: a run over code nobody here wrote. Run here, on 232
+hand-written files of the project it came from, it added three findings. One was
+the real password it was written to catch. Two were `_token =
+data.session?.access_token ?? null` — a token read out of an object through
+optional chaining, which the new exemption did not recognise because it only knew
+a plain dot. `A_DOTTED_PATH` accepts `?.` now, and two cases hold it.
+
+After that fix: 232 hand-written files, one new finding, and it is the true one.
+238 files of this repo, no change. On a wider sweep of 4,000 files that includes
+`node_modules` and Next.js build output, it adds 28 findings, all false —
+a constant whose name ends in a credential word followed by another word,
+holding a quoted string of ordinary words joined by dots. Not fixed, and left
+here rather than hidden: the gate reads staged diffs, that code is never staged,
+and the shape appeared zero times in the 232 files of real source. The
+forty-character ceiling on the path exemption is kept for the same reason it
+cost one of those 28 — fewer exemptions is the stricter reading.
+
+The three comments the contribution carried were removed. Its own checkout was
+the one whose hooks were not loading, so looper's comment rule never judged it.
+
 ### 74 · `blunt` — a file of deliberately key-shaped fixtures has no legal spelling — cleared
 
 Raised while fixing finding 73, on 2026-08-18, and left open on purpose.
