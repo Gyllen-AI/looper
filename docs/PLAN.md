@@ -1222,7 +1222,7 @@ Every rule the engine loads appears exactly once below, and
 | the failure survives but names nothing | `TS-TYPE:2` | `RUST-TYPE:1` `RUST-TYPE:2` `RUST-TYPE:3` | `PY-ERROR:3` |
 | the checker is told to trust you | `TS-TYPE:3` `TS-TYPE:4` `TS-DEAD:1` | `RUST-TYPE:4` `RUST-DEAD:1` | `PY-TYPE:1` |
 | "what happens when nobody said" is answered in more than one place | `TS-TRUTH:1` `TS-TRUTH:2` | `RUST-TRUTH:1` `RUST-TRUTH:2` | `PY-TRUTH:1` |
-| output is taken from whoever ran the program | `TS-LOG:1` | `RUST-LOG:1` `RUST-LOG:2` | **open** — `print` outside the entry file |
+| output is taken from whoever ran the program | `TS-LOG:1` | `RUST-LOG:1` `RUST-LOG:2` | `PY-LOG:1` |
 | the shape of the code hides what it does | `TS-DECOMPOSITION:1` `TS-LAYER:2` `TS-DEAD:4` | `RUST-DECOMPOSITION:1` `RUST-DECOMPOSITION:2` `RUST-DECOMPOSITION:3` `RUST-LAYER:1` `RUST-LAYER:2` `RUST-LAYER:3` `RUST-DEAD:4` | `PY-LAYER:1`, and **open** — a file and a function cap |
 | unfinished work reads as finished | `TS-DEAD:2` `TS-DEAD:3` | `RUST-DEAD:2` `RUST-DEAD:3` | **open** — a body that is only `pass`, `...` or `raise NotImplementedError` |
 | the language's own guarantees are stepped around | none built | `RUST-ERROR:5` `RUST-ERROR:7` `RUST-TESTS:1` | none built |
@@ -1236,8 +1236,13 @@ of them does yet — which is why the four blanks above say `open` instead.
 
 **The weight is in the wrong place and this table is what makes that visible.**
 The section below already argues that Python is the language where the law is
-worth most, because the language itself checks nothing. It answers eight of the
-twelve rows with seven rules. Rust answers eight with twenty-nine.
+worth most, because the language itself checks nothing.
+
+Counted from the table on 2026-08-18: TypeScript answers eleven of the twelve
+rows, Rust nine, Python eight — with twenty-six, twenty-nine and eight rules.
+**Corrected the same day.** The first version of this paragraph said Python
+answered eight rows and Rust eight, which was wrong on both counts and was written
+without counting. The numbers above were read off the rows.
 
 **How a cell gets filled**, in the order the seven Python rules already used:
 cases first from the ban text, then the reader, then run over real code in that
@@ -2971,6 +2976,7 @@ built, as of 2026-08-18:
 | `PY-TRUTH:1` | a default argument that is a mutable container | built 2026-08-18 |
 | `PY-TRUTH:2` | `assert` outside a test file, whatever it is checking | built 2026-08-18 |
 | `PY-LAYER:1` | `from x import *`, which takes every name without saying which | built 2026-08-18 |
+| `PY-LOG:1` | `print`, and writing to `sys.stdout` or `sys.stderr` directly, in a file that does not say it starts the program | built 2026-08-18, from issue #63 |
 
 `PY-TRUTH:2` is the one worth explaining, because it is the rule most likely to
 be argued with. `assert` is not a check in Python; it is a check that disappears
@@ -2982,6 +2988,34 @@ They shipped one at a time, cases first from each ban text, and each run over re
 Python nobody here wrote before it counted as done. Naming all seven up front was
 not a promise to build all seven; it was so the gap stayed visible while it was
 open. It was open for a few hours, and the record of each is below.
+
+`PY-LOG:1` came later, on 2026-08-18, from issue #63 rather than from the original
+seven: the table of what the law defends showed that Rust and TypeScript both
+answered "output is taken from whoever ran the program" and Python answered
+nothing, in the language `print` is most reached for.
+
+Two things had to be decided, and the corpus decided the second.
+
+**What says a file starts the program.** There is no `package.json` to read for a
+Python project, so the entry list `TS-LOG:1` leans on does not exist here. Python
+has its own way of saying it, and the rule uses that: a file named `__main__.py`,
+or a file holding an `if __name__ == "__main__":` block. Anything else is a module
+somebody imports.
+
+**Who chose the destination.** Thirteen cases, then the reader, then 167 files of
+Python's own standard library, where it found 37 with none unreadable. Reading all
+37 by hand turned up one class that is not this harm at all: `print(item, file=file)`
+in `abc`, `traceback`, `getpass` and `optparse`, where `file` is a parameter the
+caller supplied. The caller chose where it went, which is precisely what the rule
+wants. `file=sys.stdout` and `file=sys.stderr` are the opposite — the module
+choosing the terminal again — so those still fire. With that boundary the same
+corpus gives **21, and all 21 were read one at a time and every one is a module
+writing to the terminal**: `bdb`'s trace output and its two demo functions,
+`this.py` printing on import, `socketserver` printing a traceback banner where no
+logging setup can see it, `warnings` and `typing` naming stderr themselves.
+
+Nothing in this repo fires: looper's own `read.py` and `skeleton.py` print only
+under `if __name__ == "__main__":`, which is the shape the rule points at.
 
 `PY-ERROR:1` went first because it is the shape with the least room to argue and
 the clearest legal spelling. Twelve cases, then the reader, then two corpora

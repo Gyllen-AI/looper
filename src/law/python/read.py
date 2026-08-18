@@ -18,6 +18,12 @@ LAUNDERED_NAMESPACE = "PY-LAYER:1"
 
 UNNAMED_FAILURE = "PY-ERROR:3"
 
+PRINTS_ITS_OWN_OUTPUT = "PY-LOG:1"
+
+TERMINAL_WRITES = frozenset({"write", "writelines"})
+
+TERMINAL_HANDLES = frozenset({"stdout", "stderr"})
+
 SAYS_NOTHING = frozenset({"Exception", "BaseException"})
 
 MUTABLE_BUILDERS = frozenset(
@@ -34,6 +40,50 @@ def does_nothing(body):
                 continue
         return False
     return True
+
+
+def destination_of(node):
+    for given in node.keywords:
+        if given.arg == "file":
+            return given.value
+    return None
+
+
+def is_a_terminal_handle(held):
+    if not isinstance(held, ast.Attribute) or held.attr not in TERMINAL_HANDLES:
+        return False
+    return isinstance(held.value, ast.Name) and held.value.id == "sys"
+
+
+def writes_to_the_terminal(node):
+    if isinstance(node.func, ast.Name):
+        if node.func.id != "print":
+            return False
+        sent = destination_of(node)
+        return sent is None or is_a_terminal_handle(sent)
+    if not isinstance(node.func, ast.Attribute):
+        return False
+    if node.func.attr not in TERMINAL_WRITES:
+        return False
+    return is_a_terminal_handle(node.func.value)
+
+
+def says_it_starts_the_program(node):
+    if not isinstance(node, ast.If) or not isinstance(node.test, ast.Compare):
+        return False
+    test = node.test
+    if len(test.ops) != 1 or not isinstance(test.ops[0], ast.Eq):
+        return False
+    sides = [test.left, test.comparators[0]]
+    named = {one.id for one in sides if isinstance(one, ast.Name)}
+    values = {one.value for one in sides if isinstance(one, ast.Constant)}
+    return "__name__" in named and "__main__" in values
+
+
+def starts_the_program(tree, path):
+    if path.replace("\\", "/").split("/")[-1] == "__main__.py":
+        return True
+    return any(says_it_starts_the_program(node) for node in ast.walk(tree))
 
 
 def is_a_test_file(path):
@@ -124,9 +174,13 @@ def defaults_of(node):
     return given
 
 
-def violations_in(tree, in_a_test_file):
+def violations_in(tree, in_a_test_file, is_where_it_starts):
     found = []
     for node in ast.walk(tree):
+        if isinstance(node, ast.Call):
+            if not is_where_it_starts and writes_to_the_terminal(node):
+                found.append({"rule": PRINTS_ITS_OWN_OUTPUT, "line": node.lineno})
+            continue
         if isinstance(node, ast.Raise):
             thrown = node.exc
             if isinstance(thrown, ast.Call):
@@ -189,7 +243,7 @@ def judge(path):
         tree = ast.parse(source, filename=path)
     except SyntaxError as error:
         return {"unreadable": {"file": path, "detail": f"line {error.lineno}: {error.msg}"}}
-    hits = list(violations_in(tree, is_a_test_file(path)))
+    hits = list(violations_in(tree, is_a_test_file(path), starts_the_program(tree, path)))
     for line in silenced_lines(source):
         hits.append({"rule": SILENCED_CHECKER, "line": line})
     return {"violations": [dict(hit, file=path) for hit in hits]}
