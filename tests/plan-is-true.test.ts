@@ -65,6 +65,15 @@ const TOOLS: readonly string[] = [
   "thiserror",
   "secrecy",
   "reqwest",
+  "FastAPI",
+  "Pydantic",
+  "Uvicorn",
+  "SQLAlchemy",
+  "Alembic",
+  "structlog",
+  "pytest",
+  "Ruff",
+  "mypy",
 ];
 
 function namesAList(line: string): boolean {

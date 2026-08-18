@@ -44,6 +44,11 @@ A project with both is not confused by it. looper works out from what is on
 disk which half is the backend and which is the interface, and a rule about
 database queries never fires on a user interface that has no database.
 
+**Not Python, yet.** [STACK.md](STACK.md) prescribes a Python backend and
+`docs/PLAN.md` names the seven rules for it, none of them written. Until they
+are, a `.py` file gets everything except the law — the doctrine, the secrets
+gate and the staleness check — and nothing pretends otherwise.
+
 ## When a rule is wrong
 
 It will be, and being wrong is the only real failure a tool like this has. Three

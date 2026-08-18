@@ -2688,3 +2688,98 @@ Chunk 0, and inside it the merge path first: `init` against a repo that already
 has an agent settings file with a foreign hook, proving the file comes out with
 both hooks in it. That is property 2 in one test, and everything else in the
 container is the proven part.
+
+## Python, the third language, and the stack it brings
+
+The condition chunk 7 set for any new language reader was that **an adopter
+ships it**. Rust met that condition and got a reader. Python meets it now: an
+adopter runs a Python service behind a TypeScript front end, and the same
+repository carries both. The queue position is earned the same way, by the same
+rule, and nothing about the argument is new.
+
+What is new is that Python is the first language looper would read where the
+language itself checks nothing. TypeScript has a compiler that catches a
+misspelled field. Rust refuses to build. Python runs a file with a typo in it
+until the line is reached, and then stops in front of whoever was using it. That
+makes the law worth more here than in either of the others, and it also makes
+every rule harder to write, because there is no type information to lean on — a
+Python rule can only read the shape of the source.
+
+### The reader costs nothing to install
+
+The Rust engine is a compiled binary built once with the `cargo` a Rust project
+already has. The equivalent here is smaller: Python ships its own parser in the
+standard library, as the `ast` module, so the reader is a script driven over the
+same one-JSON-object protocol that `src/law/rust/drive.ts` already uses. No npm
+package is added, so the dependency argument this document requires does not
+arise — the resolved tree is unchanged and still cannot open a socket.
+
+The one new external requirement is that `python3` exists. That is the same
+condition the Rust half already lives under, and it takes the same answer: when
+the engine is missing the gate says so by name and passes, rather than reporting
+every `.py` file as clean or wedging the session. A repository with no `.py`
+files never looks for it.
+
+### The stack, argued one choice at a time
+
+**The web framework is FastAPI.** Not because it is fastest, but because it emits
+its OpenAPI description from the same objects that validate the request. That is
+the property Zod was chosen for on the TypeScript side: one definition, and the
+contract cannot drift from the check, because they are the same object.
+
+**Validation is Pydantic, one model per concept.** It is what makes the previous
+paragraph true, and it is the legal spelling the law hands back for data arriving
+from outside. A rule that bans trusting an unvalidated request is only fair if
+there is an obvious way to validate it.
+
+**The database is PostgreSQL**, as everywhere else here.
+
+**Database access is SQLAlchemy 2.0 with typed models.** This is the Drizzle
+argument, unchanged: the schema is written in the language looper reads, so the
+parser it already has can see it. An ORM whose schema lives in its own file
+format is a wall the reader cannot see through. Migrations are Alembic, because
+that is what these models already use.
+
+**Logging is structlog.** This is load-bearing rather than a preference, for the
+reason Pino is: the rule that a failure must be observed needs a named symbol
+whose origin can be checked, or a local do-nothing function called `warn`
+satisfies it.
+
+**Errors are exception classes, one per failure.** The `thiserror` argument in
+another language. `raise Exception("something went wrong")` names nothing, so
+nothing downstream can act on it differently from anything else.
+
+**Type checking is mypy, in strict mode.** Python is the one language here whose
+types are optional, which means the setting is not a preference but the only
+thing that makes an annotation mean anything. Where the TypeScript compiler
+settings are part of the stack, this is the same decision.
+
+**Tests are pytest. Formatting is Ruff, style only** — the law is not a linter,
+and that boundary matters more here than elsewhere, because Python's linters have
+historically tried to be both. **Packaging is `uv` with `pyproject.toml`**, and
+the server it runs under is Uvicorn.
+
+### The rules, named before they are written
+
+Seven, taken from the failure shapes this document already listed, and none of
+them built:
+
+| rule | bans | state |
+|---|---|---|
+| `PY-ERROR:1` | a bare `except:` or an `except` whose body is `pass` | **not built yet** |
+| `PY-ERROR:2` | answering a failure with `None` | **not built yet** |
+| `PY-ERROR:3` | `raise Exception(...)` where a named class belongs | **not built yet** |
+| `PY-TYPE:1` | a `# type: ignore` comment | **not built yet** |
+| `PY-TRUTH:1` | a mutable default argument | **not built yet** |
+| `PY-TRUTH:2` | `assert` used as a runtime check, which `-O` deletes | **not built yet** |
+| `PY-LAYER:1` | a star import, which launders one namespace into another | **not built yet** |
+
+`PY-TRUTH:2` is the one worth explaining, because it is the rule most likely to
+be argued with. `assert` is not a check in Python; it is a check that disappears
+when the interpreter is asked to optimise. A validation written with it works in
+every test and is absent in production, which is the exact shape of failure this
+whole document exists to refuse.
+
+They ship one at a time, cases first from each ban text, and each run over real
+Python nobody here wrote before it counts as done. Naming all seven now is not a
+promise to build all seven; it is so that the gap is visible while it is open.

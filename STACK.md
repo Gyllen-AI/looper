@@ -63,7 +63,34 @@ edit and every commit — so this is a prescription rather than a courtesy.
 Compiler settings are part of the stack, not a preference:
 `strict`, `noUncheckedIndexedAccess`, `exactOptionalPropertyTypes`.
 
-## Four entries are load-bearing for the law, not the product
+## The Python backend it also governs
+
+An adopter ships Python behind a TypeScript front end, which is the condition
+`docs/PLAN.md` sets for reading a language at all. Seven rules are named there
+and none is built yet, so today Python gets everything except the law: the rule
+sets, the secrets gate and the staleness check.
+
+| job | tool |
+|---|---|
+| HTTP API | FastAPI, emitting OpenAPI from the models that validate |
+| validation | Pydantic, one model per concept |
+| server | Uvicorn |
+| database | PostgreSQL |
+| database access | SQLAlchemy 2.0, typed models |
+| migrations | Alembic |
+| logging | structlog, structured JSON |
+| errors | an exception class per failure |
+| tracing | OpenTelemetry |
+| tests | pytest |
+| packaging | `uv`, with `pyproject.toml` |
+| formatting | Ruff — style only, the law is not a linter |
+| type checking | mypy, strict |
+
+Reading it costs no dependency: Python ships its own parser as the `ast` module,
+driven over the same protocol as the Rust engine. The only requirement is that
+`python3` exists, and a repository with no `.py` files never looks for it.
+
+## Seven entries are load-bearing for the law, not the product
 
 - **Pino** gives the "a failure must be observed" rule a named symbol whose
   provenance can be verified — `logger.warn`, `logger.error`. That is what stops
@@ -76,6 +103,12 @@ Compiler settings are part of the stack, not a preference:
 - **`thiserror`** is what makes `RUST-TYPE:1` actionable. That rule bans an error
   type that says nothing — `String`, `Box<dyn Error>`, `anyhow` — and the legal
   spelling it hands back is an enum with a variant per failure.
+- **structlog** is the Python side of the same requirement Pino carries, for the
+  same reason: a named symbol whose origin can be verified.
+- **Pydantic** is the legal spelling `PY-ERROR:2` will hand back. A rule that
+  refuses an unvalidated request is only fair where validating one is obvious.
+- **mypy strict** is not a preference but the whole of it. Python's annotations
+  mean nothing unless something checks them, so the setting is the check.
 
 The prescription is for new services. An existing service in a language looper
 cannot read is governed by everything except the law: the rule sets, the secrets
