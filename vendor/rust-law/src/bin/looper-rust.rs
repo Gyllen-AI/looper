@@ -1,6 +1,7 @@
 use std::path::{Path, PathBuf};
 
 use rust_law::scan::{judge_files, judge_project};
+use rust_law::skeleton::{shape_at, Shape};
 use rust_law::violation::{LawError, Violation};
 
 fn escape(text: &str) -> String {
@@ -30,6 +31,31 @@ fn as_json(found: &[Violation]) -> String {
         ));
     }
     format!("{{\"violations\":[{}]}}", parts.join(","))
+}
+
+fn shape_as_json(shape: &Shape) -> String {
+    let detail: Vec<String> = shape.detail.iter().map(|one| format!("\"{}\"", escape(one))).collect();
+    let children: Vec<String> = shape.children.iter().map(shape_as_json).collect();
+    format!(
+        "{{\"node\":\"{}\",\"detail\":[{}],\"children\":[{}]}}",
+        escape(&shape.node),
+        detail.join(","),
+        children.join(",")
+    )
+}
+
+fn print_shape(path: &Path, line: usize, depth: usize) {
+    let source = match std::fs::read_to_string(path) {
+        Ok(held) => held,
+        Err(error) => {
+            println!("{{\"error\":\"{}\"}}", escape(&format!("could not read {}: {}", path.display(), error)));
+            return;
+        }
+    };
+    match shape_at(&source, line, depth) {
+        Ok(shape) => println!("{{\"shape\":{}}}", shape_as_json(&shape)),
+        Err(error) => println!("{{\"error\":\"{}\"}}", escape(&said(&error))),
+    }
 }
 
 fn said(error: &LawError) -> String {
@@ -141,6 +167,18 @@ fn print_commands(root: &Path) {
 
 fn main() {
     let args: Vec<String> = std::env::args().skip(1).collect();
+    if args.first().map(String::as_str) == Some("--shape") {
+        let (Some(path), Some(line), Some(depth)) = (args.get(1), args.get(2), args.get(3)) else {
+            println!("{{\"error\":\"--shape needs a file, a line and a depth\"}}");
+            return;
+        };
+        let (Ok(line), Ok(depth)) = (line.parse::<usize>(), depth.parse::<usize>()) else {
+            println!("{{\"error\":\"--shape needs a line and a depth that are numbers\"}}");
+            return;
+        };
+        print_shape(Path::new(path), line, depth);
+        return;
+    }
     if args.first().map(String::as_str) == Some("--commands") {
         let Some(root) = args.get(1) else {
             println!("{{\"error\":\"--commands needs a project root\"}}");

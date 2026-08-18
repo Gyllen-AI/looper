@@ -164,3 +164,36 @@ export function judgeRust(
   }
   return ranWith(builtAt(looperRoot), [projectRoot, ...files]);
 }
+
+export type Shaped =
+  | { readonly kind: "unavailable"; readonly detail: string }
+  | { readonly kind: "found"; readonly payload: unknown };
+
+export function shapeFromRust(
+  looperRoot: string,
+  path: string,
+  line: number,
+  depth: number,
+): Shaped {
+  if (!engineIsBuilt(looperRoot)) {
+    const built = buildEngine(looperRoot);
+    if (built.kind !== "found") {
+      return { kind: "unavailable", detail: `looper's Rust half is not built (${built.detail})` };
+    }
+  }
+  let output = "";
+  try {
+    output = execFileSync(builtAt(looperRoot), ["--shape", path, String(line), String(depth)], {
+      encoding: "utf8",
+      timeout: RUST_TIMEOUT_MS,
+      stdio: ["ignore", "pipe", "ignore"],
+    });
+  } catch (cause) {
+    return { kind: "unavailable", detail: `the Rust reader would not run (${reasonFrom(cause)})` };
+  }
+  try {
+    return { kind: "found", payload: JSON.parse(output) };
+  } catch (cause) {
+    return { kind: "unavailable", detail: `it did not answer in JSON (${reasonFrom(cause)})` };
+  }
+}

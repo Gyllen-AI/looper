@@ -190,3 +190,141 @@ test("a template literal's text does not survive into the shape", () => {
   assert.ok(!render(found.shape, 0).includes("acme_tenant_ledger"));
   assert.ok(render(found.shape, 0).includes("TemplateLiteral"));
 });
+
+const PRIVATE_RUST = `pub fn reconcile_tenant_ledger(tenant_ref: &str) -> u8 {
+    let settled = acme_billing_gateway::settle(tenant_ref, "PROD-TENANT-8842");
+    settled.len() as u8
+}
+`;
+
+const RUST_SECRETS: readonly string[] = [
+  "reconcile_tenant_ledger",
+  "tenant_ref",
+  "acme_billing_gateway",
+  "settle",
+  "PROD-TENANT-8842",
+  "settled",
+];
+
+const PRIVATE_PYTHON = `def reconcile_tenant_ledger(tenant_ref):
+    try:
+        return acme_billing_gateway.settle(tenant_ref, "PROD-TENANT-8842")
+    except OSError:
+        return []
+`;
+
+function rustProject(): string {
+  const root = mkdtempSync(join(tmpdir(), "looper-report-rust-"));
+  mkdirSync(join(root, "src"), { recursive: true });
+  writeFileSync(join(root, "Cargo.toml"), '[package]\nname = "held"\nversion = "0.1.0"\nedition = "2021"\n');
+  writeFileSync(join(root, "src/ledger.rs"), PRIVATE_RUST);
+  return root;
+}
+
+test("a Rust file gets a report, because the Rust half is judged by rules that can be wrong too", () => {
+  const root = rustProject();
+  try {
+    const written = buildReport({
+      root,
+      ruleId: "RUST-TYPE:4",
+      file: "src/ledger.rs",
+      line: 3,
+      tried: "the token is a column type override, not a numeric cast",
+    });
+
+    assert.equal(
+      written.kind,
+      "written",
+      `a Rust file could not be reported on: ${JSON.stringify(written)}. Twenty-nine Rust rules are judged at full strength and none of them could be argued with.`,
+    );
+    if (written.kind !== "written") return;
+    for (const secret of RUST_SECRETS) {
+      assert.ok(
+        !written.body.includes(secret),
+        `the report carries ${secret}, which is the adopter's code and the one thing this file promises never to hold`,
+      );
+    }
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test("a Python file gets a report too, for the same reason", () => {
+  const root = mkdtempSync(join(tmpdir(), "looper-report-python-"));
+  try {
+    mkdirSync(join(root, "src"), { recursive: true });
+    writeFileSync(join(root, "src/ledger.py"), PRIVATE_PYTHON);
+
+    const written = buildReport({
+      root,
+      ruleId: "PY-ERROR:1",
+      file: "src/ledger.py",
+      line: 3,
+      tried: "the failure is observed by the caller above",
+    });
+
+    assert.equal(written.kind, "written", `a Python file could not be reported on: ${JSON.stringify(written)}`);
+    if (written.kind !== "written") return;
+    for (const secret of ["reconcile_tenant_ledger", "tenant_ref", "acme_billing_gateway", "PROD-TENANT-8842"]) {
+      assert.ok(!written.body.includes(secret), `the report carries ${secret}`);
+    }
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test("a line with nothing on it is refused in Rust as well, rather than guessed at", () => {
+  const root = rustProject();
+  try {
+    const written = buildReport({
+      root,
+      ruleId: "RUST-TYPE:4",
+      file: "src/ledger.rs",
+      line: 400,
+      tried: "nothing is there",
+    });
+
+    assert.equal(written.kind, "no-shape");
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
+const EVERY_PYTHON_SHAPE = `import acme_billing as gateway
+from acme_ledger import settle
+
+
+def reconcile(tenant_ref, *rest, **named):
+    totals = [one.amount for one in rest if one.paid]
+    with gateway.open(tenant_ref) as handle:
+        try:
+            return settle(handle, reason="PROD-TENANT-8842", totals=totals)
+        except OSError as cause:
+            raise RuntimeError("could not settle") from cause
+`;
+
+test("every Python construct that names its node in lower case still gets a report", () => {
+  const root = mkdtempSync(join(tmpdir(), "looper-report-python-nodes-"));
+  try {
+    mkdirSync(join(root, "src"), { recursive: true });
+    writeFileSync(join(root, "src/every.py"), EVERY_PYTHON_SHAPE);
+
+    for (const line of [1, 2, 5, 6, 7, 8, 9, 10, 11]) {
+      const written = buildReport({
+        root,
+        ruleId: "PY-ERROR:1",
+        file: "src/every.py",
+        line,
+        tried: "the sentence is checked and this one is plain",
+      });
+
+      assert.equal(
+        written.kind,
+        "written",
+        `line ${line} could not be reported on: ${JSON.stringify(written)}. Python's ast names twenty of its node types in lower case — arg, alias, comprehension, withitem and the rest — and a name looper has not declared is read as a leak, which refuses the whole report.`,
+      );
+    }
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});

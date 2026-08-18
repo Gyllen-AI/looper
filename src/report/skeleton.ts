@@ -1,4 +1,9 @@
+import { extname } from "node:path";
+
 import { isNode, parseSource, walk, type Node } from "../law/ts/parse.ts";
+import { shapeFromRust, type Shaped } from "../law/rust/drive.ts";
+import { shapeFromPython } from "../law/python/drive.ts";
+import { fieldAt } from "../fields.ts";
 
 const STRUCTURAL: readonly string[] = [
   "type",
@@ -31,7 +36,34 @@ function sayableValue(held: string): string {
   return "removed";
 }
 
-export const SKELETON_WORDS: readonly string[] = [...STRUCTURAL, ...GRAMMAR, ...NAMED];
+const RUST_GRAMMAR: readonly string[] = [
+  "as", "async", "await", "break", "const", "continue", "crate", "dyn", "else", "enum", "extern",
+  "fn", "for", "if", "impl", "in", "let", "loop", "match", "mod", "move", "mut", "pub", "ref",
+  "return", "self", "Self", "static", "struct", "trait", "type", "union", "unsafe", "use", "where",
+  "while", "u8", "u16", "u32", "u64", "u128", "usize", "i8", "i16", "i32", "i64", "i128", "isize",
+  "f32", "f64", "bool", "char", "str", "parens", "braces", "brackets", "none",
+];
+
+const PYTHON_NODES: readonly string[] = [
+  "alias", "arg", "arguments", "boolop", "cmpop", "comprehension", "excepthandler", "expr",
+  "expr_context", "keyword", "match_case", "mod", "operator", "pattern", "slice", "stmt",
+  "type_ignore", "type_param", "unaryop", "withitem",
+];
+
+const PYTHON_GRAMMAR: readonly string[] = [
+  "and", "assert", "async", "await", "break", "class", "continue", "def", "del", "elif", "else",
+  "except", "finally", "for", "from", "global", "import", "lambda", "nonlocal", "not", "raise",
+  "return", "try", "while", "with", "yield",
+];
+
+export const SKELETON_WORDS: readonly string[] = [
+  ...STRUCTURAL,
+  ...GRAMMAR,
+  ...NAMED,
+  ...RUST_GRAMMAR,
+  ...PYTHON_GRAMMAR,
+  ...PYTHON_NODES,
+];
 
 export type Shape = {
   readonly node: string;
@@ -133,4 +165,48 @@ export function shapeAt(file: string, text: string, line: number, depth: number)
     return { kind: "not-found", why: `nothing looked like a statement on line ${line}` };
   }
   return { kind: "found", shape: shapeOf(smallest, anonymiser(), depth) };
+}
+
+function shapeFrom(payload: unknown): Located {
+  const refused = fieldAt(payload, "error");
+  if (typeof refused === "string") return { kind: "not-found", why: refused };
+  const built = builtShape(fieldAt(payload, "shape"));
+  if (built === null) return { kind: "not-found", why: "the reader did not answer with a shape" };
+  return { kind: "found", shape: built };
+}
+
+function builtShape(held: unknown): Shape | null {
+  const node = fieldAt(held, "node");
+  if (typeof node !== "string") return null;
+  const detail = fieldAt(held, "detail");
+  const children = fieldAt(held, "children");
+  const said: string[] = Array.isArray(detail)
+    ? detail.filter((one): one is string => typeof one === "string")
+    : [];
+  const below: Shape[] = [];
+  if (Array.isArray(children)) {
+    for (const one of children) {
+      const child = builtShape(one);
+      if (child !== null) below.push(child);
+    }
+  }
+  return { node, detail: said, children: below };
+}
+
+function readBy(said: Shaped): Located {
+  if (said.kind === "unavailable") return { kind: "not-found", why: said.detail };
+  return shapeFrom(said.payload);
+}
+
+export function shapeFor(
+  looperRoot: string,
+  path: string,
+  source: string,
+  line: number,
+  depth: number,
+): Located {
+  const ending = extname(path);
+  if (ending === ".rs") return readBy(shapeFromRust(looperRoot, path, line, depth));
+  if (ending === ".py") return readBy(shapeFromPython(looperRoot, path, line, depth));
+  return shapeAt(path, source, line, depth);
 }

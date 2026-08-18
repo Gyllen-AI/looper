@@ -232,7 +232,7 @@ function reached(root: string, reach: Reach): Walked {
 
 export type RustSaid = { readonly violations: readonly Violation[]; readonly unreadable: readonly string[] };
 
-function looperRoot(): string {
+export function looperRoot(): string {
   return join(import.meta.dirname, "..", "..");
 }
 

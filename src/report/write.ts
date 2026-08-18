@@ -3,8 +3,8 @@ import { join } from "node:path";
 
 import { writeAtomically } from "../atomic.ts";
 import { REPORT_DEPTH, REPORT_PATH, SERVER_VERSION } from "../config.ts";
-import { SKELETON_WORDS, render, shapeAt } from "./skeleton.ts";
-import { judgedFiles } from "../law/project.ts";
+import { SKELETON_WORDS, render, shapeFor } from "./skeleton.ts";
+import { judgedFiles, looperRoot } from "../law/project.ts";
 import { reasonFrom } from "../fields.ts";
 
 const WORD = /[A-Za-z_$][A-Za-z0-9_$]{2,}/g;
@@ -84,8 +84,9 @@ export type Request = {
 };
 
 export function buildReport(request: Request): Written {
-  const source = readFileSync(join(request.root, request.file), "utf8");
-  const located = shapeAt(request.file, source, request.line, REPORT_DEPTH);
+  const path = join(request.root, request.file);
+  const source = readFileSync(path, "utf8");
+  const located = shapeFor(looperRoot(), path, source, request.line, REPORT_DEPTH);
   if (located.kind === "not-found") return { kind: "no-shape", why: located.why };
 
   const shape = render(located.shape, 0);
@@ -131,7 +132,7 @@ export function buildReport(request: Request): Written {
   const typed = leaksInTyped(request.tried, new Set([...vocabulary.words, ...wordsIn(source)]));
   if (typed.length > 0) return { kind: "would-leak", leaks: typed };
 
-  const path = join(request.root, REPORT_PATH);
-  writeAtomically(path, body);
-  return { kind: "written", path, body };
+  const written = join(request.root, REPORT_PATH);
+  writeAtomically(written, body);
+  return { kind: "written", path: written, body };
 }

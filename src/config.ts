@@ -149,6 +149,8 @@ export const PYTHON_COMMAND = "python3";
 
 export const PYTHON_READER = "src/law/python/read.py";
 
+export const PYTHON_SKELETON = "src/law/python/skeleton.py";
+
 export const PYTHON_TIMEOUT_MS = 60_000;
 
 export const STACK_PATH = "CURRENTSTACK.md";

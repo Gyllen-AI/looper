@@ -14,5 +14,6 @@ pub mod provenance;
 pub mod report;
 pub mod scan;
 pub mod shapes;
+pub mod skeleton;
 pub mod violation;
 pub mod visitor;

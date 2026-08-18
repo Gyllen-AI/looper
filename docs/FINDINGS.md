@@ -22,7 +22,69 @@ is a suspicion and belongs in the notes at the bottom, not in the list.
 
 ## Open
 
-_Empty. Findings 41 to 91 are closed._
+_Empty. Findings 41 to 92 are closed._
+
+### 92 · `missing` — the escape hatch read one of the three languages — cleared
+
+2026-08-18. The third thing the same adopter found on the same pin bump, and the
+one that made the other two hard to report. Told to argue with the rule that had
+just fired wrongly on their Rust, they ran the documented route:
+
+```
+looper report --rule RUST-TYPE:4 --file crates/admin/src/store/operator.rs --line 39
+looper: no report written — the file could not be read as TypeScript.
+```
+
+`shapeAt` sent every file through the Babel parser. Twenty-nine Rust rules and
+seven Python ones were judged at full strength, and **not one of them could be
+disputed** — the only route left is the one CONTRIBUTING.md calls the worst,
+switching the rule off.
+
+This document already said the report was shared: "one baseline and one report
+across both languages", written when Rust was designed in. It was true of the
+baseline and false of the report, and it had been false for as long as looper has
+read Rust. `tests/plan-is-true.test.ts` holds the rule table to the code and this
+claim is prose, so nothing caught it.
+
+The shape now comes from whichever reader already reads the language, because
+there was never a second parser to be had. `.rs` goes through a new
+`--shape <file> <line> <depth>` mode on the engine (`vendor/rust-law/src/skeleton.rs`),
+`.py` through `read.py`, `.ts` through Babel as before. All three answer with the
+same three fields, and the guard that refuses a leak is the one guard. Spawning
+stays in the two drives that were already allowed to spawn — the first attempt put
+it in `src/report/skeleton.ts` and `tests/invariants.test.ts` refused it, correctly.
+
+**Two gates refused the first version of this change and both were right.** The
+second was `.github/workflows/evidence.yml`: the shape reader started life inside
+`read.py`, which added `frozenset` and `isinstance` to a file the gate watches for
+rule-shaped edits, so it demanded cases for a change that is not a rule. The
+answer is not a wider grep — it is that `read.py` had one job and had been given
+two. The shape reader is its own file, `src/law/python/skeleton.py`, the way the
+Rust one is, and the gate's heuristic stays worth having.
+
+**What the probe found, which the tests did not.** `audit/shape-probe.ts` asks for
+a shape on five lines of every file in a corpus and checks every word of the
+answer against the words looper can write. Over 4,168 lines of `syn`, `tokio`,
+`axum`, `hyper`, `clap`, `serde` and Python's own standard library: **0 leaks** —
+after it caught two things first. Rust's short keywords (`fn`, `if`, `as`, `u8`)
+were not in the declared vocabulary, and Python's `ast` names twenty of its node
+types in lower case (`arg`, `alias`, `comprehension`, `withitem`) which the leak
+guard reads as a name from the adopter's code, refusing the whole report. Both are
+now declared. The product guard never saw either, because its word pattern needs
+three characters — so a two-character keyword was never checked at all.
+
+A test caught the third: `except OSError as cause:` had no shape, because the
+enclosing set was a list of statement types somebody typed out. `PY-ERROR:1` fires
+on exactly that line, so the most disputable Python rule was the one that could
+not be reported. The set is now `ast.stmt` and the two clause types, which is the
+language's own answer instead of a list.
+
+**What it still cannot shape** is a line that is only a comment, which is where
+the silenced-type-checker rule fires when `# type: ignore` sits on its own line.
+A comment is not a statement and looper refuses rather than guesses, the same
+answer the TypeScript side has always given for a blank line. Named here rather
+than papered over.
+
 
 ### 91 · `wrong` — the engine was built once and then never again, in silence — cleared
 
