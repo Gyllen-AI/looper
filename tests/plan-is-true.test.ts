@@ -126,3 +126,25 @@ test("a row about a rule describes the rule it names", () => {
     "a row in the plan describes a rule other than the one it names. That happened once for a day, and two of the rows promised rules that do not exist.",
   );
 });
+
+test("a finding reported by an adopter says which half we saw and which we were told", () => {
+  const findings = readFileSync(new URL("../docs/FINDINGS.md", import.meta.url), "utf8");
+  const blocks = findings.split(/^### /m).slice(1);
+  const unmarked: string[] = [];
+
+  for (const block of blocks) {
+    const lines = block.split("\n");
+    const heading = lines[0];
+    if (heading === undefined) continue;
+    const dateline = lines.slice(1, 5).join(" ");
+    if (!dateline.includes("adopter issue #")) continue;
+    if (block.includes("Told, not seen")) continue;
+    unmarked.push(heading.slice(0, 60));
+  }
+
+  assert.deepEqual(
+    unmarked,
+    [],
+    "a finding whose own dateline says an adopter reported it is written from their words about a tree nobody here can read, and a document that mixes what was seen with what was told cannot be corrected later, because nobody can tell which half to re-check",
+  );
+});

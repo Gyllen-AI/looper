@@ -43,9 +43,14 @@ from your code: TRUTH.
 
 And the match came from comment prose. In their project `TRUTH` is not an
 identifier anywhere — it appears in comments, in capitals, as an ordinary English
-word. So any word anybody ever wrote in a comment became unusable. Their project
-is meanwhile deleting every comment because `TS-DEAD:2` says to, and the words in
-those comments kept blocking reports until the deletion finished.
+word. So any word anybody ever wrote in a comment became unusable.
+
+**Told, not seen.** Everything in the paragraph above about their project — where
+`TRUTH` appears, that it is not an identifier, and that they are deleting every
+comment because `TS-DEAD:2` says to while those words keep blocking reports — comes
+from the issue they wrote. Their tree cannot be read from here and nothing of it
+may enter this repo. What was seen is below: the same situation rebuilt on a
+scratch project, and the measurements taken on it.
 
 **Reproduced here** on a scratch project holding one `?? 0` and one Python file
 whose only occurrence of `TRUTH` is a `#` comment. Same rule, same file, same
@@ -99,6 +104,12 @@ so it is the whole statement, not a truncated one. `TS-TRUTH:1` bans `??`, `||`,
 is impossible for that line. Checked here: `looper law` on that shape answers
 `nothing to fix`, and the rule reports the exact line of the operator rather than
 the line the statement starts on.
+
+**Told, not seen.** The 3,749-line file, the 2,391 baseline problems, the table of
+staged sizes against cited lines, and the shape above are all theirs, from the
+issue and a `looper report` they ran. Their tree cannot be read from here. What was
+seen is everything below: what that shape means, checked against the rules here,
+and the fixture the cause was measured on.
 
 **The cause.** `ask` in `src/git.ts` ended with
 
@@ -157,6 +168,9 @@ which is the entire complaint in #44. The route the `law` rule set names as the
 only way to argue with a rule was open while looper was right about the line and
 shut when it was wrong about it.
 
+**Told, not seen.** The refusal above is the one they reported. What was seen is
+the reproduction below and the report it now writes.
+
 **The fix.** A shape lookup has three answers. Found, when something begins there.
 `around`, when nothing begins there but a statement contains it — the report is
 written against that statement and says which line it really begins on, because
@@ -194,6 +208,10 @@ file list the survey walked, and the survey walks `JUDGED_EXTENSIONS`, which
 listed `.ts`, `.tsx`, `.mts`, `.cts`, `.rs`, `.py`. So the stack record silently
 stopped describing the project.
 
+**Told, not seen.** Their command and its answer, the `next.config.mjs`, and the
+1,554 of 2,391 are from the issue they wrote. What was seen is the two tests below
+and what the change found in this repo on its first run.
+
 **The fix is that list.** `.js`, `.jsx`, `.mjs` and `.cjs` are judged. Nothing
 else moved: `lawFor` already routes anything that is not Rust or Python to the
 TypeScript reader, and `languageOf` already knew those four extensions mean
@@ -229,6 +247,10 @@ evidence, and names `.catch(() => 0)` beside it. `TS-ERROR:4` walked for
 did not. The adopter counted 19 in one console, 12 of them in a single file, in a
 file that reports 630 problems from other rules — so this was not a codebase
 looper was quiet about, it was this shape.
+
+**Told, not seen.** The 19 instances, the 12 in a single file, and the 630 problems
+that file reports are theirs, from the issue. What was seen is the boundary probe,
+the corpus below, and every hit in it.
 
 **The fix.** An inline `.catch(handler)` body is the same thing as a catch clause
 and faces the same two questions: does it observe the failure through a blessed
@@ -297,6 +319,10 @@ reads an exit code can tell the two apart. The adopter wanted `looper law` in th
 single command their project runs before every commit and in CI beside the type
 check, and could not: it would be red from the first day of the cleanup until the
 last of 2,391 problems was gone, and a check that is always red is not a check.
+
+**Told, not seen.** The 2,391 problems across 65 files, the transcript above and
+the timings they credited are theirs, from the issue. What was seen is the
+measurement on this repo below.
 
 **The fix.** The exit code answers one question, *is anything blocking*. 0 when
 every problem found is in the baseline, 2 when one is not.
