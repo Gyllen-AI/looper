@@ -22,7 +22,47 @@ is a suspicion and belongs in the notes at the bottom, not in the list.
 
 ## Open
 
-_Empty. Findings 41 to 94 are closed._
+_Empty. Findings 41 to 95 are closed._
+
+### 95 · `missing` — looper's own project was reached as an installed command, so its tools never started — cleared
+
+2026-08-18. Found by running `looper init` in this repo the moment finding 94 was
+merged, to watch the repair work. It did repair the stale entry, and what it wrote
+in its place was
+
+```
+it was launching  node $CLAUDE_PROJECT_DIR/src/main.ts serve
+it now launches   looper serve
+```
+
+`looper` is not on PATH here and there is no `node_modules/.bin/looper`, so one
+launch that cannot run was replaced by another. The same run said the hooks'
+command could not be found; the `.mcp.json` line said `corrected` and nothing
+else.
+
+`reachedFrom` knew three shapes and not the fourth. `local` is a
+`node_modules/.bin` beside the project, `inside` is a checkout under it, and
+everything else is `INSTALLED`, the bare command. The project that **is** looper
+matched none of the first two and fell to the third. `DEV`, whose launch is the
+root-relative `./src/main.ts` that finding 93 measured as the spelling which
+connects, could only be reached by typing `--dev` — a step nobody knows exists,
+which is the input rule in one line.
+
+**The fix.** `reachedFrom` asks first whether the root is itself a looper
+checkout, using the same `isLooperCheckout` that `checkoutUnder` already applies
+to subfolders, and answers `DEV` when it is. One line, and no adopter can reach
+it: an adopting project's root is never a looper checkout.
+
+**Measured, not claimed.** With the entry it now writes, the server answers:
+
+```
+$ printf '…initialize…tools/list…' | node ./src/main.ts serve
+{"result":{"protocolVersion":"2025-06-18","serverInfo":{"name":"looper","version":"0.1.0"}}}
+{"result":{"tools":[{"name":"doctrine"…},{"name":"recall"…},{"name":"see"…}]}}
+```
+
+The test asserts the reach and the two fields of the entry, and fails on the
+previous `reachedFrom`.
 
 ### 94 · `wrong` — init could add its server but never repair it, so finding 93's fix reached nobody — cleared
 

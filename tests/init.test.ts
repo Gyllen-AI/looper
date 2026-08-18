@@ -244,6 +244,42 @@ test("a command the hooks cannot reach is said out loud, not left looking wired"
   }
 });
 
+test("the project that is looper is reached as its own source, not as a command that is not there", () => {
+  const root = scratch();
+  try {
+    mkdirSync(join(root, "bin"), { recursive: true });
+    writeFileSync(join(root, "bin", "looper.js"), "");
+    writeFileSync(join(root, "package.json"), JSON.stringify({ name: "looper" }, null, 2));
+    mkdirSync(join(root, "src"), { recursive: true });
+    writeFileSync(join(root, "src", "main.ts"), "");
+
+    const reached = reachedFrom(root);
+    assert.deepEqual(
+      reached,
+      DEV,
+      "looper's own project was reached as an installed command, which is not on PATH there, so its own tools never start",
+    );
+
+    const report = runInit(root, reached, NO_PATH);
+    const held: unknown = JSON.parse(readFileSync(join(root, ".mcp.json"), "utf8"));
+    const servers = Object.getOwnPropertyDescriptor(held, "mcpServers")?.value;
+    const mine = Object.getOwnPropertyDescriptor(servers, "looper")?.value;
+
+    assert.equal(Object.getOwnPropertyDescriptor(mine, "command")?.value, "node");
+    assert.deepEqual(
+      Object.getOwnPropertyDescriptor(mine, "args")?.value,
+      ["./src/main.ts", "serve"],
+      "the entry launches something other than the source sitting right there",
+    );
+    assert.ok(
+      !report.steps.some((step) => step.kind === "entry-unreachable"),
+      "init said the command it wrote cannot be found, in the one project where the source is certainly there",
+    );
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
 test("looper checked out inside a project is wired as the checkout it is", () => {
   const root = scratch();
   try {
