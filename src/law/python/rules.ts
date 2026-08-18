@@ -45,4 +45,20 @@ export const PYTHON_RULES: readonly Rule[] = [
     ],
     valve: { kind: "none" },
   },
+  {
+    id: "PY-ERROR:2",
+    category: "ERROR",
+    pass: "fast",
+    bans: "answering a failure with a made-up value — `return None`, `return []`, `return \"\"`, `return 0` inside an `except`",
+    why:
+      "one line later nothing can tell the made-up value from a real one, so a file that could not be opened becomes an empty string and a database that was down becomes an empty list of orders. The person who sees the screen has no way to know anything went wrong, and the cause is three layers away by the time anyone looks",
+    instead: [
+      "raise something the caller can act on: `raise Missing(path) from error`",
+      "use the error, and this rule steps aside: `except OSError as error: logger.warning(\"...\", error); return None`",
+      "return a real answer from a real place: `return fallback.read()`",
+      "if absence is a genuine answer, say so in the signature and return it from the `try` as well, so the handler is not the only place it appears",
+      "leaving a command with a failing exit code is a report, not a fabrication — say it as one: `raise SystemExit(2)`",
+    ],
+    valve: { kind: "none" },
+  },
 ];

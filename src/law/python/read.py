@@ -8,6 +8,8 @@ MUTABLE_DEFAULT = "PY-TRUTH:1"
 
 ASSERT_AS_A_CHECK = "PY-TRUTH:2"
 
+MADE_UP_ANSWER = "PY-ERROR:2"
+
 MUTABLE_BUILDERS = frozenset(
     {"list", "dict", "set", "bytearray", "defaultdict", "Counter", "deque", "OrderedDict"}
 )
@@ -30,6 +32,62 @@ def is_a_test_file(path):
     if "tests" in parts[:-1] or "test" in parts[:-1]:
         return True
     return name.startswith("test_") or name.endswith("_test.py") or name == "conftest.py"
+
+
+def shape_of(node):
+    if node is None:
+        return "None"
+    if isinstance(node, ast.Constant):
+        return f"constant:{node.value!r}"
+    if isinstance(node, ast.List) and not node.elts:
+        return "empty:list"
+    if isinstance(node, ast.Dict) and not node.keys:
+        return "empty:dict"
+    if isinstance(node, ast.Set) and not node.elts:
+        return "empty:set"
+    if isinstance(node, ast.Tuple) and not node.elts:
+        return "empty:tuple"
+    return ""
+
+
+def is_made_up(node):
+    shape = shape_of(node)
+    if shape.startswith("empty:") or shape == "None":
+        return True
+    return isinstance(node, ast.Constant)
+
+
+def answers_already_given(body):
+    given = set()
+    for statement in body:
+        for node in ast.walk(statement):
+            if isinstance(node, ast.Return):
+                shape = shape_of(node.value)
+                if shape:
+                    given.add(shape)
+    return given
+
+
+def looks_at_the_error(handler):
+    if handler.name is None:
+        return False
+    for node in ast.walk(handler):
+        if isinstance(node, ast.Name) and node.id == handler.name:
+            return True
+    return False
+
+
+def made_up_answers_in(handler, already):
+    found = []
+    for statement in handler.body:
+        for node in ast.walk(statement):
+            if not isinstance(node, ast.Return):
+                continue
+            if shape_of(node.value) in already:
+                continue
+            if is_made_up(node.value):
+                found.append(node.lineno)
+    return found
 
 
 def builder_name(call):
@@ -59,6 +117,14 @@ def defaults_of(node):
 def violations_in(tree, in_a_test_file):
     found = []
     for node in ast.walk(tree):
+        if isinstance(node, ast.Try):
+            already = answers_already_given(node.body)
+            for handler in node.handlers:
+                if looks_at_the_error(handler):
+                    continue
+                for line in made_up_answers_in(handler, already):
+                    found.append({"rule": MADE_UP_ANSWER, "line": line})
+            continue
         if isinstance(node, ast.ExceptHandler):
             if node.type is None or does_nothing(node.body):
                 found.append({"rule": BARE_EXCEPT, "line": node.lineno})

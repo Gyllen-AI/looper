@@ -22,7 +22,40 @@ is a suspicion and belongs in the notes at the bottom, not in the list.
 
 ## Open
 
-_Empty. Findings 41 to 80 are closed._
+_Empty. Findings 41 to 81 are closed._
+
+### 81 · the made-up answer that hides a failure, in Python — cleared
+
+2026-08-18, the fourth Python rule, and the first written as a deliberate mirror
+rather than a fresh design. `TS-ERROR:3` already bans answering a failure with a
+made-up value, and copying its shape exactly is how the two languages keep
+agreeing about what a fabricated answer is, instead of drifting apart one rule at
+a time.
+
+Both of its exemptions are reproduced. A handler that **uses the caught error** is
+doing something with it, so it steps aside. A handler that **returns the same
+shape the `try` block already returns** is being consistent rather than inventing
+— that is what stops a function whose honest answer is `None` from being refused
+for saying so in the one place it must.
+
+Ten cases first: `None`, `[]`, `""`, `0`, `{}` and a bare `return`, all inside an
+`except`, all firing; re-raising, using the error, matching the try block's own
+answer, and returning a real value from a real place, all silent.
+
+**Both corpora.** 147 in 167 files of the standard library, 63 in 176
+hand-written files of the adopting project. Fourteen of the latter were read and
+all fourteen are the shape: a missing key becoming an empty list, malformed XML
+becoming no rows, an unreadable settings file becoming an empty dictionary.
+Several already carried `# noqa: BLE001`, so Ruff had reached the same verdict and
+been silenced line by line.
+
+**Two are worth naming rather than counting.** A command-line program that prints
+the problem and returns exit code 2 — the caller genuinely can tell, so that is a
+report and not a fabrication. The rule still fires, because the exemption that
+would cover it is not decidable, and instead it owes the case a spelling:
+`raise SystemExit(2)` says the same thing from anywhere in the program, survives,
+and does not pretend to be data. That line is now in the rule's own suggestions,
+which is the difference between a strict rule and a blunt one.
 
 ### 80 · `assert` is a check that disappears when it matters — cleared
 

@@ -2761,12 +2761,12 @@ the server it runs under is Uvicorn.
 
 ### The rules, named before they are written
 
-Seven, taken from the failure shapes this document already listed. Three are built:
+Seven, taken from the failure shapes this document already listed. Four are built:
 
 | rule | bans | state |
 |---|---|---|
 | `PY-ERROR:1` | a bare `except:`, and an `except` whose body does nothing — `pass` or `...` | built 2026-08-18 |
-| `PY-ERROR:2` | answering a failure with `None` | **not built yet** |
+| `PY-ERROR:2` | answering a failure with a made-up value inside an `except` | built 2026-08-18 |
 | `PY-ERROR:3` | `raise Exception(...)` where a named class belongs | **not built yet** |
 | `PY-TYPE:1` | a `# type: ignore` comment | **not built yet** |
 | `PY-TRUTH:1` | a default argument that is a mutable container | built 2026-08-18 |
@@ -2827,6 +2827,23 @@ every test and are absent under `-O`. Two narrow a type for the checker, which
 `if x is None: raise` does honestly. The standard library's are mostly internal
 invariants, the language's own documented use of `assert`, and they vanish under
 `-O` no differently, which is why the rule does not try to tell the two apart.
+
+`PY-ERROR:2` is a deliberate mirror rather than a fresh design. `TS-ERROR:3`
+already bans answering a failure with a made-up value, and it carries two
+exemptions worth copying exactly: a handler that uses the caught error is doing
+something with it, and a handler returning the same shape the `try` block already
+returns is being consistent rather than inventing. Both are reproduced, so the
+two languages agree about what a fabricated answer is instead of drifting apart
+one rule at a time.
+
+Measured: 147 in 167 files of the standard library, 63 in 176 hand-written files
+of the adopting project. Fourteen of the latter were read and all fourteen are
+the shape — a missing key becoming an empty list, malformed XML becoming no rows,
+an unreadable settings file becoming an empty dictionary, several already
+carrying `# noqa: BLE001`. Two are worth naming: a command-line program that
+prints the problem and returns exit code 2. The caller genuinely can tell, so the
+rule owes that case a spelling rather than a refusal, and `raise SystemExit(2)`
+is it — honest from anywhere in the program, and it does not pretend to be data.
 
 What `PY-TRUTH:1` deliberately does not do is fire on every call in a default position.
 `def f(t=datetime.now())` has the same underlying cause — the default is built
