@@ -4,7 +4,7 @@ import { mkdirSync, mkdtempSync, existsSync, rmSync, writeFileSync } from "node:
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
-import { buildReport, leaksInShape, wordsIn } from "../src/report/write.ts";
+import { buildReport, leaksInShape, wordsIn, withoutComments } from "../src/report/write.ts";
 import { render, shapeAt } from "../src/report/skeleton.ts";
 
 const PRIVATE = `import { acmeBillingGateway } from "@acme/billing-internal";
@@ -396,6 +396,53 @@ test("a Python line that starts no statement is reported against the statement a
     assert.ok(
       written.body.includes("starts no statement"),
       "the report has to say the line began nothing, or the reader cannot tell what was judged",
+    );
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test("a word that only appears in a comment is not a name from the code", () => {
+  assert.equal(
+    withoutComments("src/note.py", "# THE BUCKET IS THE TRUTH about it\nx = 1\n").includes("TRUTH"),
+    false,
+    "an ordinary English word somebody wrote in a comment becomes a word nobody may use when arguing with a rule",
+  );
+  assert.equal(
+    withoutComments("src/one.ts", "// the CACHE_KEY is stale\nconst CACHE_KEY = 1;\n").includes("CACHE_KEY"),
+    true,
+    "the name is still declared in the code, so it stays in the corpus",
+  );
+  assert.equal(
+    withoutComments("src/one.ts", 'const marker = "# not a comment";\n').includes("not"),
+    true,
+    "a comment marker inside a string is not a comment",
+  );
+  assert.equal(
+    withoutComments("src/one.ts", "/* SWEPT away */\nconst kept = 1;\n").includes("SWEPT"),
+    false,
+  );
+});
+
+test("arguing with a rule may use the rule's own name", () => {
+  const root = mkdtempSync(join(tmpdir(), "looper-report-ruleid-"));
+  try {
+    mkdirSync(join(root, "src"), { recursive: true });
+    writeFileSync(join(root, "src/one.ts"), "export const n = rows.get(k) ?? 0;\n");
+    writeFileSync(join(root, "src/note.py"), "# THE BUCKET IS THE TRUTH about it\nx = 1\n");
+
+    const written = buildReport({
+      root,
+      ruleId: "TS-TRUTH:1",
+      file: "src/one.ts",
+      line: 1,
+      tried: "The gate named a line where TRUTH does not apply.",
+    });
+
+    assert.equal(
+      written.kind,
+      "written",
+      `the one word the sentence cannot avoid is the rule's own name, and it is already printed in the report: ${JSON.stringify(written)}`,
     );
   } finally {
     rmSync(root, { recursive: true, force: true });
