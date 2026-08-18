@@ -22,7 +22,46 @@ is a suspicion and belongs in the notes at the bottom, not in the list.
 
 ## Open
 
-_Empty. Findings 41 to 97 are closed._
+_Empty. Findings 41 to 98 are closed._
+
+### 98 · `missing` — JavaScript entered a governed project and nothing saw it — cleared
+
+2026-08-18, adopter issue #46. `looper law deploy/check.py deploy/check.mjs`
+answered `1 files, nothing to fix`. The `.mjs` was not judged clean; it was not
+judged. In the same project a `next.config.mjs` holding three `//` comments and a
+`/** */` block drew no verdict, while `TS-DEAD:2` accounts for 1,554 of that
+project's 2,391 baseline problems everywhere else.
+
+`STACK:1` was silent for the same reason and not a second one. It is handed the
+file list the survey walked, and the survey walks `JUDGED_EXTENSIONS`, which
+listed `.ts`, `.tsx`, `.mts`, `.cts`, `.rs`, `.py`. So the stack record silently
+stopped describing the project.
+
+**The fix is that list.** `.js`, `.jsx`, `.mjs` and `.cjs` are judged. Nothing
+else moved: `lawFor` already routes anything that is not Rust or Python to the
+TypeScript reader, and `languageOf` already knew those four extensions mean
+JavaScript. Two tests, one per half, both failing before.
+
+**What it found here, immediately.** looper's own `bin/looper.js` had never been
+read by looper. Four problems, and every one of them correct:
+
+| | |
+|---|---|
+| `TS-LOG:1` at 12, 19 | `console.error` in a library |
+| `TS-LAYER:2` at 43 | `await import("../src/main.ts")` partway down the file |
+| `STACK:1` at 1 | JavaScript is not in `CURRENTSTACK.md` |
+
+Both code rules name the same valve, `law.toml [entry] files`, and `bin/looper.js`
+is exactly what that valve is for — it is what `package.json` declares as `bin`,
+and the late import is the entry point deciding to load late, which is what
+`TS-LAYER:2`'s own advice says is allowed there. This repo's `law.toml` declares
+its entry files by hand, which overrides the `package.json` default, and the shim
+was missing from that list because nothing had ever judged it. It is declared now.
+
+`STACK:1` was right in the plainest way: looper ships a JavaScript file and its
+own stack document did not say so. `CURRENTSTACK.md` says so now.
+
+After both, `looper law` on this repo is back to 13 baseline problems and exit 0.
 
 ### 97 · `missing` — the doctrine named `.catch(() => {})` twice and no rule caught it — cleared
 
