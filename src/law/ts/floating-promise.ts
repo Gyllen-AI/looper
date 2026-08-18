@@ -73,18 +73,55 @@ export function importedAsyncNames(root: string, file: string, tree: Node): Read
   return found;
 }
 
-function droppedCallName(node: Node): string | null {
-  if (node.type !== "ExpressionStatement") return null;
-  const expression = node["expression"];
-  if (fieldAt(expression, "type") !== "CallExpression") {
-    return null;
-  }
+const HANDLES_FAILURE = "catch";
+
+const CONTINUES = "then";
+
+function calledName(expression: unknown): string | null {
+  if (fieldAt(expression, "type") !== "CallExpression") return null;
   const callee = fieldAt(expression, "callee");
-  if (fieldAt(callee, "type") !== "Identifier") {
-    return null;
-  }
+  if (fieldAt(callee, "type") !== "Identifier") return null;
   const name = fieldAt(callee, "name");
   return typeof name === "string" ? name : null;
+}
+
+function methodOn(expression: unknown): { readonly named: string; readonly on: unknown } | null {
+  if (fieldAt(expression, "type") !== "CallExpression") return null;
+  const callee = fieldAt(expression, "callee");
+  if (fieldAt(callee, "type") !== "MemberExpression") return null;
+  const named = fieldAt(fieldAt(callee, "property"), "name");
+  if (typeof named !== "string") return null;
+  return { named, on: fieldAt(callee, "object") };
+}
+
+function saysWhatHappensOnFailure(expression: unknown): boolean {
+  const held = methodOn(expression);
+  if (held === null) return false;
+  if (held.named === HANDLES_FAILURE) return true;
+  if (held.named === CONTINUES) {
+    const args = fieldAt(expression, "arguments");
+    if (Array.isArray(args) && args.length > 1) return true;
+  }
+  return saysWhatHappensOnFailure(held.on);
+}
+
+function startedBy(expression: unknown): string | null {
+  const direct = calledName(expression);
+  if (direct !== null) return direct;
+  const held = methodOn(expression);
+  return held === null ? null : startedBy(held.on);
+}
+
+function droppedCallName(node: Node): string | null {
+  if (node.type !== "ExpressionStatement") return null;
+  let expression = node["expression"];
+  // `void save(order)` throws the promise away without saying what happens when it
+  // fails, which is the harm this rule names, not a way out of it
+  if (fieldAt(expression, "type") === "UnaryExpression" && fieldAt(expression, "operator") === "void") {
+    expression = fieldAt(expression, "argument");
+  }
+  if (saysWhatHappensOnFailure(expression)) return null;
+  return startedBy(expression);
 }
 
 type Named = { readonly name: string; readonly called: string; readonly node: Node };
