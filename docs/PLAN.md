@@ -2197,6 +2197,41 @@ answer is assembled, dropping one more set if that is what it costs, and
 `overflowed` means what it says: the text handed over is larger than the budget,
 which now happens only when the constitution alone is.
 
+### What the secrets gate was missing. Corrected 2026-08-18, from adopter issue #21
+
+Reported with numbers from a real repository: 119 lines flagged out of 688,138
+scanned, 0.017%, and zero real secrets — which is the argument for looking
+harder, not the argument for stopping. Four holes, and the first two matter most
+because they are what a real project is actually called:
+
+- **`\b` before a credential name.** Underscore is a word character, so
+  `rcon_password`, `db_password`, `auth_token` and `PGPASSWORD` never matched
+  while `password` did. The names that had been thought about worked; the ones
+  that had not were invisible.
+- **A note excused the line.** `todo` is in the placeholder vocabulary and the
+  excuse applied to the whole line, so the most likely line in any codebase to
+  carry a hardcoded credential — the one somebody left a note on — was the one
+  line passed over. `FIXME` was not in the list, which is the accident that made
+  it visible. The excuse now applies to the value, as the vendor patterns always
+  did.
+- **A single-case value was never random enough.** Thirty-two lowercase hex
+  characters is what an RCON password looks like. Accepted now when the value is
+  hex or base32 and long enough, with `GIT_SHA` narrowed to the lengths git
+  actually produces rather than every length between 7 and 40.
+- **Unquoted assignments.** `export PGPASSWORD=…` is the shape `.env` files and
+  shell scripts use.
+
+**The cost of getting this wrong is a scanner nobody believes, so every widening
+was measured against foreign code before it shipped.** The first attempt flagged
+24 lines of `@babel/parser` — `tokens = file.tokens.map(…)`, because the name
+allowance ran into `tokens` and the unquoted value swallowed an expression. The
+second flagged looper's own `FRESHNESS_BYPASS`, because bypass ends in pass. The
+shipped version allows a prefix only for names that are unambiguous, keeps bare
+`pass` and `auth` behind a separator, and requires an unquoted value to end at
+whitespace. Measured after: `node_modules` 22 files and 35,358 lines, `src` 89
+files, `vendor` 87 files — **zero flagged in all three**, and in `tests/` only
+the nineteen deliberate fixtures.
+
 ## Freshness: the gate that stops a rule set describing something else
 
 Carried from the Rust predecessor on 2026-08-17, after checking what that

@@ -24,16 +24,39 @@ const PRIVATE_KEY = /-----BEGIN [A-Z ]*PRIVATE KEY-----/;
 
 const CONNECTION = /\b(postgres(?:ql)?|mysql|mongodb(?:\+srv)?|redis|amqp):\/\/[^:@\s/]+:[^@\s]+@/i;
 
-const ASSIGNED =
-  /\b(pass(?:word|wd)?|secret|token|api[-_]?key|apikey|credential|auth|private[-_]?key)\b["']?\s*[:=]\s*["']([^"'\s]{12,})["']/i;
+const NAMED_ANYWHERE =
+  "pass(?:word|wd)|secret|token|api[-_]?key|apikey|credential|private[-_]?key";
+
+const NAMED_ON_ITS_OWN = "pass|auth";
+
+const ASSIGNED = new RegExp(
+  `(?:[A-Za-z0-9_]*(?:${NAMED_ANYWHERE})|(?<![A-Za-z0-9])(?:${NAMED_ON_ITS_OWN}))` +
+    `\\b["']?\\s*[:=]\\s*` +
+    `(?:["']([^"'\\s]{12,})["']|([^\\s"';,()\\[\\]{}.]{12,})(?=\\s|$))`,
+  "i",
+);
 
 const BLOB = /[A-Za-z0-9+/_-]{24,}={0,2}/g;
 
-const GIT_SHA = /^[0-9a-f]{7,40}$/;
+const GIT_SHA = /^(?:[0-9a-f]{7}|[0-9a-f]{8}|[0-9a-f]{40}|[0-9a-f]{64})$/;
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
 
 const MIN_ENTROPY = 4.2;
+
+const ONE_CASE_MIN_ENTROPY = 3.0;
+
+const HEX_ONLY = /^[0-9a-f]+$/i;
+
+const BASE32_ONLY = /^[a-z2-7]+$/i;
+
+const BASE32_MIN_DIGITS = 3;
+
+const ONE_CASE_MIN_LENGTH = 32;
+
+const SUBRESOURCE = /^sha(?:256|384|512)-/;
+
+const A_URL = "://";
 
 const LONGEST_WORD = 7;
 
@@ -58,12 +81,23 @@ function longestLowercaseRun(value: string): number {
   return best;
 }
 
+function isMixedCase(value: string): boolean {
+  return /[A-Z]/.test(value) && /[a-z]/.test(value) && /[0-9]/.test(value);
+}
+
 export function looksRandom(value: string): boolean {
   if (value.length < 24) return false;
-  if (GIT_SHA.test(value) || UUID.test(value)) return false;
-  if (!/[A-Z]/.test(value) || !/[a-z]/.test(value) || !/[0-9]/.test(value)) return false;
-  if (longestLowercaseRun(value) > LONGEST_WORD) return false;
-  return entropyOf(value) >= MIN_ENTROPY;
+  if (GIT_SHA.test(value) || UUID.test(value) || SUBRESOURCE.test(value)) return false;
+  if (isMixedCase(value)) {
+    if (longestLowercaseRun(value) > LONGEST_WORD) return false;
+    return entropyOf(value) >= MIN_ENTROPY;
+  }
+  if (value.length < ONE_CASE_MIN_LENGTH) return false;
+  if (HEX_ONLY.test(value)) return entropyOf(value) >= ONE_CASE_MIN_ENTROPY;
+  if (!BASE32_ONLY.test(value)) return false;
+  const digits = value.replace(/[^0-9]/g, "").length;
+  if (digits < BASE32_MIN_DIGITS) return false;
+  return entropyOf(value) >= ONE_CASE_MIN_ENTROPY;
 }
 
 function excerptOf(text: string): string {
@@ -72,14 +106,20 @@ function excerptOf(text: string): string {
   return `${trimmed.slice(0, 16)}…`;
 }
 
+function valueIn(hit: RegExpExecArray): string | undefined {
+  const quoted = hit[1];
+  if (quoted !== undefined) return quoted;
+  return hit[2];
+}
+
 export function findingsIn(text: string, allowed: ReadonlySet<string>): readonly Finding[] {
   const found: Finding[] = [];
-  const excused = PLACEHOLDER.test(text);
 
   if (PRIVATE_KEY.test(text)) {
     found.push({ kind: "a private key", excerpt: excerptOf(text) });
   }
-  if (CONNECTION.test(text) && !excused) {
+  const connection = CONNECTION.exec(text);
+  if (connection !== null && !PLACEHOLDER.test(connection[0])) {
     found.push({ kind: "a database address with its password in it", excerpt: excerptOf(text) });
   }
   for (const [shape, kind] of VENDOR) {
@@ -91,18 +131,20 @@ export function findingsIn(text: string, allowed: ReadonlySet<string>): readonly
   if (found.length > 0) return found;
 
   const assigned = ASSIGNED.exec(text);
-  if (assigned !== null && !excused) {
-    const value = assigned[2];
-    if (value !== undefined && !allowed.has(value)) {
+  if (assigned !== null) {
+    const value = valueIn(assigned);
+    const real =
+      value !== undefined && !allowed.has(value) && !PLACEHOLDER.test(value) && !value.includes(A_URL);
+    if (real && value !== undefined) {
       found.push({ kind: "something named like a credential, with a value", excerpt: excerptOf(value) });
       return found;
     }
   }
 
-  if (excused) return found;
   const blobs = text.match(BLOB);
   for (const candidate of blobs === null ? [] : blobs) {
-    if (allowed.has(candidate) || !looksRandom(candidate)) continue;
+    if (allowed.has(candidate) || PLACEHOLDER.test(candidate)) continue;
+    if (!looksRandom(candidate)) continue;
     found.push({
       kind: `a ${candidate.length}-character random-looking string`,
       excerpt: excerptOf(candidate),

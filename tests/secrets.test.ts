@@ -268,3 +268,93 @@ test("the agent typing a key into the commit command is caught before it runs", 
     rmSync(root, { recursive: true, force: true });
   }
 });
+
+const A_MADE_UP_VALUE = "correcthorsebatterystaple";
+
+const NAMES_THAT_MUST_BE_CAUGHT: readonly string[] = [
+  "password",
+  "api_key",
+  "private_key",
+  "rcon_password",
+  "db_password",
+  "auth_token",
+  "admin_secret",
+  "PGPASSWORD",
+];
+
+test("a credential name is not defeated by what somebody put in front of it", () => {
+  for (const name of NAMES_THAT_MUST_BE_CAUGHT) {
+    assert.ok(
+      findingsIn(`${name} = "${A_MADE_UP_VALUE}"`, NOTHING_ALLOWED).length > 0,
+      `${name} carries a value and nothing was said. An underscore is a word character, so \\b never matched between rcon_ and password — and rcon_password is what a real project called its credential.`,
+    );
+  }
+});
+
+const NAMES_THAT_MUST_STAY_SILENT: readonly string[] = [
+  "FRESHNESS_BYPASS",
+  "compass_heading",
+  "oauth_url",
+];
+
+test("a word that merely ends in a credential name is not one", () => {
+  for (const name of NAMES_THAT_MUST_STAY_SILENT) {
+    assert.deepEqual(
+      [...findingsIn(`${name} = "${A_MADE_UP_VALUE}"`, NOTHING_ALLOWED)],
+      [],
+      `${name} was read as a credential. Bypass ends in pass, and a gate that fires on the word bypass is one somebody switches off.`,
+    );
+  }
+});
+
+test("a note about a secret does not excuse the secret", () => {
+  assert.ok(
+    findingsIn(`password = "${A_MADE_UP_VALUE}" // TODO: move to env`, NOTHING_ALLOWED).length > 0,
+    "the single most likely line in a codebase to carry a hardcoded credential is the one somebody left a note on, and TODO in the note excused the whole line",
+  );
+  assert.deepEqual(
+    [...findingsIn('token = "TODO"', NOTHING_ALLOWED)],
+    [],
+    "a value that really is a placeholder is not a secret; the word is only an excuse where the value carries it",
+  );
+});
+
+test("a value nobody quoted is still a value", () => {
+  assert.ok(
+    findingsIn("export PGPASSWORD=abc123def456ghi789jkl", NOTHING_ALLOWED).length > 0,
+    "env files and shell scripts are where unquoted assignments live, and they were invisible",
+  );
+  assert.deepEqual(
+    [...findingsIn("token: tokenLabelName(tokenType)", NOTHING_ALLOWED)],
+    [],
+    "an unquoted value that is code is not a credential, and reading one as a credential is how a scanner earns being switched off",
+  );
+});
+
+test("a secret of one case is still a secret", () => {
+  for (const value of [
+    "a3f9c2e7b14d8f60a3f9c2e7b14d8f60",
+    "5d41402abc4b2a76b9719d911017c592",
+    "mfrggzdfmztwq2lknnwg23tpobyxe43uov",
+  ]) {
+    assert.ok(
+      looksRandom(value),
+      `${value} was passed over for having no capital letter. An RCON password is thirty-two random characters and looks like nothing in particular.`,
+    );
+  }
+});
+
+test("what one case must not swallow", () => {
+  for (const value of [
+    "thequickbrownfoxjumpedoverthelazydog2",
+    "a_long_snake_case_identifier_here1",
+    "8f3a1c2b4d5e6f708192a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2c3d4",
+    "sha384-Kj9mQ2wTz7bR4nX8vC1pL6hF3sD5gA0eJ8tR2yU7pZqAAAA",
+  ]) {
+    assert.equal(
+      looksRandom(value),
+      false,
+      `${value.slice(0, 40)} is prose, an identifier, a git object or a published hash, and calling it a secret is the failure that gets a scanner ignored`,
+    );
+  }
+});
