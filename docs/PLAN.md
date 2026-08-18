@@ -2761,7 +2761,7 @@ the server it runs under is Uvicorn.
 
 ### The rules, named before they are written
 
-Seven, taken from the failure shapes this document already listed. Five are built:
+Seven, taken from the failure shapes this document already listed. Six are built:
 
 | rule | bans | state |
 |---|---|---|
@@ -2771,7 +2771,7 @@ Seven, taken from the failure shapes this document already listed. Five are buil
 | `PY-TYPE:1` | `# type: ignore` on a line, `# mypy: ignore-errors` on a file | built 2026-08-18 |
 | `PY-TRUTH:1` | a default argument that is a mutable container | built 2026-08-18 |
 | `PY-TRUTH:2` | `assert` outside a test file, whatever it is checking | built 2026-08-18 |
-| `PY-LAYER:1` | a star import, which launders one namespace into another | **not built yet** |
+| `PY-LAYER:1` | `from x import *`, which takes every name without saying which | built 2026-08-18 |
 
 `PY-TRUTH:2` is the one worth explaining, because it is the rule most likely to
 be argued with. `assert` is not a check in Python; it is a check that disappears
@@ -2858,6 +2858,20 @@ as though it were: a `Callable` assigned `None`, a union never narrowed, an
 attribute the type does not declare. One is the optional-import idiom,
 `ZoneInfo = None` under an `except ImportError`, and even that has an honest
 spelling in `ZoneInfo: type | None`.
+
+`PY-LAYER:1` is the quietest of all: 23 in 167 files of the standard library and
+**none** in 176 hand-written files of the adopting project. All 23 were read and
+every one is the same idiom — CPython pulling a C accelerator or a platform
+module's names in wholesale, `from _heapq import *`, `from _socket import *`,
+`from posix import *`.
+
+One of them is the rule's own reasoning, in the wild. `datetime.py` has two star
+imports, four lines apart: `_datetime` and then `_pydatetime`. The second
+silently replaces names from the first, which is precisely what the rule says
+happens and why nothing anywhere can say where a name came from. CPython does it
+deliberately and can defend it; the point is that the shape is indefensible
+anywhere it is not deliberate, and there is no way to tell those apart by reading
+the file.
 
 What `PY-TRUTH:1` deliberately does not do is fire on every call in a default position.
 `def f(t=datetime.now())` has the same underlying cause — the default is built

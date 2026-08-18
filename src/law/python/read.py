@@ -14,6 +14,8 @@ MADE_UP_ANSWER = "PY-ERROR:2"
 
 SILENCED_CHECKER = "PY-TYPE:1"
 
+LAUNDERED_NAMESPACE = "PY-LAYER:1"
+
 MUTABLE_BUILDERS = frozenset(
     {"list", "dict", "set", "bytearray", "defaultdict", "Counter", "deque", "OrderedDict"}
 )
@@ -121,6 +123,10 @@ def defaults_of(node):
 def violations_in(tree, in_a_test_file):
     found = []
     for node in ast.walk(tree):
+        if isinstance(node, ast.ImportFrom):
+            if any(alias.name == "*" for alias in node.names):
+                found.append({"rule": LAUNDERED_NAMESPACE, "line": node.lineno})
+            continue
         if isinstance(node, ast.Try):
             already = answers_already_given(node.body)
             for handler in node.handlers:

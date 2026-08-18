@@ -76,4 +76,18 @@ export const PYTHON_RULES: readonly Rule[] = [
     ],
     valve: { kind: "none" },
   },
+  {
+    id: "PY-LAYER:1",
+    category: "LAYER",
+    pass: "fast",
+    bans: "`from x import *`, which takes every name a module has without saying which",
+    why:
+      "afterwards nobody can tell where a name came from — not a reader, not an editor, not a checker. Two star imports in one file and the second silently replaces names from the first, so a function you thought you were calling is a different one with the same name, and nothing anywhere says so. Adding a name to the module you imported from can break this file without touching it",
+    instead: [
+      "name what you take, and the line says where it came from: `from os.path import join`",
+      "keep the module and read through it: `import os.path` then `os.path.join(...)`",
+      "re-exporting from a package is worth writing out: `from .models import Order as Order`, or list them in `__all__`",
+    ],
+    valve: { kind: "none" },
+  },
 ];

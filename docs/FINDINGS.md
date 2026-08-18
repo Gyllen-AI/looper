@@ -22,7 +22,35 @@ is a suspicion and belongs in the notes at the bottom, not in the list.
 
 ## Open
 
-_Empty. Findings 41 to 82 are closed._
+_Empty. Findings 41 to 83 are closed._
+
+### 83 · the star import, and the standard library demonstrating why — cleared
+
+2026-08-18, the sixth Python rule and the quietest of all: 23 findings in 167
+files of Python's own standard library, **none** in 176 hand-written files of the
+adopting project.
+
+`from x import *` takes every name a module has without saying which. Afterwards
+nobody can tell where a name came from — not a reader, not an editor, not a
+checker — and adding a name to the module you imported from can break this file
+without anyone touching it.
+
+Six cases first: a star import from a module and from a package beside it, both
+firing; naming what you take, importing the module and reading through it,
+renaming a single name, and a multiplication that is not an import at all, all
+silent.
+
+**All 23 read, none a misread.** Every one is the same idiom: CPython pulling a C
+accelerator or a platform module's names in wholesale — `from _heapq import *`,
+`from _socket import *`, `from posix import *`.
+
+**One of them is the rule's own reasoning, in the wild.** `datetime.py` carries
+two star imports four lines apart, `_datetime` and then `_pydatetime`. The second
+silently replaces names from the first, which is exactly what the rule says
+happens. CPython does it deliberately and can defend it. The point is that the
+shape is indefensible anywhere it is not deliberate, and nothing in the file tells
+those two cases apart — which is the argument for the rule rather than against
+it.
 
 ### 82 · silencing the type checker, which is the annotation quietly ceasing to be true — cleared
 
