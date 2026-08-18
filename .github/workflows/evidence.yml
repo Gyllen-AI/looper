@@ -40,6 +40,16 @@ jobs:
                    | grep -E 'PY-|isinstance|frozenset' || true)
           cases=$(git diff --name-only "$range" \
                   | grep -E '^audit/(cases|rust-cases|python-cases)\.ts$' || true)
+          # STACK:1 is about a project rather than a file's text, so the case
+          # harness in audit/ cannot express it. Its cases live beside it.
+          stack=$(git diff -U0 "$range" -- 'src/law/stack.ts' \
+                  | grep -E '^[+-][^+-]' | grep -E 'bans:|instead:|id: "' || true)
+          stackCases=$(git diff --name-only "$range" \
+                       | grep -E '^tests/stack\.test\.ts$' || true)
+          if [ -n "$stack" ] && [ -n "$stackCases" ]; then
+            said=$(echo "$said" | grep -v 'STACK' || true)
+            cases="tests/stack.test.ts"
+          fi
 
           if { [ -n "$said" ] || [ -n "$rust" ] || [ -n "$python" ]; } && [ -z "$cases" ]; then
             echo "This changes what a rule says:"
