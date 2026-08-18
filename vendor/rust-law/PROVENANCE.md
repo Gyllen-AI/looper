@@ -110,6 +110,30 @@ by line and every one is the shape the rule bans: `index.length as usize` inside
 `tests/invariants.test.ts` fails if a newer copy of lawkeeper arrives without
 these scanners.
 
+**`TYPE:4` read a type-position `as` as a cast — fixed here, 2026-08-18.** The
+macro token scan added above fired on the bare word `as` and never looked at what
+followed it. In a macro's tokens `as` is not always a cast: `<T as Trait>::method`
+is a qualified path, `parse_macro_input!(x as Args)` is syn's own grammar, and
+`sqlx::query!("...", role as &str)` is a column type override. The rule's own ban
+text is about numbers only — "it truncates, wraps, rounds and re-signs in
+silence" — and none of those three can truncate anything.
+
+`scan_tokens_for_casts` now fires only when the token after `as` names a numeric
+primitive, `_`, or begins a pointer type. Typed syntax is untouched: a real
+`ExprCast` still fires whatever it casts to, because there syn has already told
+us it is a cast. The cost of the narrower token rule is a numeric cast written
+through a type alias or a path (`as std::os::raw::c_int`, `as MyLen`) inside macro
+tokens, which now goes unjudged.
+
+Measured on 599,944 lines of Rust from `~/.cargo/registry` that nobody here
+wrote, the old engine and the new one run over the same corpus: **33 hits
+removed, 0 added, no other rule moved.** All 33 were read by hand and all 33 are
+false positives — 17 `<#ty as Trait>::…` inside `quote!` in
+`attribute-derive-macro`, 12 `<Self as Trait>::…` inside `mac!` in `async-trait`,
+and 4 `parse_macro_input!(x as Args)`. **1,077 `TYPE:4` hits still stand**,
+sampled across crates and every one a real cast, including inside macros
+(`bit_width as usize` inside `debug_assert!`). See finding 90.
+
 **Updating it.** Nothing fetches this. If lawkeeper gains something worth having,
 someone copies the new source in by hand, deliberately, re-applies the changes
 listed above, and says so in the commit. That is the price of never downloading

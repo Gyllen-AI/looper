@@ -84,4 +84,20 @@ export const RUST_CASES: readonly RustCase[] = [
     code: `use crate::f as g;\npub fn h() -> u8 { let _ = g; 1 }` },
   { rule: "RUST-TYPE:4", name: "a rename inside a macro body is not a cast", expect: "silent",
     code: `macro_rules! bring { () => { use std::collections::HashMap as Map; }; }\npub fn f() { bring!(); }` },
+
+  { rule: "RUST-TYPE:4", name: "a float cast inside a macro argument is still a cast", expect: "fires",
+    code: `pub fn f(n: u64) { println!("{}", n as f64); }` },
+  { rule: "RUST-TYPE:4", name: "a query macro's column type override is not a numeric cast", expect: "silent",
+    code: `pub fn f(role: &str) { let _ = sqlx::query!("insert $1", role as &str); }` },
+  { rule: "RUST-TYPE:4", name: "an override to an Option type inside a macro is not a numeric cast", expect: "silent",
+    code: `pub fn f(plan: Option<&str>) { let _ = sqlx::query!("insert $1", plan as Option<&str>); }` },
+  { rule: "RUST-TYPE:4", name: "an override to a named type inside a macro is not a numeric cast", expect: "silent",
+    code: `pub struct Role;\npub fn f(role: Role) { let _ = sqlx::query!("insert $1", role as Role); }` },
+  { rule: "RUST-TYPE:4", name: "a pointer cast written as Rust, not as macro tokens, is still a cast", expect: "fires",
+    code: `pub fn f(x: &u8) -> *const u8 { x as *const u8 }` },
+
+  { rule: "RUST-TYPE:4", name: "a cast to an inferred type inside a macro hides its target and is still a cast", expect: "fires",
+    code: `pub fn f(n: u64) { println!("{}", n as _); }` },
+  { rule: "RUST-TYPE:4", name: "a pointer cast inside a macro argument is still a cast", expect: "fires",
+    code: `pub fn f(x: &u8) { println!("{:?}", x as *const u8); }` },
 ];

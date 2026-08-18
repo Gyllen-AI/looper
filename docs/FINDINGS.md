@@ -22,7 +22,42 @@ is a suspicion and belongs in the notes at the bottom, not in the list.
 
 ## Open
 
-_Empty. Findings 41 to 89 are closed._
+_Empty. Findings 41 to 90 are closed._
+
+### 90 · `blunt` — a type-position `as` is not a cast, and finding 69 shipped without noticing — cleared
+
+2026-08-18. Found by an adopter bumping their pin to the commit that closed
+finding 88: two `TYPE:4` violations appeared in code nobody had touched, both
+`sqlx::query!("...", role as &str)`, which is sqlx spelling a column type
+override. Neither is a cast and neither can truncate anything.
+
+Finding 69 taught four rules to read macro tokens. `scan_tokens_for_casts` fired
+on the bare word `as` and never looked at the next token. Inside a macro's tokens
+`as` has at least three other jobs: a qualified path `<T as Trait>::method`,
+syn's `parse_macro_input!(x as Args)`, and the sqlx override. The rule's ban text
+was never about any of them — "it truncates, wraps, rounds and re-signs in
+silence" is a sentence about numbers.
+
+The scan now fires only when the next token names a numeric primitive, `_`, or
+opens a pointer type. Typed syntax is untouched: a real `ExprCast` still fires
+whatever the target, because there syn has already said it is a cast. That split
+is deliberate and is pinned by a case, so nobody unifies the two paths and brings
+this back.
+
+**Finding 69 said "No false positive found" and that was a corpus too small to
+find them.** It read 2,538 files and hand-checked ten hits, all numeric. Run
+properly — both engines over the same 599,944 lines from `~/.cargo/registry` —
+the answer is **33 hits removed, 0 added, no other rule moved**, and all 33 read
+by hand are false positives: 17 `<#ty as Trait>::…` inside `quote!`, 12
+`<Self as Trait>::…` inside `mac!`, 4 `parse_macro_input!`. Every one of them is
+in a proc-macro crate, which is the class of code the old ten-hit sample missed
+entirely. **1,077 `TYPE:4` hits still stand.**
+
+The lesson is not about `as`. It is that "no false positive found" is a claim
+about the corpus, not about the rule, and finding 69 wrote it as though it were
+the second. A diff of the two engines over one corpus is the check that cannot be
+satisfied by a lucky sample, and it is cheap: two builds and one script.
+
 
 ### 89 · the rule that would have caught finding 88, written after it did not — cleared
 
