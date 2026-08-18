@@ -1,8 +1,8 @@
 import { existsSync, readFileSync, readdirSync, realpathSync, statSync } from "node:fs";
-import { dirname, isAbsolute, join, relative, resolve } from "node:path";
+import { dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
 
 import { JUDGED_EXTENSIONS, LAW_PATH, OUTSIDE_THE_LAW, RUST_EXTENSION } from "../config.ts";
-import { trackedFiles } from "../git.ts";
+import { ignoredHere, trackedFiles, type Ignoring } from "../git.ts";
 import { readConcessions } from "./concessions.ts";
 import { judge } from "./engine.ts";
 import { CHECKS } from "./checks.ts";
@@ -103,9 +103,20 @@ function realOf(path: string): Real {
   }
 }
 
+function toGitPath(where: string): string {
+  return where.split(sep).join("/");
+}
+
 function isInside(rootReal: string, fileReal: string): boolean {
   const inside = relative(rootReal, fileReal);
   return !inside.startsWith("..") && !isAbsolute(inside);
+}
+
+function askedToBeIgnored(ignoring: Ignoring, where: string, isFolder: boolean): boolean {
+  if (ignoring.kind === "unavailable") return false;
+  const named = isFolder ? `${where}/` : where;
+  if (ignoring.paths.has(named)) return true;
+  return ignoring.folders.some((folder) => named === folder || named.startsWith(folder));
 }
 
 export function walkProject(root: string): Walked {
@@ -114,6 +125,7 @@ export function walkProject(root: string): Walked {
   const selfGoverned: SelfGoverned[] = [];
   const submodules = submodulesOf(root);
   const seen = new Set<string>();
+  const ignoring = ignoredHere(root);
 
   function walkDirectory(dir: string, rootReal: string): void {
     const held = realOf(dir);
@@ -149,6 +161,7 @@ export function walkProject(root: string): Walked {
       }
 
       if (stat.isDirectory()) {
+        if (askedToBeIgnored(ignoring, toGitPath(relative(root, path)), true)) continue;
         const inside = relative(root, path).split(/[\\/]/);
         const governed = anyAncestorGoverns(root, inside, submodules);
         if (governed.kind === "yes") {
@@ -163,6 +176,7 @@ export function walkProject(root: string): Walked {
         continue;
       }
       if (!JUDGED_EXTENSIONS.some((suffix) => entry.endsWith(suffix))) continue;
+      if (askedToBeIgnored(ignoring, toGitPath(relative(root, path)), false)) continue;
       const where = realOf(path);
       if (where.kind === "unknown") {
         unreadable.push(`${relative(root, path)} (${where.why})`);

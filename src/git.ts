@@ -64,6 +64,36 @@ export function trackedFiles(root: string): Staged {
   }
 }
 
+export type Ignoring =
+  | { readonly kind: "unavailable"; readonly detail: string }
+  | { readonly kind: "ignoring"; readonly paths: ReadonlySet<string>; readonly folders: readonly string[] };
+
+const IGNORED: readonly string[] = [
+  "ls-files",
+  "--others",
+  "--ignored",
+  "--exclude-standard",
+  "--directory",
+];
+
+export function ignoredHere(root: string): Ignoring {
+  if (!existsSync(join(root, ".git"))) {
+    return { kind: "unavailable", detail: "this is not a git repository" };
+  }
+  try {
+    const said = ask(root, IGNORED);
+    const paths = new Set<string>();
+    const folders: string[] = [];
+    for (const line of said) {
+      if (line.endsWith("/")) folders.push(line);
+      else paths.add(line);
+    }
+    return { kind: "ignoring", paths, folders };
+  } catch (cause) {
+    return { kind: "unavailable", detail: reasonFrom(cause) };
+  }
+}
+
 export type AddedLine = {
   readonly file: string;
   readonly line: number;
