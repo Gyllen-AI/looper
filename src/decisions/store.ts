@@ -1,3 +1,5 @@
+import { DECISIONS_PATH } from "../config.ts";
+import { DECISIONS_HEADER } from "../stubs.ts";
 import { createHash } from "node:crypto";
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
@@ -5,29 +7,9 @@ import { join } from "node:path";
 import { withLock, writeAtomically } from "../atomic.ts";
 import { required } from "../present.ts";
 
-
 export const HASH_LENGTH = 12;
 
 export const NOTHING_UNDER_IT = "none";
-
-export const DECISIONS_HEADER = `# Decisions taken with a known cost
-
-Where this project and its own law disagree, on purpose. Append-only.
-
-Most entries are security or legal questions nobody on the team can answer, which
-is why they are written down rather than argued. The entry exists so that whoever
-can answer one is handed a framed, dated question pointed at the code.
-
-Each entry names the files it rests on and the hash of those files when somebody
-last read it, so this document is never trusted to be current: looper recomputes
-them and says which entries the code has moved out from under. It never edits the
-prose, because what an entry says is a judgement and no tool refreshes a judgement.`;
-
-export const DECISIONS_PATH = ".looper/decisions.md";
-
-export const DECISIONS_TOOL = "decisions";
-
-export const DECISIONS_PRIORITY = 30;
 
 export type Decision = {
   readonly taken: string;

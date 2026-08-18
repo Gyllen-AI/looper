@@ -1,9 +1,12 @@
+import { BASELINE_HEADER } from "../stubs.ts";
 import { countIn } from "../present.ts";
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 
 import { writeAtomically } from "../atomic.ts";
-import { BASELINE_HEADER, BASELINE_PATH } from "../config.ts";
+import {
+  BASELINE_PATH,
+} from "../config.ts";
 import { parseToml, tableIn } from "../toml.ts";
 import type { Violation } from "./rule.ts";
 

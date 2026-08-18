@@ -1,3 +1,4 @@
+import { DECISIONS_TOOL } from "../src/config.ts";
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
@@ -6,7 +7,6 @@ import { join } from "node:path";
 
 import { Decisions } from "../src/decisions/capability.ts";
 import {
-  DECISIONS_TOOL,
   readDecisions,
   standings,
   type Standing,

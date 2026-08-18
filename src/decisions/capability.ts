@@ -1,3 +1,4 @@
+import { DECISIONS_PRIORITY, DECISIONS_TOOL } from "../config.ts";
 import { SILENT } from "../capability.ts";
 import type {
   Capability,
@@ -17,8 +18,6 @@ import {
   reread,
   standingOf,
   standings,
-  DECISIONS_PRIORITY,
-  DECISIONS_TOOL,
   NOTHING_UNDER_IT,
   type Decision,
   type Standing,
