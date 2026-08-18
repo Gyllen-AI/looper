@@ -1226,7 +1226,7 @@ Every rule the engine loads appears exactly once below, and
 | the shape of the code hides what it does | `TS-DECOMPOSITION:1` `TS-LAYER:2` `TS-DEAD:4` | `RUST-DECOMPOSITION:1` `RUST-DECOMPOSITION:2` `RUST-DECOMPOSITION:3` `RUST-LAYER:1` `RUST-LAYER:2` `RUST-LAYER:3` `RUST-DEAD:4` | `PY-LAYER:1`, and **open** — a file and a function cap |
 | unfinished work reads as finished | `TS-DEAD:2` `TS-DEAD:3` | `RUST-DEAD:2` `RUST-DEAD:3` | **tried and not shippable**, measured 2026-08-18 — the argument is below |
 | the language's own guarantees are stepped around | none built | `RUST-ERROR:5` `RUST-ERROR:7` `RUST-TESTS:1` | none built |
-| something from outside is used as an instruction | `DATA:1` `DATA:2` `NODE:1` `NEXT:1` | none built | `PY-SECURITY:1`, and **open** — a query built by pasting |
+| something from outside is used as an instruction | `DATA:1` `DATA:2` `NODE:1` `NEXT:1` | none built | `PY-SECURITY:1` `PY-SECURITY:2` |
 | a framework's own contract is broken in silence | `REACT:1` `REACT:2` `TAURI:1` | — | — |
 | the project gains a language nobody chose | `STACK:1`, which reads the project rather than a file, so it answers for all three | | |
 
@@ -3102,6 +3102,7 @@ built, as of 2026-08-18:
 | `PY-LAYER:1` | `from x import *`, which takes every name without saying which | built 2026-08-18 |
 | `PY-LOG:1` | `print`, and writing to `sys.stdout` or `sys.stderr` directly, in a file that does not say it starts the program | built 2026-08-18, from issue #63 |
 | `PY-SECURITY:1` | handing the operating system a command built by pasting values into it | built 2026-08-19, from the table of what the law defends |
+| `PY-SECURITY:2` | building a database query by pasting values into the text of it | built 2026-08-19, from the table of what the law defends |
 
 `PY-TRUTH:2` is the one worth explaining, because it is the rule most likely to
 be argued with. `assert` is not a check in Python; it is a check that disappears
@@ -3113,6 +3114,49 @@ They shipped one at a time, cases first from each ban text, and each run over re
 Python nobody here wrote before it counted as done. Naming all seven up front was
 not a promise to build all seven; it was so the gap stayed visible while it was
 open. It was open for a few hours, and the record of each is below.
+
+`PY-SECURITY:2` is its sibling, built the same day and the same way: the query
+half of the same row. It mirrors `DATA:1`, whose precision comes from two
+conditions together rather than one — the method is a querying one, `execute`,
+`executemany`, `executescript` or `text`, **and** the text carries at least two
+SQL words. A built string handed to something that merely happens to be called
+`execute` is not a query.
+
+**The corpus made this rule, twice over.** 574 files of Python's own standard
+library gave **zero** hits, which tests that it is quiet and tests nothing else —
+the standard library builds almost no SQL. So it was run over 3,217 files of
+third-party packages under `/usr/lib/python3/dist-packages`, none unreadable,
+which gave **eight**. Reading all eight found the rule was wrong about six:
+
+```python
+params = ", ".join(["?"] * len(message_ids))
+cursor.execute(f"SELECT id, data FROM message WHERE id IN ({params})", tuple(message_ids))
+```
+
+That is the **correct** way to write `IN (...)`, which no driver takes as a
+parameter: the f-string pastes only question marks and the values go through the
+driver untouched. Five more pasted `str(int(id))`, which cannot carry SQL either.
+
+So the rule gained the same boundary its sibling has, from the same principle:
+**text from outside is the harm, and an integer or a `?` is not text from
+outside.** A pasted part is followed back to what built it, and the rule stays
+silent when every varying part is a number again or a run of placeholders.
+
+With that, the same 3,217 files give **one hit and no false positives**:
+
+```python
+"DELETE FROM task WHERE id NOT IN ({})".format(
+    ",".join([str(task.id) for task in except_tasks]))
+```
+
+`str(task.id)` with no `int()` around it — nothing there proves the value is a
+number, and the repair is one word. That is a rule finding the one place worth
+looking at rather than firing on a pattern. Nothing in this repo fires.
+
+**The second corpus also found six more for `PY-SECURITY:1`**, all genuine: a
+pager and an editor pasted into shells in `click/_termui_impl.py`, and
+`os.system("mkdir %s" % path)` in an SFTP client where `path` is what somebody
+typed at its prompt.
 
 `PY-SECURITY:1` came next, on 2026-08-19, from the same table: TypeScript answers
 "something from outside is used as an instruction" with four rules and Python
