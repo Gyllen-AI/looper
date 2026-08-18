@@ -40,7 +40,9 @@ import {
 } from "./config.ts";
 import { countsOf, totalIn, writeBaseline } from "./law/baseline.ts";
 import { surveyProject } from "./law/project.ts";
-import { BASELINE_PATH } from "./config.ts";
+import { BASELINE_PATH, STACK_PATH } from "./config.ts";
+import { stackOf } from "./stack/read.ts";
+import { stackDocument } from "./stack/write.ts";
 import { mergeMcp, mergeSettings } from "./settings.ts";
 import type { Existing } from "./types.ts";
 
@@ -274,6 +276,17 @@ export type AgentAbove =
   | { readonly kind: "none" }
   | { readonly kind: "started-in"; readonly path: string };
 
+function today(): string {
+  return new Date().toISOString().slice(0, 10);
+}
+
+function writeStack(root: string): Step {
+  const path = join(root, STACK_PATH);
+  if (existsSync(path)) return { kind: "yours-already", path };
+  writeAtomically(path, stackDocument(stackOf(root), today()));
+  return { kind: "scaffolded", path };
+}
+
 export function agentProjectAbove(root: string): AgentAbove {
   const home = whereTheUserLives();
   let at = dirname(root);
@@ -297,6 +310,7 @@ export function runInit(
   steps.push(messageGate(root, invocation));
   const reach = entryReach(root, invocation, searchPath);
   if (reach.kind === "missing") steps.push({ kind: "entry-unreachable", what: reach.what });
+  steps.push(writeStack(root));
   const outer = agentProjectAbove(root);
   if (outer.kind === "started-in") steps.push({ kind: "outer-agent-project", path: outer.path });
   if (!existsSync(join(root, BASELINE_PATH))) steps.push(survey(root));

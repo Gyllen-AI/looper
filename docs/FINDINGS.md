@@ -22,7 +22,57 @@ is a suspicion and belongs in the notes at the bottom, not in the list.
 
 ## Open
 
-_Empty. Findings 41 to 85 are closed._
+_Empty. Findings 41 to 87 are closed._
+
+### 87 · a rule fired and the report threw it away without a word — cleared
+
+2026-08-18, found while building `STACK:1`. `Category` in `src/law/rule.ts` is a
+fixed union and `STACK` was not in it. Nothing type-checks this repository —
+finding 75, open on purpose — so the invalid category was accepted at runtime,
+and `formatReport`, which walks a fixed list of categories, dropped every
+violation the rule produced without printing anything.
+
+The rule worked. `surveyProject` returned the finding. `looper law` said "2
+problems" and listed two others. A rule that fires and is never shown is worse
+than a rule that does not exist, because the count is now a lie in the quiet
+direction.
+
+The category is added, and the cause is fixed rather than the instance: the
+report counts what it printed against what it was handed, and when the two differ
+it says so under a heading that reads **looper is broken**, names the category it
+did not recognise, and tells the reader to open an issue because it is our bug
+and not theirs.
+
+### 86 · the stack a project actually has, written from measurement — cleared
+
+2026-08-18. Asked for after noticing that nothing stops an agent adding a Python
+service to a Rust codebase. `looper init` built a baseline of rule violations and
+never looked at what the code was written in, so there was no record of the stack
+and nothing to judge against.
+
+`CURRENTSTACK.md` is written at `init` from what is on disk — a manifest where
+there is one, the files themselves where there is not — grouped by backend and
+frontend because `shapeOf` already computes that split. Nothing is invented: a
+project with no frontend gets an empty section saying so, which is the honest
+answer and the one this project's constitution insists on.
+
+`STACK:1` refuses a source file in a language the document does not list, and the
+way through is one row added in the same commit, where a reviewer sees it. It
+forbids nothing — it insists the decision is visible, which is the bargain
+`.looper/secrets.allow` already makes.
+
+**Demonstrated end to end.** A Rust project adopted: looper measured `Rust —
+Cargo.toml, and 2 file(s)`, and an empty frontend. An agent then added
+`jobs/queue.py`; `STACK:1` refused it, naming the row to add. The row was added,
+and the same commit went through.
+
+**Two things building it corrected in the design**, both written back into
+`docs/PLAN.md`. A rule about which language a file is cannot live inside one
+language's checks — it went into `CHECKS`, which only runs over TypeScript, so it
+never saw a `.py` file, which is the entire case it exists for. And frameworks
+are recorded but not gated: a new dependency is ordinary work, a new language is
+a new runtime, and firing on the first would be the blunt rule this project
+refuses to ship.
 
 ### 85 · the Python half on a real project, and two defects only size could show — cleared
 

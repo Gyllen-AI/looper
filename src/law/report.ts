@@ -59,11 +59,31 @@ export function formatReport(violations: readonly Violation[], standing: Standin
     `it instead. You do not need to read anything else to fix these.`,
   ];
 
+  let shown = 0;
   for (const category of CATEGORY_ORDER) {
     const grouped = groupByRule(violations, category);
     if (grouped.size === 0) continue;
     lines.push(``, `--- ${category} --- ${spiritOf(category)}`);
-    for (const [rule, places] of grouped) lines.push(...entry(rule, places));
+    for (const [rule, places] of grouped) {
+      shown += places.length;
+      lines.push(...entry(rule, places));
+    }
+  }
+
+  const swallowed = violations.length - shown;
+  if (swallowed > 0) {
+    const strangers = [...new Set(violations.map((held) => held.rule.category))].filter(
+      (category) => !CATEGORY_ORDER.includes(category),
+    );
+    lines.push(
+      ``,
+      `--- looper is broken ---`,
+      `  ${swallowed} problem(s) were found and could not be printed, because their`,
+      `  category is not one this report knows: ${strangers.join(", ")}.`,
+      `  A rule that fires and is never shown is worse than a rule that does not exist.`,
+      `  Add the category to CATEGORY_ORDER in src/law/rule.ts, and please open an`,
+      `  issue at github.com/gyllen-ai/looper — this is our bug, not yours.`,
+    );
   }
 
   lines.push(

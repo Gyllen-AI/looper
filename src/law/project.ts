@@ -15,6 +15,7 @@ import { crossingsIn } from "./rust/boundary.ts";
 import { roleOf, shapeOf, type Shape } from "./shape.ts";
 import { rustRuleFor } from "./rust/rules.ts";
 import { PYTHON_RULES } from "./python/rules.ts";
+import { undeclaredLanguagesIn } from "./stack.ts";
 import { judgePython } from "./python/drive.ts";
 
 export type Survey = {
@@ -431,6 +432,10 @@ export function surveyProject(root: string, reach: Reach, only: readonly string[
   const rustSaid = judgeRustIn(root, rustFiles);
   violations.push(...rustSaid.violations);
   unreadable.push(...rustSaid.unreadable);
+
+  violations.push(
+    ...undeclaredLanguagesIn(root, files.map((path) => relative(root, path))),
+  );
 
   const pythonFiles = files.filter((path) => path.endsWith(PYTHON_EXTENSION));
   const pythonSaid = judgePythonIn(root, pythonFiles);

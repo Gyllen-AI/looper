@@ -7,7 +7,8 @@ export type Category =
   | "DEAD"
   | "TRUTH"
   | "LOG"
-  | "TESTS";
+  | "TESTS"
+  | "STACK";
 
 export type Pass = "fast" | "slow";
 
@@ -44,6 +45,7 @@ export const CATEGORY_ORDER: readonly Category[] = [
   "TRUTH",
   "LOG",
   "TESTS",
+  "STACK",
 ];
 
 const SPIRIT: Readonly<Record<Category, string>> = {
@@ -58,6 +60,8 @@ const SPIRIT: Readonly<Record<Category, string>> = {
   DEAD: "code not serving the program right now is noise, and noise misleads.",
   TRUTH: "every fact has one home. two homes means none.",
   LOG: "output belongs to whoever started the program. diagnostics go to the logger.",
+  STACK:
+    "the languages a codebase speaks is a decision, and it is the one most often arrived at rather than made.",
   TESTS: "a test drives what a real caller can reach, and nothing else.",
 };
 

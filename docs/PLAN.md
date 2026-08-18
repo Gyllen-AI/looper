@@ -2949,8 +2949,14 @@ recommended stack still gets a truthful document, and no rule anywhere reads
 
 ### The rule it makes possible
 
-`STACK:1` — a file appears in a language the document does not list, or a
-manifest gains a framework it does not list.
+`STACK:1` — a source file appears in a language the document does not list.
+
+**Frameworks are recorded and not gated, which is narrower than this section
+first said.** A new dependency is ordinary work and firing on every one of them
+would be the blunt rule this project refuses to ship. A new *language* is a new
+runtime, a new dependency file to audit and a new thing to read, which is a
+different size of decision. The document names both; only the language is a
+refusal.
 
 The refusal is not "you may not do this". It is: **this is a decision about the
 project, and it belongs in a file somebody can read in a diff.** The compliant
@@ -2974,4 +2980,23 @@ for three years.
 
 | rule | bans | state |
 |---|---|---|
-| `STACK:1` | a language or framework not named in `CURRENTSTACK.md` | **not built yet** |
+| `STACK:1` | a source file in a language `CURRENTSTACK.md` does not list | built 2026-08-18 |
+
+### What building it corrected
+
+Two things the design got wrong, both found by running it.
+
+**A rule about which language a file is cannot live inside one language's
+checks.** `STACK:1` first went into `CHECKS`, which only runs over TypeScript —
+so it never saw a `.py` file, which is the entire case it exists for. It is a
+pass over the file list now, beside the Rust and Python drivers rather than
+inside either.
+
+**The report silently swallowed it.** `Category` is a fixed union and `STACK` was
+not in it. Nothing type-checks this repository — finding 75, still open — so the
+invalid category was accepted, and the reporter, iterating a fixed order, dropped
+every violation it produced without a word. A rule that fires and is never shown
+is worse than a rule that does not exist. The category is added, and the reporter
+now counts what it printed against what it was given and says so loudly when the
+two differ, naming the unknown category and calling it looper's bug rather than
+the reader's.

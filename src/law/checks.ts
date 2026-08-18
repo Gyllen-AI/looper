@@ -23,6 +23,7 @@ import { stubValueCheck } from "./ts/stub-value.ts";
 import { unreadableFileCheck } from "./ts/unreadable.ts";
 import { RUST_RULES } from "./rust/rules.ts";
 import { PYTHON_RULES } from "./python/rules.ts";
+import { UNDECLARED_LANGUAGE } from "./stack.ts";
 import { CROSSED_BOUNDARY } from "./rust/boundary.ts";
 import { suppressionCheck } from "./ts/suppression.ts";
 import { vanishedErrorCheck } from "./ts/vanished-error.ts";
@@ -61,6 +62,7 @@ export function knownRuleIds(): readonly string[] {
     ...CHECKS.map((held) => held.rule.id),
     ...RUST_RULES.map((held) => held.id),
     ...PYTHON_RULES.map((held) => held.id),
+    UNDECLARED_LANGUAGE.id,
     CROSSED_BOUNDARY.id,
   ];
 }

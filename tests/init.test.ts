@@ -29,8 +29,8 @@ test("a fresh project gets a doctrine tree it can actually use", () => {
     const report = runInit(root, INSTALLED, NO_PATH);
     const made = pathsOf(report.steps, "scaffolded");
 
-    assert.equal(made.length, 4);
-    for (const tail of ["constitution.md", "map.toml", "README.md", "secrets.allow"]) {
+    assert.equal(made.length, 5);
+    for (const tail of ["constitution.md", "map.toml", "README.md", "secrets.allow", "CURRENTSTACK.md"]) {
       assert.ok(made.some((path) => path.endsWith(tail)), `${tail} was not created`);
     }
     assert.ok(
@@ -120,7 +120,7 @@ test("twice is indistinguishable from once", () => {
     const second = runInit(root, INSTALLED, NO_PATH);
 
     assert.deepEqual([...pathsOf(second.steps, "scaffolded")], []);
-    assert.equal(pathsOf(second.steps, "yours-already").length, 4);
+    assert.equal(pathsOf(second.steps, "yours-already").length, 5);
     assert.equal(pathsOf(second.steps, "already-wired").length, 2);
   } finally {
     rmSync(root, { recursive: true, force: true });
