@@ -148,3 +148,26 @@ test("a finding reported by an adopter says which half we saw and which we were 
     "a finding whose own dateline says an adopter reported it is written from their words about a tree nobody here can read, and a document that mixes what was seen with what was told cannot be corrected later, because nobody can tell which half to re-check",
   );
 });
+
+test("every rule the engine loads has a row in the table of what the law defends", () => {
+  const plan = readFileSync(new URL("../docs/PLAN.md", import.meta.url), "utf8");
+  const after = plan.split("### What the law defends, and which language answers it")[1];
+  assert.notEqual(after, undefined, "the table of what the law defends is gone from the plan");
+  if (after === undefined) return;
+  const table = after.split("\n**A cell that says")[0];
+
+  const found = table.match(/[A-Z]+(?:-[A-Z]+)?:\d+/g);
+  const placed = new Set(found === null ? [] : found);
+  const known = [...knownRuleIds()];
+
+  assert.deepEqual(
+    known.filter((id) => !placed.has(id)),
+    [],
+    "a rule was added without saying what it defends against, so the next person cannot tell whether the other two languages answer it",
+  );
+  assert.deepEqual(
+    [...placed].filter((id) => !known.includes(id)),
+    [],
+    "the table names a rule the engine does not load",
+  );
+});
