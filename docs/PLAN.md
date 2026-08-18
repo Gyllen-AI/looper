@@ -2707,8 +2707,8 @@ Python rule can only read the shape of the source.
 
 ### The reader costs nothing to install
 
-The Rust engine is a compiled binary built once with the `cargo` a Rust project
-already has. The equivalent here is smaller: Python ships its own parser in the
+The Rust engine is a compiled binary built with the `cargo` a Rust project
+already has, and rebuilt when its own source is newer than it. The equivalent here is smaller: Python ships its own parser in the
 standard library, as the `ast` module, so the reader is a script driven over the
 same one-JSON-object protocol that `src/law/rust/drive.ts` already uses. No npm
 package is added, so the dependency argument this document requires does not

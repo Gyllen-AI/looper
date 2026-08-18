@@ -1,5 +1,5 @@
 import { execFileSync } from "node:child_process";
-import { existsSync } from "node:fs";
+import { existsSync, readdirSync, statSync } from "node:fs";
 import { join } from "node:path";
 
 import { RUST_ENGINE_DIR, RUST_ENGINE_NAME, RUST_TIMEOUT_MS } from "../../config.ts";
@@ -11,6 +11,8 @@ export type RustHit = {
   readonly line: number;
 };
 
+const ENGINE_MANIFESTS: readonly string[] = ["Cargo.toml", "Cargo.lock"];
+
 export type Judged =
   | { readonly kind: "unavailable"; readonly detail: string }
   | { readonly kind: "refused"; readonly detail: string }
@@ -20,8 +22,54 @@ function builtAt(looperRoot: string): string {
   return join(looperRoot, RUST_ENGINE_DIR, "target", "release", RUST_ENGINE_NAME);
 }
 
+function newestUnder(at: string): number {
+  let newest = 0;
+  let entries: readonly string[] = [];
+  try {
+    entries = readdirSync(at);
+  } catch {
+    return newest;
+  }
+  for (const entry of entries) {
+    const here = join(at, entry);
+    let held;
+    try {
+      held = statSync(here);
+    } catch {
+      continue;
+    }
+    if (held.isDirectory()) {
+      newest = Math.max(newest, newestUnder(here));
+      continue;
+    }
+    newest = Math.max(newest, held.mtimeMs);
+  }
+  return newest;
+}
+
+function engineWrittenAt(looperRoot: string): number {
+  const engine = join(looperRoot, RUST_ENGINE_DIR);
+  let newest = newestUnder(join(engine, "src"));
+  for (const name of ENGINE_MANIFESTS) {
+    try {
+      newest = Math.max(newest, statSync(join(engine, name)).mtimeMs);
+    } catch {
+      continue;
+    }
+  }
+  return newest;
+}
+
 export function engineIsBuilt(looperRoot: string): boolean {
-  return existsSync(builtAt(looperRoot));
+  const binary = builtAt(looperRoot);
+  if (!existsSync(binary)) return false;
+  let standing;
+  try {
+    standing = statSync(binary);
+  } catch {
+    return false;
+  }
+  return standing.mtimeMs >= engineWrittenAt(looperRoot);
 }
 
 export function buildEngine(looperRoot: string): Judged {
