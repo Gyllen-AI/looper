@@ -1224,7 +1224,7 @@ Every rule the engine loads appears exactly once below, and
 | "what happens when nobody said" is answered in more than one place | `TS-TRUTH:1` `TS-TRUTH:2` | `RUST-TRUTH:1` `RUST-TRUTH:2` | `PY-TRUTH:1` |
 | output is taken from whoever ran the program | `TS-LOG:1` | `RUST-LOG:1` `RUST-LOG:2` | `PY-LOG:1` |
 | a log line cannot be asked a question, because the value is inside the sentence | `TS-LOG:3` | `RUST-LOG:3` | `PY-LOG:3` |
-| the shape of the code hides what it does | `TS-DECOMPOSITION:1` `TS-LAYER:2` `TS-DEAD:4` | `RUST-DECOMPOSITION:1` `RUST-DECOMPOSITION:2` `RUST-DECOMPOSITION:3` `RUST-LAYER:1` `RUST-LAYER:2` `RUST-LAYER:3` `RUST-DEAD:4` | `PY-LAYER:1`, and **open** — a file and a function cap |
+| the shape of the code hides what it does | `TS-DECOMPOSITION:1` `TS-LAYER:2` `TS-DEAD:4` | `RUST-DECOMPOSITION:1` `RUST-DECOMPOSITION:2` `RUST-DECOMPOSITION:3` `RUST-LAYER:1` `RUST-LAYER:2` `RUST-LAYER:3` `RUST-DEAD:4` | `PY-LAYER:1`, and **open on purpose** — 500 does not port, measured below |
 | unfinished work reads as finished | `TS-DEAD:2` `TS-DEAD:3` | `RUST-DEAD:2` `RUST-DEAD:3` | **tried and not shippable**, measured 2026-08-18 — the argument is below |
 | the language's own guarantees are stepped around | none built | `RUST-ERROR:5` `RUST-ERROR:7` `RUST-TESTS:1` | none built |
 | something from outside is used as an instruction | `DATA:1` `DATA:2` `NODE:1` `NEXT:1` | none built | `PY-SECURITY:1` `PY-SECURITY:2` |
@@ -1276,6 +1276,64 @@ there and nowhere else. Which rules run is part of asking what a file is before
 asking what is wrong with it, and a gate that answers it differently from the
 survey is two laws wearing one name. The shape is read once per commit rather than
 once per file.
+
+### The line cap, measured at last
+
+**2026-08-19.** `max_loc` has been 500 since the beginning, in `src/config.ts` and
+in every `law.toml`, and no line of this document ever said why. The doctrine here
+is explicit that a number inherited is a number unmeasured, so it was measured.
+
+**The cap this measurement argues for is `max_loc = 500`**, unchanged — not
+because 500 is right, but because changing it is a decision with a cost that
+belongs to whoever owns the repo, and this section exists so that decision can be
+made from numbers instead of habit.
+
+**This repo, 150 judged files** — every tracked `.ts`, `.tsx`, `.js`, `.py` and
+`.rs` outside `vendor/`:
+
+| | lines |
+|---|---|
+| median | 122 |
+| p90 | 288 |
+| p95 | 414 |
+| longest | 500 — `src/main.ts`, exactly on the cap |
+| over 500 | **0** |
+| over 400 | 9 |
+| over 300 | 15 |
+| over 200 | 27 |
+
+**Three corpora nobody here wrote**, the same measure:
+
+| corpus | files | median | p95 | over 500 |
+|---|---|---|---|---|
+| npm's own JavaScript, Node 24.19.0 | 1,122 | 65 | 551 | 5% |
+| Python's standard library | 167 | 468 | 2,699 | **47%** |
+| `/usr/lib/python3/dist-packages` | 3,217 | 139 | 1,279 | 18% |
+
+**Two things follow, and neither is comfortable.**
+
+**The cap is set above where this repo actually lives.** Median 122 and p95 414
+say the habit is well under it. The one file at the cap, `src/main.ts`, holds
+twenty-four top-level functions — `init`, `law`, `report`, `adopt`, `serve`,
+`hook`, `inject`, `status` and the rest. That is a dispatcher and six commands in
+one file, which is precisely the thing `TS-DECOMPOSITION:1` exists to name, and
+at 500 the rule permits it. A cap that only ever catches the worst file in the
+repo, after it has already become seven things, is a ratchet rather than a rule.
+
+Lowering it is a decision with a cost — nine files at 400, fifteen at 300, every
+one of them baselined rather than blocking — and that cost belongs to whoever owns
+the repo, not to this document. What this document can say is that 500 was never
+argued and the numbers above are what an argument would have to start from.
+
+**And 500 does not port to Python.** The standard library's median file is 468
+lines and 47% of it is over the cap, against 5% for JavaScript. That is not
+Python being worse; it is Python putting a module's whole subject in one file
+where TypeScript splits it. A cap copied across would fire on half of a language's
+own library on the first run, which is how a tool gets switched off in week one.
+
+So the Python cell in the table above stays open **on purpose**, with this
+measurement against it rather than the word "open". A Python cap needs a number
+measured on Python, and nobody has measured one.
 
 **A Python rule for the unfinished stub was built, measured, and thrown away.
 2026-08-18, from the table above.** Rust bans `todo!` and `unimplemented!`;
