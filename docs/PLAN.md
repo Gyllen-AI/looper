@@ -2898,3 +2898,80 @@ What `PY-TRUTH:1` deliberately does not do is fire on every call in a default po
 once at definition — but a rule that fires on every constructor would be blunt
 where this one is decidable. That is a separate rule if it is ever wanted, and
 naming the boundary here is cheaper than rediscovering it.
+
+## The stack a project actually has, and refusing to grow it by accident
+
+`STACK.md` in this repository is a **prescription**: what a new service should be
+built from. It says nothing about what any given project already is, and neither
+does anything else looper does. `looper init` on an existing codebase builds a
+baseline of rule violations and never looks at what the code is written in.
+
+That leaves a hole with a specific shape. An agent asked to add a job queue to a
+Rust backend can reach for Python, because Python is what it knows best for that
+job, and nothing anywhere says no. Nobody notices until there is a second runtime
+to install, a second dependency file to audit and a second language nobody on the
+team reads. The decision was never made; it was arrived at.
+
+### What it is
+
+A file the project owns, written by looper from what is actually on disk and
+read back on every survey:
+
+```
+CURRENTSTACK.md
+```
+
+Grouped by **frontend** and **backend**, because that is the split looper already
+computes — `shapeOf(root)` works out which half is the interface and which holds
+data, and a rule about database queries already declines to fire on a user
+interface. The document uses the same division rather than inventing a second
+one.
+
+It is Markdown because a person has to read it in a pull request and argue with
+it. It is also machine-read, in a fixed table, because a document nothing parses
+cannot gate anything, and this project does not describe barriers that are not
+wired.
+
+### Where it comes from, and what it never does
+
+**Written from measurement, never from a guess.** `Cargo.toml` means Rust.
+`package.json` means TypeScript or JavaScript, and its dependencies name the
+frameworks. `pyproject.toml` or `requirements.txt` means Python. A `.py` file
+with no manifest is still Python and is recorded as such, because the language is
+a fact about the files whatever the manifest says. Nothing is written that was
+not found: a project with no frontend gets an empty frontend section, not a
+plausible one.
+
+**It is a description, not a second prescription.** `STACK.md` says what looper
+recommends. `CURRENTSTACK.md` says what this project is. A project on none of the
+recommended stack still gets a truthful document, and no rule anywhere reads
+`STACK.md` to judge a project by it.
+
+### The rule it makes possible
+
+`STACK:1` — a file appears in a language the document does not list, or a
+manifest gains a framework it does not list.
+
+The refusal is not "you may not do this". It is: **this is a decision about the
+project, and it belongs in a file somebody can read in a diff.** The compliant
+path is to add the language to `CURRENTSTACK.md` in the same commit, which takes
+one line and turns an accident into a choice. That is the same shape as
+`.looper/secrets.allow`: the gate does not forbid, it insists the decision be
+visible.
+
+Two things it must not do. It must not fire on a file that already existed when
+looper arrived — the baseline covers that, and a project adopting looper is not
+asking to be told its own history is wrong. And it must not fire on a test
+fixture or a build script in a foreign language, which is why the rule reads the
+language of *source* the project ships rather than every file on disk.
+
+### Why a rule and not a note
+
+A note in a document stops nothing. The whole argument of this project is that
+only a mechanical check counts as a control, and the languages a codebase speaks
+is exactly the kind of decision that gets made by accident at 4pm and lived with
+for three years.
+
+| rule | bans | state |
+|---|---|---|
+| `STACK:1` | a language or framework not named in `CURRENTSTACK.md` | **not built yet** |

@@ -57,6 +57,23 @@ export function parseMap(source: string): Governs {
   return governsIn(source, GOVERNS_SECTION);
 }
 
+const A_BRANCH_LINE = /^\s*"?[A-Za-z0-9_.-]+"?\s*=\s*\[/;
+
+export function branchLinesOutsideASection(source: string): readonly string[] {
+  const stray: string[] = [];
+  let inSection = false;
+  for (const line of source.split("\n")) {
+    const said = line.trim();
+    if (said.startsWith("#") || said.length === 0) continue;
+    if (said.startsWith("[")) {
+      inSection = true;
+      continue;
+    }
+    if (!inSection && A_BRANCH_LINE.test(said)) stray.push(said);
+  }
+  return stray;
+}
+
 export function parseFreshnessMap(source: string): Governs {
   const own = governsIn(source, FRESHNESS_SECTION);
   return own.size > 0 ? own : governsIn(source, GOVERNS_SECTION);

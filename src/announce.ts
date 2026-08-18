@@ -1,10 +1,13 @@
 import { relative } from "node:path";
 
-import { AGENT_DIR } from "./config.ts";
+import { AGENT_DIR, MAP_PATH } from "./config.ts";
 import { canonBranch } from "./canon.ts";
+import { existsSync, readFileSync } from "node:fs";
+import { join } from "node:path";
+
 import { listBranches, readProjectBranch } from "./doctrine.ts";
 import { trackedFiles } from "./git.ts";
-import { matches, readMap, unheardIn } from "./map.ts";
+import { branchLinesOutsideASection, matches, readMap, unheardIn } from "./map.ts";
 import type { Weighed } from "./allocator.ts";
 import type { Step } from "./init.ts";
 
@@ -127,9 +130,23 @@ export function costLines(root: string, weighed: readonly Weighed[]): readonly s
 }
 
 
+function strayBranchLines(root: string): readonly string[] {
+  const path = join(root, MAP_PATH);
+  if (!existsSync(path)) return [];
+  const stray = branchLinesOutsideASection(readFileSync(path, "utf8"));
+  if (stray.length === 0) return [];
+  return [
+    `  ${MAP_PATH} has ${stray.length} branch line(s) above any section, so none of them is read:`,
+    ...stray.map((line) => `    ${line}`),
+    `    a branch belongs under [governs], or under [freshness] to say when it goes stale`,
+  ];
+}
+
 export function mapComplaints(root: string): readonly string[] {
   const map = readMap(root);
   if (map.kind === "absent") return [];
+  const stray = strayBranchLines(root);
+  if (stray.length > 0) return stray;
   const tracked = trackedFiles(root);
   const files = tracked.kind === "unavailable" ? [] : tracked.paths;
   const said = unheardIn(map.governs, listBranches(root), (globs) =>
