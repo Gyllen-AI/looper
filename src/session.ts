@@ -1,0 +1,42 @@
+import type { Out } from "./out.ts";
+import { allocate, type Allocation, type Weighed } from "./allocator.ts";
+import { DEV, INJECTION_BUDGET, namedProject, projectRoot, searchPath, whereTheUserLives, type Invocation } from "./config.ts";
+import { NO_SESSION_EVER, lastRun, noteRun, sayWhenHooksRan, worthSayingAtCommit } from "./seen.ts";
+import { dispatchHook, registry } from "./registry.ts";
+import { reasonFrom } from "./fields.ts";
+
+export function here(): string {
+  return projectRoot(process.cwd(), namedProject()).root;
+}
+
+export function remember(event: string, out: Out): void {
+  const home = whereTheUserLives();
+  const root = here();
+  const startedIn = whereTheAgentStarted();
+  if (worthSayingAtCommit(event, startedIn, lastRun(root, home))) out.warn(NO_SESSION_EVER);
+  try {
+    noteRun(root, home, { event, startedIn, at: new Date().toISOString() });
+  } catch (cause) {
+    const detail = reasonFrom(cause);
+    out.warn(`looper: could not record that this hook ran (${detail}); continuing`);
+  }
+}
+
+export function currentAllocation(out: Out): Allocation {
+  const run = allocate(registry(), {
+    root: here(),
+    budget: INJECTION_BUDGET,
+  });
+  for (const complaint of run.complaints) {
+    out.warn(
+      `looper: ${complaint.capability} could not contribute (${complaint.detail}); continuing without it`,
+    );
+  }
+  return run.allocation;
+}
+
+export function whereTheAgentStarted(): string {
+  const named = namedProject();
+  if (named.kind === "none") return "";
+  return named.root;
+}
