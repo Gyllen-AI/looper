@@ -37,8 +37,9 @@ moved is worse than no document.
 ## What it reads
 
 **TypeScript and JavaScript**, including React and Next. **Rust**, if the
-project has a `Cargo.toml` — looper builds its Rust half once with the `cargo`
-you already have. A TypeScript-only project never sees any of that.
+project has a `Cargo.toml` — looper builds its Rust half with the `cargo` you
+already have, and rebuilds it whenever its own source is newer than the binary,
+so an upgrade cannot leave you judged by the law it replaced. A TypeScript-only project never sees any of that.
 
 A project with both is not confused by it. looper works out from what is on
 disk which half is the backend and which is the interface, and a rule about

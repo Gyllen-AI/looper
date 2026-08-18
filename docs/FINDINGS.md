@@ -22,7 +22,37 @@ is a suspicion and belongs in the notes at the bottom, not in the list.
 
 ## Open
 
-_Empty. Findings 41 to 90 are closed._
+_Empty. Findings 41 to 91 are closed._
+
+### 91 · `wrong` — the engine was built once and then never again, in silence — cleared
+
+2026-08-18. Found by the same adopter, on the same pin bump, and it is the worse
+half of finding 90. `engineIsBuilt` decided with `existsSync` on
+`vendor/rust-law/target/release/looper-rust` and nothing else. The bump rewrote
+`patterns.rs` and `visitor.rs`; the binary from the previous build stayed; every
+`.rs` file in that project went on being judged by the rules the bump replaced,
+and nothing anywhere said so.
+
+It surfaced only because their suite caught it: `tests/rust-cases.test.ts` failed
+nine cases, eight of them "wanted fires, got silent" — the four macro rules from
+finding 69, which the adopter had just pinned and could not use. Anyone who did
+not run looper's own suite would have seen no signal at all. **A stale law reports
+as a clean file, which is the failure mode this project exists to prevent.**
+
+`engineIsBuilt` now compares the binary's mtime against the newest file under
+`vendor/rust-law/src` and the two manifests, and a stale binary is not built. The
+build path was already there: `judgeRust` and `commandsUnder` call `buildEngine`
+whenever the engine is not ready, so the rebuild needs no new command and no
+person who knows it exists. Measured on the adopter's project: 8.09 seconds on the
+first run after the source changed, 0.216 seconds on the next, and one rebuild
+rather than one per edit.
+
+Three claims said "built once" and all three were true and misleading. README.md
+and the Python section of this document now say it is rebuilt when its own source
+is newer, and the test that asserts the engine is ready stops telling people to
+run `cargo build` by hand, which is a command the project constitution says
+nothing load-bearing may hide behind.
+
 
 ### 90 · `blunt` — a type-position `as` is not a cast, and finding 69 shipped without noticing — cleared
 

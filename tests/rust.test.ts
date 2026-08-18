@@ -2,7 +2,7 @@ import { dispatchHook } from "../src/registry.ts";
 import { Law } from "../src/law/capability.ts";
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { readFileSync, mkdtempSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
+import { readFileSync, mkdtempSync, mkdirSync, rmSync, utimesSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -19,7 +19,7 @@ const LOOPER_ROOT = join(import.meta.dirname, "..");
 test("the Rust half is built, because nothing below judges a line of Rust without it", () => {
   assert.ok(
     engineIsBuilt(LOOPER_ROOT),
-    "vendor/rust-law/target/release/looper-rust is not there, so every Rust verdict below is the absence of an engine rather than the absence of a violation. Run: cargo build --release --manifest-path vendor/rust-law/Cargo.toml",
+    "vendor/rust-law/target/release/looper-rust is missing or older than vendor/rust-law/src, so every Rust verdict below is the absence of an engine, or a law that has been replaced, rather than the absence of a violation. An ordinary looper run rebuilds it; `npm test` does not, so run one first.",
   );
 });
 
@@ -388,4 +388,59 @@ test("two Tauri apps in one repository do not answer each other's invokes", () =
     "none",
     "a file under no app has no owning command set, and guessing one is how the union bug started",
   );
+});
+
+function fakeEngine(): { root: string; binary: string; source: string } {
+  const root = mkdtempSync(join(tmpdir(), "looper-engine-freshness-"));
+  const built = join(root, "vendor", "rust-law", "target", "release");
+  const src = join(root, "vendor", "rust-law", "src");
+  mkdirSync(built, { recursive: true });
+  mkdirSync(src, { recursive: true });
+  const binary = join(built, "looper-rust");
+  const source = join(src, "patterns.rs");
+  writeFileSync(source, "pub fn f() {}\n");
+  writeFileSync(binary, "");
+  return { root, binary, source };
+}
+
+test("an engine built after its own source is ready to judge", () => {
+  const { root, binary, source } = fakeEngine();
+  try {
+    utimesSync(source, new Date(1000), new Date(1000));
+    utimesSync(binary, new Date(2000), new Date(2000));
+
+    assert.ok(engineIsBuilt(root), "the binary is newer than every source, so it is the current law");
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test("an engine older than its own source is not built, it is stale", () => {
+  const { root, binary, source } = fakeEngine();
+  try {
+    utimesSync(binary, new Date(1000), new Date(1000));
+    utimesSync(source, new Date(2000), new Date(2000));
+
+    assert.equal(
+      engineIsBuilt(root),
+      false,
+      "a pin bump rewrites vendor/rust-law/src and leaves the old binary in place. Deciding on existence alone judges Rust by rules that were replaced, and says nothing at all about it.",
+    );
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test("a manifest newer than the binary is stale too, because the crates are the law's dependencies", () => {
+  const { root, binary } = fakeEngine();
+  try {
+    const manifest = join(root, "vendor", "rust-law", "Cargo.toml");
+    writeFileSync(manifest, "[package]\nname = \"x\"\n");
+    utimesSync(binary, new Date(1000), new Date(1000));
+    utimesSync(manifest, new Date(2000), new Date(2000));
+
+    assert.equal(engineIsBuilt(root), false, "a changed manifest is a changed engine");
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
 });
