@@ -60,6 +60,7 @@ export type Step =
       readonly kind: "merged";
       readonly path: string;
       readonly wired: readonly string[];
+      readonly rewired: readonly string[];
       readonly backup: Backup;
     }
   | { readonly kind: "already-wired"; readonly path: string }
@@ -200,6 +201,7 @@ function wireSettings(root: string, invocation: Invocation): Step {
     kind: "merged",
     path,
     wired: outcome.wired,
+    rewired: outcome.rewired,
     backup: written.backup,
   };
 }

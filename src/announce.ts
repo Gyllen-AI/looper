@@ -46,9 +46,17 @@ export function describeStep(step: Step): readonly string[] {
       step.backup.kind === "kept"
         ? [`             your previous version is kept at ${step.backup.path}`]
         : [];
+    const replaced = step.rewired.map(
+      (command) => `             replaced an older looper hook: ${command}`,
+    );
+    const said =
+      step.rewired.length === 0
+        ? `  merged   ${step.path} (everything already in it was left alone)`
+        : `  merged   ${step.path} (looper's own hooks were rewired; everything else was left alone)`;
     return [
-      `  merged   ${step.path} (everything already in it was left alone)`,
+      said,
       ...step.wired.map((command) => `             wired  ${command}`),
+      ...replaced,
       ...backup,
     ];
   }

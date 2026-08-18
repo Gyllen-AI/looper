@@ -1375,6 +1375,19 @@ from evidence instead of repeating this one. What would change the answer is a
 signal for intent that Python actually carries — not a cleverer reading of the
 same shapes.
 
+**looper owns its own hooks and repairs them; everything else in that file is the
+project's. Corrected 2026-08-19, finding 105.** `mergeSettings` added a hook
+beside whatever was there and never over it. That is right for a hook somebody
+else wrote and wrong for a stale one of looper's own, so moving the entry left
+every already-wired project running looper twice per event — or, if init was never
+re-run, still wired to the entry that cannot announce its own failure.
+
+It now recognises a hook it could have written, by the tail it writes and the four
+entry spellings it can produce, and replaces that one. It names each replacement in
+the report, because a repair nobody is told about is the same silence as the stale
+entry. This is the rule finding 94 taught `mergeMcp`, arriving in the second place
+it was needed.
+
 **There is one entry, and it cannot fail. Added 2026-08-19, issue #74, finding
 104.** looper fails open when a capability cannot reach a verdict, and that was
 already true. It did not hold when looper itself could not be **loaded**: the hook
