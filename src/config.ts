@@ -117,7 +117,17 @@ export const JUDGED_EXTENSIONS: readonly string[] = [".ts", ".tsx", ".mts", ".ct
 
 export const RUST_EXTENSION = ".rs";
 
-export const OUTSIDE_THE_LAW: readonly string[] = ["node_modules", "dist", ".git", "target", "vendor"];
+export const OUTSIDE_THE_LAW: readonly string[] = [
+  "node_modules",
+  "dist",
+  ".git",
+  "target",
+  "vendor",
+  ".venv",
+  "venv",
+  "site-packages",
+  "__pycache__",
+];
 
 export const RUST_ENGINE_DIR = "vendor/rust-law";
 

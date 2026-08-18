@@ -15,7 +15,17 @@ const TAURI_DIR = "src-tauri";
 
 const TAURI_CONFIG = "tauri.conf.json";
 
-const NOT_WORTH_WALKING: readonly string[] = ["target", "node_modules", ".git", "dist", "vendor"];
+const NOT_WORTH_WALKING: readonly string[] = [
+  "target",
+  "node_modules",
+  ".git",
+  "dist",
+  "vendor",
+  ".venv",
+  "venv",
+  "site-packages",
+  "__pycache__",
+];
 
 const HOW_DEEP = 4;
 
