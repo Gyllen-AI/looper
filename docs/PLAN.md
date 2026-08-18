@@ -1226,7 +1226,7 @@ Every rule the engine loads appears exactly once below, and
 | the shape of the code hides what it does | `TS-DECOMPOSITION:1` `TS-LAYER:2` `TS-DEAD:4` | `RUST-DECOMPOSITION:1` `RUST-DECOMPOSITION:2` `RUST-DECOMPOSITION:3` `RUST-LAYER:1` `RUST-LAYER:2` `RUST-LAYER:3` `RUST-DEAD:4` | `PY-LAYER:1`, and **open** — a file and a function cap |
 | unfinished work reads as finished | `TS-DEAD:2` `TS-DEAD:3` | `RUST-DEAD:2` `RUST-DEAD:3` | **tried and not shippable**, measured 2026-08-18 — the argument is below |
 | the language's own guarantees are stepped around | none built | `RUST-ERROR:5` `RUST-ERROR:7` `RUST-TESTS:1` | none built |
-| something from outside is used as an instruction | `DATA:1` `DATA:2` `NODE:1` `NEXT:1` | none built | **open** — the same harm, `subprocess` with `shell=True` and a query built by pasting |
+| something from outside is used as an instruction | `DATA:1` `DATA:2` `NODE:1` `NEXT:1` | none built | `PY-SECURITY:1`, and **open** — a query built by pasting |
 | a framework's own contract is broken in silence | `REACT:1` `REACT:2` `TAURI:1` | — | — |
 | the project gains a language nobody chose | `STACK:1`, which reads the project rather than a file, so it answers for all three | | |
 
@@ -3101,6 +3101,7 @@ built, as of 2026-08-18:
 | `PY-TRUTH:2` | `assert` outside a test file, whatever it is checking | built 2026-08-18 |
 | `PY-LAYER:1` | `from x import *`, which takes every name without saying which | built 2026-08-18 |
 | `PY-LOG:1` | `print`, and writing to `sys.stdout` or `sys.stderr` directly, in a file that does not say it starts the program | built 2026-08-18, from issue #63 |
+| `PY-SECURITY:1` | handing the operating system a command built by pasting values into it | built 2026-08-19, from the table of what the law defends |
 
 `PY-TRUTH:2` is the one worth explaining, because it is the rule most likely to
 be argued with. `assert` is not a check in Python; it is a check that disappears
@@ -3112,6 +3113,33 @@ They shipped one at a time, cases first from each ban text, and each run over re
 Python nobody here wrote before it counted as done. Naming all seven up front was
 not a promise to build all seven; it was so the gap stayed visible while it was
 open. It was open for a few hours, and the record of each is below.
+
+`PY-SECURITY:1` came next, on 2026-08-19, from the same table: TypeScript answers
+"something from outside is used as an instruction" with four rules and Python
+answered with none, in the language where `shell=True` is one keyword away and the
+safe form needs the command split into a list.
+
+It fires only where both halves are true: the operating system is handed a
+**shell** — `os.system`, `os.popen`, `subprocess.getoutput` and
+`getstatusoutput`, or `subprocess` called with `shell=True` — **and** the command
+was **built by pasting**, which is an f-string with a value in it, a `+`, a `%`,
+or `.format(...)`. A shell handed a line nobody outside wrote cannot be injected
+into, so `os.system("ls -la")` is silent, exactly as `NODE:1` treats its literal.
+
+**Ten cases, then 167 files of Python's own standard library: three hits, no false
+positives**, each read in full:
+
+- `pydoc.py:1724`, `os.system(cmd + ' "' + filename + '"')`, where `cmd` comes
+  from the `PAGER` environment variable. The classic.
+- `pydoc.py:1679`, `'more "%s"' % filename` pasted inside double quotes.
+- `_osx_support.py:292` pastes a compiler path but hand-escapes it with
+  `.replace("'", "'\"'\"'")` and carries a comment saying `subprocess` cannot be
+  used during bootstrap. The rule names it correctly and a project would answer
+  with a concession, which is what concessions are for — the escaping is the
+  repair this rule's own advice calls a repair.
+
+Three hits in 167 files is the shape of a rule that has found something rather
+than a rule that fires on a pattern. Nothing in this repo fires.
 
 `PY-LOG:1` came later, on 2026-08-18, from issue #63 rather than from the original
 seven: the table of what the law defends showed that Rust and TypeScript both
