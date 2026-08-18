@@ -1061,6 +1061,17 @@ that restriction lifts, that test fails and the shim can be deleted.
 Working inside this repository is unaffected: the `dev` invocation still runs
 `node ./src/main.ts` straight from the checkout, where type stripping works.
 
+**Which machines this runs on, and which claim is not yet evidence.** Nothing
+platform-specific ships: the only place `process.platform` appears in `src/` is
+the seer's path lookup, which on a Mac finds no capture program and therefore
+offers no `see` tool — the correct answer rather than a failure. The git hooks
+init writes are `#!/bin/sh`, and `wslpath` and `powershell.exe` live only under
+`seer/`, which is not in the package. So macOS should work, and *should* is the
+word that does not belong in this document: it had never been run there. CI now
+runs the suite on macOS as well as Linux, and the first green run is what turns
+that sentence into a fact. Until then it is reasoning, and it is marked as such
+here on purpose.
+
 **Which Node versions this was run on, 2026-08-18.** The suite passes on 22.23.2,
 24.19.0 and 26.7.0 — 333 tests, three times. A packed install wires a project and
 refuses a bad commit on 22.23.2 and on 26.7.0, so the newest Node is covered by
