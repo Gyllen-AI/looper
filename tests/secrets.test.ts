@@ -61,6 +61,17 @@ test("a long word starting with the same three letters is not a Meta token", () 
   assert.deepEqual([...kinds('const name = "EAAsomething";')], []);
 });
 
+test("a credential word with more name after it is still a credential", () => {
+  assert.equal(kinds("SECRET_KEY=mnbvcxzlkjhgfdsa99").length, 1);
+  assert.equal(kinds("STRIPE_SECRET_KEY=mnbvcxzlkjhgfdsa99").length, 1);
+  assert.equal(kinds("PASSWORD_HASH=mnbvcxzlkjhgfdsa99").length, 1);
+});
+
+test("a word that merely begins with a credential word is not one", () => {
+  assert.deepEqual([...kinds('const tokenizer = "mnbvcxzlkjhgfdsa99"')], []);
+  assert.deepEqual([...kinds('const authorName = "Ferdinand Bloggsss"')], []);
+});
+
 test("a password with a full stop in it is caught", () => {
   assert.equal(kinds("SUPABASE_DB_PASSWORD=Ab3.xY7%zQ*w?Kd").length, 1);
   assert.equal(kinds('password = "s3cret.value.here"').length, 1);

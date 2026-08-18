@@ -30,8 +30,14 @@ const NAMED_ANYWHERE =
 
 const NAMED_ON_ITS_OWN = "pass|auth";
 
+// A credential word may have more name after it — SECRET_KEY, PASSWORD_HASH — and the
+// word boundary alone never reached those, because `_` is a word character. The suffix
+// must start with a separator, which is what keeps `tokenizer` and `authorName` out: a
+// credential word continued by plain letters is a different word, not a longer name.
+const MORE_NAME = "(?:[_-][A-Za-z0-9_-]*)?";
+
 const ASSIGNED = new RegExp(
-  `(?:[A-Za-z0-9_]*(?:${NAMED_ANYWHERE})|(?<![A-Za-z0-9])(?:${NAMED_ON_ITS_OWN}))` +
+  `(?:[A-Za-z0-9_]*(?:${NAMED_ANYWHERE})${MORE_NAME}|(?<![A-Za-z0-9])(?:${NAMED_ON_ITS_OWN}))` +
     `\\b["']?\\s*[:=]\\s*` +
     `(?:["']([^"'\\s]{12,})["']|([^\\s"';,()\\[\\]{}]{12,})(?=\\s|$))`,
   "i",
