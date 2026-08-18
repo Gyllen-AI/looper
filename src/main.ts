@@ -9,7 +9,7 @@ import { matches, readMap, unheardIn } from "./map.ts";
 import { trackedFiles } from "./git.ts";
 import { relative } from "node:path";
 import { isHookEvent, type Payload } from "./capability.ts";
-import { DEV, INJECTION_BUDGET, searchPath, type Invocation } from "./config.ts";
+import { DEV, INJECTION_BUDGET, namedProject, projectRoot, searchPath, type Invocation } from "./config.ts";
 import { describeStep } from "./announce.ts";
 import { reachedFrom, runInit, type Report, type Step } from "./init.ts";
 import { totalIn, readBaseline } from "./law/baseline.ts";
@@ -71,17 +71,17 @@ function printReport(report: Report): void {
 
 function invocationFrom(args: readonly string[]): Invocation {
   if (args.includes("--dev")) return DEV;
-  return reachedFrom(process.cwd());
+  return reachedFrom(here());
 }
 
 function init(args: readonly string[]): number {
-  printReport(runInit(process.cwd(), invocationFrom(args), searchPath()));
+  printReport(runInit(here(), invocationFrom(args), searchPath()));
   return 0;
 }
 
 function currentAllocation(): Allocation {
   const run = allocate(registry(), {
-    root: process.cwd(),
+    root: here(),
     budget: INJECTION_BUDGET,
   });
   for (const complaint of run.complaints) {
@@ -108,11 +108,15 @@ function inject(): number {
 
 const DOCTRINE_PREFIX = "doctrine:";
 
+function here(): string {
+  return projectRoot(process.cwd(), namedProject()).root;
+}
+
 function halvesOf(source: string): string {
   if (!source.startsWith(DOCTRINE_PREFIX)) return "";
   const name = source.slice(DOCTRINE_PREFIX.length);
   const canon = canonBranch(name);
-  const mine = readProjectBranch(process.cwd(), name);
+  const mine = readProjectBranch(here(), name);
   const ours = canon.kind === "found" ? canon.body.length : 0;
   const yours = mine.kind === "present" ? mine.text.length : 0;
   if (yours === 0) return "   all of it looper's";
@@ -127,11 +131,11 @@ function costLines(weighed: readonly Weighed[]): readonly string[] {
 }
 
 function mapComplaints(): readonly string[] {
-  const map = readMap(process.cwd());
+  const map = readMap(here());
   if (map.kind === "absent") return [];
-  const tracked = trackedFiles(process.cwd());
+  const tracked = trackedFiles(here());
   const files = tracked.kind === "unavailable" ? [] : tracked.paths;
-  const said = unheardIn(map.governs, listBranches(process.cwd()), (globs) =>
+  const said = unheardIn(map.governs, listBranches(here()), (globs) =>
     files.length === 0 || files.some((file) => globs.some((glob) => matches(glob, file))),
   );
   return said.map((held) => `  ${held.branch} governs nothing that arrives: ${held.why}`);
@@ -139,9 +143,12 @@ function mapComplaints(): readonly string[] {
 
 function status(): number {
   const allocation = currentAllocation();
-  const outstanding = totalIn(readBaseline(process.cwd()));
+  const outstanding = totalIn(readBaseline(here()));
+  const rooted = projectRoot(process.cwd(), namedProject());
   const lines = [
     `looper status`,
+    `  project            ${rooted.root}`,
+    `                     chosen by ${rooted.how}`,
     `  injection budget   ${INJECTION_BUDGET} chars`,
     `  used this turn     ${allocation.chars} chars`,
     `  contributors`,
@@ -178,7 +185,7 @@ function hook(args: readonly string[]): number {
     return 0;
   }
   const result = dispatchHook(registry(), {
-    root: process.cwd(),
+    root: here(),
     event: name,
     payload: name === "CommitMessage" ? readMessage(args[1]) : readPayload(),
   });
@@ -206,7 +213,7 @@ function hook(args: readonly string[]): number {
 
 function serve(): number {
   const capabilities = registry();
-  const root = process.cwd();
+  const root = here();
   const reader = createInterface({ input: process.stdin });
   reader.on("line", (line: string) => {
     if (line.trim().length === 0) return;
@@ -223,14 +230,14 @@ function serve(): number {
 }
 
 function law(asked: readonly string[]): number {
-  for (const said of misspelledIn(readConcessions(process.cwd()), knownRuleIds())) {
+  for (const said of misspelledIn(readConcessions(here()), knownRuleIds())) {
     console.error(said);
   }
-  const survey = surveyProject(process.cwd(), "everything", asked);
+  const survey = surveyProject(here(), "everything", asked);
   for (const named of survey.unreadable) {
     console.error(`looper: could not read ${named}; it was not judged`);
   }
-  const forgiven = totalIn(readBaseline(process.cwd()));
+  const forgiven = totalIn(readBaseline(here()));
   if (survey.files === 0) {
     console.log(
       [
@@ -298,7 +305,7 @@ function proposalFrom(args: readonly string[]): Adopted | null {
 }
 
 function adopt(args: readonly string[]): number {
-  const root = process.cwd();
+  const root = here();
   const proposed = proposalFrom(args);
   if (proposed === null) {
     console.error(
@@ -399,7 +406,7 @@ function report(args: readonly string[]): number {
   }
 
   const written = buildReport({
-    root: process.cwd(),
+    root: here(),
     ruleId,
     file,
     line: Number(line),

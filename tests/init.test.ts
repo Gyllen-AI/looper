@@ -1,5 +1,5 @@
 import { test } from "node:test";
-import { DEV, INSTALLED, LOCAL, gitHookEntryFor, inside, launchFor, looperHooks } from "../src/config.ts";
+import { DEV, INSTALLED, LOCAL, PROJECT_DIR, gitHookEntryFor, inside, launchFor, looperHooks, projectRoot } from "../src/config.ts";
 import { reachedFrom } from "../src/init.ts";
 import assert from "node:assert/strict";
 import { mkdtempSync, readFileSync, rmSync, writeFileSync, mkdirSync } from "node:fs";
@@ -227,4 +227,39 @@ test("a project that installed looper gets commands that resolve there", () => {
 test("a global install is still a bare name, and dev still runs from source", () => {
   assert.equal(gitHookEntryFor(INSTALLED), "looper");
   assert.ok(gitHookEntryFor(DEV).startsWith("node "));
+});
+
+test("the project is the one the agent named, not the folder the shell wandered into", () => {
+  const root = scratch();
+  const inside = join(root, "vendor", "looper");
+  try {
+    mkdirSync(join(inside, ".looper", "doctrine"), { recursive: true });
+
+    const chosen = projectRoot(inside, { kind: "named", root });
+
+    assert.equal(
+      chosen.root,
+      root,
+      "a shell left inside a vendored copy of looper made an entire turn run on looper's own constitution instead of the project's, and nothing said so",
+    );
+    assert.ok(chosen.how.includes(PROJECT_DIR));
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test("with nothing named, the nearest project above is chosen and said out loud", () => {
+  const root = scratch();
+  const below = join(root, "packages", "web", "src");
+  try {
+    mkdirSync(join(root, ".looper", "doctrine"), { recursive: true });
+    mkdirSync(below, { recursive: true });
+
+    const rooted = projectRoot(below, { kind: "none" });
+
+    assert.equal(rooted.root, root, "running from a subdirectory judged a different project than the one it is in");
+    assert.ok(rooted.how.length > 0, "status has to be able to say which root was chosen, or the wrong one is invisible");
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
 });

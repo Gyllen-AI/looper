@@ -1074,11 +1074,10 @@ platform-specific ships: the only place `process.platform` appears in `src/` is
 the seer's path lookup, which on a Mac finds no capture program and therefore
 offers no `see` tool — the correct answer rather than a failure. The git hooks
 init writes are `#!/bin/sh`, and `wslpath` and `powershell.exe` live only under
-`seer/`, which is not in the package. So macOS should work, and *should* is the
-word that does not belong in this document: it had never been run there. CI now
-runs the suite on macOS as well as Linux, and the first green run is what turns
-that sentence into a fact. Until then it is reasoning, and it is marked as such
-here on purpose.
+`seer/`, which is not in the package. So macOS should work — and *should* was the word that did not belong here, since
+it had never been run there. **It has now: the suite passes on macOS in CI,
+2026-08-18, alongside Linux on Node 22.18.0, 24 and 26.** What a Mac does not get
+is the seer, which has no macOS pair.
 
 **Which Node versions this was run on, 2026-08-18.** The suite passes on 22.23.2,
 24.19.0 and 26.7.0 — 333 tests, three times. A packed install wires a project and

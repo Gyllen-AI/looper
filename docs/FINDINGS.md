@@ -22,7 +22,7 @@ is a suspicion and belongs in the notes at the bottom, not in the list.
 
 ## Open
 
-_Empty. Every pass of both audits is closed, and findings 41 to 62 with them._
+_Empty. Every pass of both audits is closed, and findings 41 to 63 with them._
 
 ## The second audit — what it covered and what it found
 
@@ -68,6 +68,34 @@ tested, and every one was tested the way it was built rather than the way it
 will be used.
 
 ## Cleared
+
+### 63 · `wrong` — a wandering shell silently swapped the doctrine and stopped the gates — cleared
+
+Adopter issue #26, and it happened to them rather than being constructed: mid-audit
+they noticed the rules at the top of their turn were looper's own constitution
+instead of their project's. Nothing was misconfigured. Their shell was simply
+still inside `vendor/looper` from the previous command.
+
+Measured on their project, same hook, same configuration, two directories:
+
+```
+inject from the repo root          4957 chars, their constitution, not looper's
+inject from inside vendor/looper   9439 chars, looper's constitution, not theirs
+edit gate from the repo root       RUST-ERROR:1, RUST-TYPE:1
+edit gate from the submodule       nothing at all
+```
+
+An entire turn governed by another product's rules, and a violation caught a
+second earlier passing in silence, because `targetOf` resolved the file against
+the wrong root and `{ kind: "outside" }` says nothing.
+
+The answer was already in the hook line: `init` writes
+`$CLAUDE_PROJECT_DIR/...` and nothing in `src/` ever read that variable. The
+project is now that variable when it is set, the nearest folder above holding a
+`.looper/doctrine` when it is not, and `looper status` names which of the two it
+used — because their closing argument is the real one: they only noticed because
+the two constitutions differ enough to spot by eye. An adopting project whose
+doctrine merely resembled looper's would have run on the wrong rules forever.
 
 ### 62 · `missing` — the suite was green here and red everywhere else — cleared
 

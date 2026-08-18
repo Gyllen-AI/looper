@@ -1,4 +1,5 @@
-import { delimiter } from "node:path";
+import { existsSync } from "node:fs";
+import { delimiter, dirname, join } from "node:path";
 import type { HookSpec } from "./types.ts";
 
 export const SETTINGS_PATH = ".claude/settings.json";
@@ -349,6 +350,43 @@ const INSTALLED_ENTRY = "looper";
 export const LOOPER_COMMAND = INSTALLED_ENTRY;
 
 export const DEV_ENTRY = "src/main.ts";
+
+export const PROJECT_DIR = "CLAUDE_PROJECT_DIR";
+
+export type Rooted = {
+  readonly root: string;
+  readonly how: string;
+};
+
+function nearestProject(from: string): Rooted {
+  let at = from;
+  for (;;) {
+    if (existsSync(join(at, DOCTRINE_DIR))) {
+      return { root: at, how: `the nearest folder above with a ${DOCTRINE_DIR}` };
+    }
+    if (existsSync(join(at, ".git"))) {
+      return { root: at, how: "the root of this git repository" };
+    }
+    const up = dirname(at);
+    if (up === at) return { root: from, how: "where the command was run, having found nothing above it" };
+    at = up;
+  }
+}
+
+export type Named = { readonly kind: "none" } | { readonly kind: "named"; readonly root: string };
+
+export function namedProject(): Named {
+  const held = process.env[PROJECT_DIR];
+  if (held === undefined || held.length === 0) return { kind: "none" };
+  return { kind: "named", root: held };
+}
+
+export function projectRoot(from: string, named: Named): Rooted {
+  if (named.kind === "named") {
+    return { root: named.root, how: `${PROJECT_DIR}, set by the agent that started this` };
+  }
+  return nearestProject(from);
+}
 
 export function searchPath(): readonly string[] {
   const written = process.env["PATH"];

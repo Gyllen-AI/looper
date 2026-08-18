@@ -73,7 +73,7 @@ decision that was reversed keeping both halves, and every number measured with
 the date beside it. Four tests read it and refuse the suite if it drifts from
 what the code does.
 
-`docs/FINDINGS.md` is the audit. Sixty-two things that were wrong with this tool,
+`docs/FINDINGS.md` is the audit. Sixty-three things that were wrong with this tool,
 how each was found, and what closing it cost. All of them are closed. A tool
 that publishes its own audit is making a claim that is expensive to fake.
 
