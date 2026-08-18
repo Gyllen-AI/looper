@@ -2,7 +2,12 @@ import { execFileSync } from "node:child_process";
 import { existsSync } from "node:fs";
 import { join } from "node:path";
 
-import { PYTHON_COMMAND, PYTHON_READER, PYTHON_TIMEOUT_MS } from "../../config.ts";
+import {
+  PYTHON_COMMAND,
+  PYTHON_READER,
+  PYTHON_SKELETON,
+  PYTHON_TIMEOUT_MS,
+} from "../../config.ts";
 import { fieldAt, reasonFrom } from "../../fields.ts";
 
 export type PythonHit = {
@@ -90,4 +95,38 @@ export function judgePython(looperRoot: string, files: readonly string[]): Judge
   const refused = fieldAt(payload, "error");
   if (typeof refused === "string") return { kind: "refused", detail: refused };
   return { kind: "found", hits: hitsFrom(payload), unreadable: unreadableFrom(payload) };
+}
+
+export type Shaped =
+  | { readonly kind: "unavailable"; readonly detail: string }
+  | { readonly kind: "found"; readonly payload: unknown };
+
+export function shapeFromPython(
+  looperRoot: string,
+  path: string,
+  line: number,
+  depth: number,
+): Shaped {
+  const reader = join(looperRoot, PYTHON_SKELETON);
+  if (!existsSync(reader)) {
+    return { kind: "unavailable", detail: `looper's Python shape reader is not at ${PYTHON_SKELETON}` };
+  }
+  let output = "";
+  try {
+    output = execFileSync(PYTHON_COMMAND, [reader, path, String(line), String(depth)], {
+      encoding: "utf8",
+      timeout: PYTHON_TIMEOUT_MS,
+      stdio: ["ignore", "pipe", "ignore"],
+    });
+  } catch (cause) {
+    return {
+      kind: "unavailable",
+      detail: `${PYTHON_COMMAND} could not run looper's Python reader (${reasonFrom(cause)})`,
+    };
+  }
+  try {
+    return { kind: "found", payload: JSON.parse(output) };
+  } catch (cause) {
+    return { kind: "unavailable", detail: `it did not answer in JSON (${reasonFrom(cause)})` };
+  }
 }

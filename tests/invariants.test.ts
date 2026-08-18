@@ -232,6 +232,16 @@ const OUR_ENGINE_CHANGES: readonly string[] = [
   "owned_by_another_type",
 ];
 
+test("the engine still carries the shape reader the report needs", () => {
+  const held = readFileSync(join(ROOT, "vendor", "rust-law", "src", "skeleton.rs"), "utf8");
+  for (const named of ["pub fn shape_at", "fn on_line", "fn item_holding"]) {
+    assert.ok(
+      held.includes(named),
+      `vendor/rust-law/src/skeleton.rs no longer has ${named}, so \`looper report\` cannot describe a Rust file and twenty-nine Rust rules become unarguable. A newer copy of lawkeeper does not have this file: it is ours, and PROVENANCE.md says to re-apply it.`,
+    );
+  }
+});
+
 test("the engine still carries what we added to it", () => {
   const patterns = readFileSync(join(ROOT, "vendor", "rust-law", "src", "patterns.rs"), "utf8");
   for (const named of OUR_ENGINE_CHANGES) {

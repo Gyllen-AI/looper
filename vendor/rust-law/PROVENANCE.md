@@ -134,6 +134,23 @@ and 4 `parse_macro_input!(x as Args)`. **1,077 `TYPE:4` hits still stand**,
 sampled across crates and every one a real cast, including inside macros
 (`bit_width as usize` inside `debug_assert!`). See finding 90.
 
+**A shape reader for `looper report` — added here, 2026-08-18.** New file,
+`src/skeleton.rs`, and a `--shape <file> <line> <depth>` mode on the binary. It
+lexes the file with `proc_macro2`, keeps the tokens that start on the asked-for
+line, and answers with their kinds: `Ident` carries a numbered stand-in unless the
+word is Rust's own grammar, `Literal` carries `value-removed`, `Group` carries
+which bracket opened it, and the root is the kind of item the line sits in
+(`ItemFn`, `ItemImpl`, and the rest). No identifier, no literal and no path
+survives. A line with no tokens is refused by name rather than guessed at.
+
+This exists because `looper report`, the way an adopter argues a rule is wrong,
+read every file through the TypeScript parser and answered "the file could not be
+read as TypeScript" for every `.rs` file. Twenty-nine Rust rules were judged at
+full strength and none of them could be disputed. See finding 92.
+
+`tests/invariants.test.ts` fails if a newer copy of lawkeeper arrives without this
+file.
+
 **Updating it.** Nothing fetches this. If lawkeeper gains something worth having,
 someone copies the new source in by hand, deliberately, re-applies the changes
 listed above, and says so in the commit. That is the price of never downloading

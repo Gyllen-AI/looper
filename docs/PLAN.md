@@ -1518,6 +1518,13 @@ and already visible.
    a report that cannot be minimised is a report that does not get sent. Our own
    audience rule applies with force — the person running this cannot judge what
    is safe to disclose, so the mechanism has to guarantee it rather than ask.
+The shape comes from whichever reader already reads the language, because there is
+no second parser to be had: `.ts` through Babel, `.rs` through the engine's
+`--shape` mode, `.py` through `read.py`. Each answers with the same three fields
+and the guard that checks for a leak is the one guard, so a language cannot be
+added to the law and left out of the report. That is what "one report across both
+languages" above has always claimed, and finding 92 is the day it became true.
+
 3. **Adopters install, they do not fork.** The canon is compiled in precisely so
    it "cannot drift into N copies", and fifty adopter forks are N copies: a fix
    argued against rules we did not ship, from a version we cannot identify. Forks
