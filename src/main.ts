@@ -9,7 +9,8 @@ import { matches, readMap, unheardIn } from "./map.ts";
 import { trackedFiles } from "./git.ts";
 import { relative } from "node:path";
 import { isHookEvent, type Payload } from "./capability.ts";
-import { DEV, INJECTION_BUDGET, namedProject, projectRoot, searchPath, type Invocation } from "./config.ts";
+import { DEV, INJECTION_BUDGET, namedProject, projectRoot, searchPath, whereTheUserLives, type Invocation } from "./config.ts";
+import { NO_SESSION_EVER, lastRun, noteRun, sayWhenHooksRan, worthSayingAtCommit } from "./seen.ts";
 import { AFTER_INIT, costLines, describeStep, mapComplaints } from "./announce.ts";
 import { reachedFrom, runInit, type Report, type Step } from "./init.ts";
 import { totalIn, readBaseline } from "./law/baseline.ts";
@@ -88,7 +89,27 @@ function currentAllocation(): Allocation {
   return run.allocation;
 }
 
+function whereTheAgentStarted(): string {
+  const named = namedProject();
+  if (named.kind === "none") return "";
+  return named.root;
+}
+
+function remember(event: string): void {
+  const home = whereTheUserLives();
+  const root = here();
+  const startedIn = whereTheAgentStarted();
+  if (worthSayingAtCommit(event, startedIn, lastRun(root, home))) console.error(NO_SESSION_EVER);
+  try {
+    noteRun(root, home, { event, startedIn, at: new Date().toISOString() });
+  } catch (cause) {
+    const detail = reasonFrom(cause);
+    console.error(`looper: could not record that this hook ran (${detail}); continuing`);
+  }
+}
+
 function inject(): number {
+  remember("UserPromptSubmit");
   const allocation = currentAllocation();
   if (allocation.text.length === 0) return 0;
   console.log(
@@ -113,6 +134,13 @@ function here(): string {
 
 
 
+function hookLines(): readonly string[] {
+  const said = sayWhenHooksRan(lastRun(here(), whereTheUserLives()));
+  return said.map((line, at) =>
+    at === 0 ? `  hooks              ${line}` : `                     ${line}`,
+  );
+}
+
 function status(): number {
   const allocation = currentAllocation();
   const outstanding = totalIn(readBaseline(here()));
@@ -121,6 +149,7 @@ function status(): number {
     `looper status`,
     `  project            ${rooted.root}`,
     `                     chosen by ${rooted.how}`,
+    ...hookLines(),
     `  injection budget   ${INJECTION_BUDGET} chars`,
     `  used this turn     ${allocation.chars} chars`,
     `  contributors`,
@@ -163,6 +192,7 @@ function hook(args: readonly string[]): number {
     console.error(`looper: ${name} is not an event looper answers; passing`);
     return 0;
   }
+  remember(name);
   const result = dispatchHook(registry(), {
     root: here(),
     event: name,
