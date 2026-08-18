@@ -145,7 +145,38 @@ export type McpMerge =
   | { readonly kind: "unchanged" }
   | { readonly kind: "created"; readonly text: string }
   | { readonly kind: "merged"; readonly text: string }
+  | {
+      readonly kind: "corrected";
+      readonly text: string;
+      readonly was: WrittenLaunch;
+      readonly now: string;
+    }
   | { readonly kind: "unreadable"; readonly why: string };
+
+export type WrittenLaunch =
+  | { readonly kind: "unreadable" }
+  | { readonly kind: "read"; readonly line: string; readonly shape: string };
+
+function launchIn(value: unknown): WrittenLaunch {
+  if (!isJsonObject(value)) return { kind: "unreadable" };
+  const command = value["command"];
+  const args = value["args"];
+  if (typeof command !== "string" || !Array.isArray(args)) return { kind: "unreadable" };
+  const words = args.map((word) => String(word));
+  return {
+    kind: "read",
+    line: [command, ...words].join(" "),
+    shape: JSON.stringify([command, words]),
+  };
+}
+
+function looperOwns(kept: JsonObject, wanted: JsonObject): JsonObject {
+  const entry: JsonObject = { ...kept };
+  entry["type"] = wanted["type"];
+  entry["command"] = wanted["command"];
+  entry["args"] = wanted["args"];
+  return entry;
+}
 
 function serverEntry(launch: Launch): JsonObject {
   return {
@@ -172,11 +203,27 @@ export function mergeMcp(existing: Existing, launch: Launch): McpMerge {
   const root: JsonObject = { ...value };
   const written = root[SERVERS_KEY];
   const servers: JsonObject = isJsonObject(written) ? written : {};
-  if (servers[SERVER_NAME] !== undefined) return { kind: "unchanged" };
+  const wanted = serverEntry(launch);
+  const asked = launchIn(wanted);
+  const mine = servers[SERVER_NAME];
+  if (mine !== undefined && asked.kind === "read") {
+    const held = launchIn(mine);
+    if (held.kind === "read" && held.shape === asked.shape) return { kind: "unchanged" };
+    const kept: JsonObject = isJsonObject(mine) ? { ...mine } : {};
+    return {
+      kind: "corrected",
+      was: held,
+      now: asked.line,
+      text: serialise({
+        ...root,
+        [SERVERS_KEY]: { ...servers, [SERVER_NAME]: looperOwns(kept, wanted) },
+      }),
+    };
+  }
 
   return {
     kind: "merged",
-    text: serialise({ ...root, [SERVERS_KEY]: { ...servers, [SERVER_NAME]: serverEntry(launch) } }),
+    text: serialise({ ...root, [SERVERS_KEY]: { ...servers, [SERVER_NAME]: wanted } }),
   };
 }
 

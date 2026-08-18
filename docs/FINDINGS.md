@@ -22,7 +22,36 @@ is a suspicion and belongs in the notes at the bottom, not in the list.
 
 ## Open
 
-_Empty. Findings 41 to 93 are closed._
+_Empty. Findings 41 to 94 are closed._
+
+### 94 · `wrong` — init could add its server but never repair it, so finding 93's fix reached nobody — cleared
+
+2026-08-18. Found the moment finding 93 was pinned by the adopter who reported
+it: they bumped to the fixed commit, ran `looper init`, and it said
+
+```
+  already wired, nothing to change  /their/project/.mcp.json
+```
+
+with the broken `$CLAUDE_PROJECT_DIR` entry still in the file. `mergeMcp` tested
+`servers[SERVER_NAME] !== undefined` and nothing else, so the presence of the key
+was the whole check. Every project that ran init before the fix keeps the entry
+that does not work, for good, and is told it is wired.
+
+`mergeSettings`, ten lines below, had the right answer already: it compares the
+command it wants against the commands in the file (`carriesCommand`) and rewires
+when it is not there. The hooks could be repaired and the server could not.
+
+This is the failure this part of the plan names in its own words: reporting a gate
+as installed when it is not.
+
+**The fix, and the boundary it draws.** looper owns two fields of its own entry,
+`command` and `args`. Everything else in that entry, and every other server in the
+file, belongs to the project and is never touched. init compares those two fields
+with what it would write now: absent, it adds; equal, it says nothing; different,
+it replaces them, keeps the previous file beside it, and reports what the entry
+was launching and what it launches now. Three tests, one per branch, and the
+repair test fails on the previous `mergeMcp`.
 
 ### 93 · `missing` — the `.mcp.json` entry was written with a shell variable, so the tools never appeared — cleared
 

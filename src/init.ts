@@ -44,6 +44,7 @@ import { BASELINE_PATH, STACK_PATH } from "./config.ts";
 import { stackOf } from "./stack/read.ts";
 import { stackDocument } from "./stack/write.ts";
 import { mergeMcp, mergeSettings } from "./settings.ts";
+import type { WrittenLaunch } from "./settings.ts";
 import type { Existing } from "./types.ts";
 
 const EVERYTHING: readonly string[] = [];
@@ -61,6 +62,13 @@ export type Step =
       readonly backup: Backup;
     }
   | { readonly kind: "already-wired"; readonly path: string }
+  | {
+      readonly kind: "mcp-corrected";
+      readonly path: string;
+      readonly was: WrittenLaunch;
+      readonly now: string;
+      readonly backup: Backup;
+    }
   | { readonly kind: "scaffolded"; readonly path: string }
   | { readonly kind: "yours-already"; readonly path: string }
   | {
@@ -207,6 +215,9 @@ function wireMcp(root: string, invocation: Invocation): Step {
   const written = writeKeepingPrior(path, outcome.text);
   if (outcome.kind === "created") {
     return { kind: "created", path, wired: [MCP_TOOLS] };
+  }
+  if (outcome.kind === "corrected") {
+    return { kind: "mcp-corrected", path, was: outcome.was, now: outcome.now, backup: written.backup };
   }
   return { kind: "merged", path, wired: [MCP_TOOLS], backup: written.backup };
 }
