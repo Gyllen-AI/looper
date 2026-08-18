@@ -328,3 +328,76 @@ test("every Python construct that names its node in lower case still gets a repo
     rmSync(root, { recursive: true, force: true });
   }
 });
+
+const SPREAD_OVER_LINES = `export function totals(rows: readonly Row[]): number {
+  return rows
+    .filter((row) => row.live)
+    .map((row) => row.amount ?? 0)
+    .reduce((a, b) => a + b, 0);
+}
+`;
+
+test("a line that starts no statement is reported against the statement around it, not refused", () => {
+  const located = shapeAt("src/totals.ts", SPREAD_OVER_LINES, 4, 6);
+
+  assert.notEqual(
+    located.kind,
+    "not-found",
+    "the one route open when a rule is wrong everywhere refuses a continuation line, which is an ordinary line and the exact place a wrong verdict lands",
+  );
+  assert.equal(located.kind, "around");
+  if (located.kind !== "around") return;
+  assert.equal(
+    located.startsAt,
+    2,
+    "the report has to say where the statement actually begins, or the reader cannot tell what was judged",
+  );
+  assert.ok(render(located.shape, 0).includes("ReturnStatement"));
+});
+
+test("a line outside every statement is still said out loud rather than refused", () => {
+  const located = shapeAt("src/totals.ts", SPREAD_OVER_LINES, 7, 6);
+
+  assert.equal(
+    located.kind,
+    "not-found",
+    "line 7 is the closing brace and belongs to no statement, which is the one honest refusal",
+  );
+});
+
+const PYTHON_OVER_LINES = `def totals(rows):
+    return sum(
+        row["amount"]
+        for row in rows
+        if row["live"]
+    )
+`;
+
+test("a Python line that starts no statement is reported against the statement around it", () => {
+  const root = mkdtempSync(join(tmpdir(), "looper-report-python-around-"));
+  try {
+    mkdirSync(join(root, "src"), { recursive: true });
+    writeFileSync(join(root, "src/totals.py"), PYTHON_OVER_LINES);
+
+    const written = buildReport({
+      root,
+      ruleId: "PY-TRUTH:1",
+      file: "src/totals.py",
+      line: 4,
+      tried: "the rule named a line that begins nothing",
+    });
+
+    assert.equal(
+      written.kind,
+      "written",
+      `the Python half refuses a continuation line, so two thirds of the escape hatch closes again: ${JSON.stringify(written)}`,
+    );
+    if (written.kind !== "written") return;
+    assert.ok(
+      written.body.includes("starts no statement"),
+      "the report has to say the line began nothing, or the reader cannot tell what was judged",
+    );
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});

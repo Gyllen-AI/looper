@@ -90,12 +90,25 @@ export function buildReport(request: Request): Written {
   if (located.kind === "not-found") return { kind: "no-shape", why: located.why };
 
   const shape = render(located.shape, 0);
+  const startsNothing =
+    located.kind === "around"
+      ? [
+          `## Line ${request.line} starts no statement`,
+          ``,
+          `Nothing begins on the line the rule named. The shape below is the statement`,
+          `that contains it, which begins at line ${located.startsAt}. If the rule named this`,
+          `line, either it means the statement around it or it has the wrong line, and`,
+          `that difference is the thing worth reading here.`,
+          ``,
+        ]
+      : [];
   const body = [
     `# looper report`,
     ``,
     `version: ${SERVER_VERSION}`,
     `rule: ${request.ruleId}`,
     ``,
+    ...startsNothing,
     `## What was tried`,
     ``,
     request.tried,

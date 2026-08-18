@@ -1199,6 +1199,20 @@ fields are replaced, the previous file is kept beside it, and init prints what t
 entry was launching and what it launches now, because a repair nobody is told
 about is the same silence as the stale entry.
 
+**And the escape hatch has to open widest where the verdict is worst. Corrected
+2026-08-18, from finding 99.** `shapeAt` refused unless an enclosing node began
+on exactly the line given, so `looper report` — the one route the law offers when
+a rule is wrong everywhere — closed on two ordinary cases: a continuation line of
+a multi-line expression, which begins nothing, and a line the tool named wrongly,
+which is the whole of adopter issue #44. The route was open while looper was
+right about where the problem was and shut when it was wrong about it.
+
+So a shape lookup has three answers rather than two. Found, when something begins
+there. **Around**, when nothing begins there but a statement contains it: the
+report is written anyway, against that statement, and says which line it actually
+begins on, because the gap between the named line and the real one is the evidence.
+Not-found only when no statement contains the line at all.
+
 **JavaScript is a language this project judges, and was not one. Corrected
 2026-08-18, from adopter issue #46, finding 98.** `JUDGED_EXTENSIONS` listed
 `.ts`, `.tsx`, `.mts`, `.cts`, `.rs` and `.py`. A `.mjs` was walked past by the
