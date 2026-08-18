@@ -1037,6 +1037,22 @@ The effect is that adoption is honest in both directions: the existing code is
 not pretended to be compliant, and the team is not asked to fix four hundred
 files before the tool does anything for them.
 
+**And the exit code has to be able to say that. Corrected 2026-08-18, from
+adopter issue #47, finding 96.** `looper law` printed, correctly, that the
+problems it listed were already here and blocked nothing, and then exited 2, which
+is the same answer it gives when something is blocking. A caller could not tell
+the two apart, so an adopter with 2,391 baselined problems could not put `looper
+law` in the one command their project runs before every commit: it would be red
+from the first day of the cleanup to the last, and a check that is always red is
+not a check.
+
+So the exit code answers exactly one question, *is anything blocking*: 0 when
+every problem found is recorded in the baseline, 2 when one is not. The counts in
+the message come from the same split, which also corrects them — they were
+`min(baseline total, found)` against `found - that`, a subtraction that calls a
+new problem old whenever an old one in the same file was fixed in the same pass.
+`againstBaseline` in `src/law/baseline.ts` is the one definition.
+
 ## How looper runs once it is installed, which is not how it runs here
 
 **Settled 2026-08-18, after the advertised install was found dead.** looper's own

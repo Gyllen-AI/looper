@@ -56,6 +56,24 @@ export function isRecorded(baseline: Baseline, file: string, ruleId: string): bo
   return held !== undefined && held > 0;
 }
 
+export type Carried = {
+  readonly yours: readonly Violation[];
+  readonly older: readonly Violation[];
+};
+
+export function againstBaseline(
+  baseline: Baseline,
+  violations: readonly Violation[],
+): Carried {
+  const yours: Violation[] = [];
+  const older: Violation[] = [];
+  for (const violation of violations) {
+    if (isRecorded(baseline, violation.file, violation.rule.id)) older.push(violation);
+    else yours.push(violation);
+  }
+  return { yours, older };
+}
+
 export function render(baseline: Baseline): string {
   const lines = [BASELINE_HEADER];
   for (const file of [...baseline.keys()].sort()) {

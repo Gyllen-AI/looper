@@ -13,7 +13,7 @@ import { DEV, INJECTION_BUDGET, namedProject, projectRoot, searchPath, whereTheU
 import { NO_SESSION_EVER, lastRun, noteRun, sayWhenHooksRan, worthSayingAtCommit } from "./seen.ts";
 import { AFTER_INIT, USAGE, costLines, describeStep, mapComplaints } from "./announce.ts";
 import { reachedFrom, runInit, type Report, type Step } from "./init.ts";
-import { totalIn, readBaseline } from "./law/baseline.ts";
+import { totalIn, readBaseline, againstBaseline } from "./law/baseline.ts";
 import { formatReport } from "./law/report.ts";
 import { surveyProject } from "./law/project.ts";
 import { misspelledIn } from "./law/misspelled.ts";
@@ -256,7 +256,6 @@ function law(asked: readonly string[]): number {
       `looper: ${held.where} governs itself (${held.why}), so its ${held.files} file(s) were not judged here`,
     );
   }
-  const forgiven = totalIn(readBaseline(here()));
   if (survey.files === 0) {
     console.log(
       [
@@ -279,13 +278,14 @@ function law(asked: readonly string[]): number {
     console.log(`looper: ${survey.files} files, nothing to fix.`);
     return 0;
   }
-  const older = Math.min(forgiven, survey.violations.length);
-  const yours = survey.violations.length - older;
+  const carried = againstBaseline(readBaseline(here()), survey.violations);
+  const older = carried.older.length;
+  const yours = carried.yours.length;
   console.log(formatReport(survey.violations, yours === 0 ? "all-older" : "some-new"));
   if (older > 0) {
     console.log(alreadyHere(older, yours));
   }
-  return 2;
+  return yours === 0 ? 0 : 2;
 }
 
 function alreadyHere(older: number, yours: number): string {
