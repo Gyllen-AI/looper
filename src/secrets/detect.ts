@@ -33,11 +33,27 @@ const NAMED_ON_ITS_OWN = "pass|auth";
 const ASSIGNED = new RegExp(
   `(?:[A-Za-z0-9_]*(?:${NAMED_ANYWHERE})|(?<![A-Za-z0-9])(?:${NAMED_ON_ITS_OWN}))` +
     `\\b["']?\\s*[:=]\\s*` +
-    `(?:["']([^"'\\s]{12,})["']|([^\\s"';,()\\[\\]{}.]{12,})(?=\\s|$))`,
+    `(?:["']([^"'\\s]{12,})["']|([^\\s"';,()\\[\\]{}]{12,})(?=\\s|$))`,
   "i",
 );
 
 const BLOB = /[A-Za-z0-9+/_-]{24,}={0,2}/g;
+
+// `token = config.apiToken` reads a credential out of an object; it is not one. The
+// value used to be matched without dots at all, which kept that quiet and also lost
+// every password with a full stop in it — SUPABASE_DB_PASSWORD=Ab3.xY7%zQ*w?Kd walked
+// through the gate. Dots are allowed in a value now, and a value that is nothing but a
+// dotted path of identifiers is read as code instead. The length ceiling keeps the
+// exemption away from long credentials that happen to look that way.
+const A_DOTTED_PATH = /^[A-Za-z_$][A-Za-z0-9_$]*(?:\.[A-Za-z_$][A-Za-z0-9_$]*)+$/;
+
+const LONGEST_PATH = 40;
+
+function readsSomethingElse(hit: RegExpExecArray): boolean {
+  const unquoted = hit[2];
+  if (unquoted === undefined) return false;   // in quotes it is a literal, not a path
+  return unquoted.length < LONGEST_PATH && A_DOTTED_PATH.test(unquoted);
+}
 
 const GIT_SHA = /^(?:[0-9a-f]{7}|[0-9a-f]{8}|[0-9a-f]{40}|[0-9a-f]{64})$/;
 
@@ -135,7 +151,11 @@ export function findingsIn(text: string, allowed: ReadonlySet<string>): readonly
   if (assigned !== null) {
     const value = valueIn(assigned);
     const real =
-      value !== undefined && !allowed.has(value) && !PLACEHOLDER.test(value) && !value.includes(A_URL);
+      value !== undefined &&
+      !allowed.has(value) &&
+      !PLACEHOLDER.test(value) &&
+      !value.includes(A_URL) &&
+      !readsSomethingElse(assigned);
     if (real && value !== undefined) {
       found.push({ kind: "something named like a credential, with a value", excerpt: excerptOf(value) });
       return found;

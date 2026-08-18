@@ -61,6 +61,16 @@ test("a long word starting with the same three letters is not a Meta token", () 
   assert.deepEqual([...kinds('const name = "EAAsomething";')], []);
 });
 
+test("a password with a full stop in it is caught", () => {
+  assert.equal(kinds("SUPABASE_DB_PASSWORD=Ab3.xY7%zQ*w?Kd").length, 1);
+  assert.equal(kinds('password = "s3cret.value.here"').length, 1);
+});
+
+test("a credential read out of an object is not a value", () => {
+  assert.deepEqual([...kinds("const token = config.apiToken")], []);
+  assert.deepEqual([...kinds("const apiKey = settings.google.apiKey")], []);
+});
+
 test("a database address carrying its password is caught", () => {
   assert.equal(kinds("DATABASE_URL=postgres://app:Tr0ub4dor3@db:5432/shop").length, 1);
   assert.equal(kinds("redis://user:s3cret@cache:6379").length, 1);
