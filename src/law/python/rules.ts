@@ -93,6 +93,21 @@ export const PYTHON_RULES: readonly Rule[] = [
     valve: { kind: "none" },
   },
   {
+    id: "PY-SECURITY:2",
+    category: "SECURITY",
+    pass: "fast",
+    bans:
+      "building a database query by pasting values into the text of it — an f-string, a `+`, a `%` or `.format(...)` handed to `execute`, `executemany`, `executescript` or `text`",
+    why:
+      "whatever the value contains becomes part of the instruction. Somebody typing the right thing into a search box can read your whole database, or empty it. This is the single most exploited mistake in software and has been for twenty-five years. Every Python database driver already does this safely, and the safe spelling is shorter than the unsafe one",
+    instead: [
+      "`cursor.execute(\"SELECT * FROM orders WHERE id = ?\", (wanted,))` — the driver keeps the value out of the instruction",
+      "with psycopg the placeholder is `%s` and the values are a tuple, which is not the same as `%` formatting: `cursor.execute(\"... id = %s\", (wanted,))`",
+      "a table or column name cannot be a parameter, so choose it from a list you wrote rather than pasting one that arrived",
+      "with SQLAlchemy: `session.execute(text(\"... id = :id\"), {\"id\": wanted})`",    ],
+    valve: { kind: "none" },
+  },
+  {
     id: "PY-LOG:1",
     category: "LOG",
     pass: "fast",
