@@ -22,71 +22,42 @@ is a suspicion and belongs in the notes at the bottom, not in the list.
 
 ## Open
 
-_Finding 75. Findings 41 to 74 are closed._
+_Empty. Findings 41 to 76 are closed._
 
-### 75 · `missing` — a strict tsconfig that nothing runs
+### 75 · `missing` — a strict tsconfig that nothing runs — cleared
 
-Found on 2026-08-18 while fixing finding 74, and left open.
+Raised 2026-08-18 while fixing finding 74, and answered the same day by
+measuring rather than arguing.
 
-`src/law/ts/comment.ts` used the bare name `Comment` with no import for its two
-helpers. The only `Comment` in scope would be the browser's, and `tsconfig.json`
-sets `lib: ["es2023"]` with no DOM, so that name resolves to nothing. It was
-wrong for as long as it has been there and no check said so.
+`src/law/ts/comment.ts` used the bare name `Comment` with no import. The only
+`Comment` in scope is the browser's, and `tsconfig.json` sets `lib: ["es2023"]`
+with no DOM, so that name resolved to nothing and was wrong for as long as it had
+been there. Fixed in finding 74's commit; the question this finding asked was why
+nothing said so.
 
-What I saw: the file, the tsconfig, and `package.json`, which has one dependency,
-`@babel/parser`, and no devDependencies. What follows from that rather than from a
-measurement: nothing ever runs `tsc`, so `strict`, `noUncheckedIndexedAccess`,
-`exactOptionalPropertyTypes` and the rest are settings with nothing behind them.
-`audit/**` is not even in `include`. I did not run a typechecker, because there
-is none installed to run.
+**Half the premise was wrong.** The tsconfig is not read by nothing — every
+editor's TypeScript service reads it, which is a real check on anyone writing
+here. What was actually missing is that `audit/**` was never in `include`, so
+those files got no checking at all. That is fixed here, and it costs nothing.
 
-Fixed in passing here — `comment.ts` now imports looper's own `Comment` — but the
-cause is untouched: a document claiming eleven strictness settings that no
-command enforces. Installing TypeScript is a dependency, and this project says a
-dependency is argued in `docs/PLAN.md` first, so that argument has to happen
-before the fix does.
+**The other half is refused, on this project's own invariant.** An automated
+`tsc` in `npm test` needs TypeScript installed, and
+`tests/invariants.test.ts` scans the whole resolved tree — devDependencies
+included — for anything that can open a socket. Installed into a scratch folder
+on 2026-08-18 and searched, TypeScript ships one:
 
-### 76 · `wrong` — a password with a full stop in it, and a credential word with more name after it — cleared
+```
+typescript/vendor/vscode-jsonrpc/lib/node/main.js   requires "net"
+```
 
-Contributed as PR #40 from a project that had adopted looper, found by pointing
-the scanner at its own `.env` line by line. Two holes, both real, both verified
-here against that file.
+So adding it fails that test, and the only way to pass would be to narrow the
+scan to exclude devDependencies. That is widening a check to let one thing
+through, which the security doctrine names as the failure that turns every future
+leak into something nobody hears about. The dependency is refused and the
+strictness settings stay, because an editor honours them.
 
-A named credential's unquoted value was matched as `[^\s"';,()\[\]{}.]{12,}` —
-no full stop allowed — so `SUPABASE_DB_PASSWORD=` followed by fifteen characters
-with a dot in them matched only up to the dot, fell under the twelve-character
-floor, and read as nothing at all. The dot was excluded to keep
-the `config.apiToken` read quiet, which is a credential being read out of an
-object rather than being one. Dots are allowed in a value now and that exemption
-is explicit instead: an unquoted value that is nothing but a dotted path of
-identifiers is code. Quoted values are exempt from the exemption, because
-`"s3cret.value.here"` in quotes is a literal.
-
-Separately, `SECRET_KEY=` never matched, because the word boundary after the
-credential word cannot land on an underscore. A credential word may be followed
-by more name, and the suffix must start with a separator, which keeps
-`tokenizer` and `authorName` out.
-
-**What the review added.** The contribution arrived without the third thing this
-project asks for: a run over code nobody here wrote. Run here, on 232
-hand-written files of the project it came from, it added three findings. One was
-the real password it was written to catch. Two were `_token =
-data.session?.access_token ?? null` — a token read out of an object through
-optional chaining, which the new exemption did not recognise because it only knew
-a plain dot. `A_DOTTED_PATH` accepts `?.` now, and two cases hold it.
-
-After that fix: 232 hand-written files, one new finding, and it is the true one.
-238 files of this repo, no change. On a wider sweep of 4,000 files that includes
-`node_modules` and Next.js build output, it adds 28 findings, all false —
-a constant whose name ends in a credential word followed by another word,
-holding a quoted string of ordinary words joined by dots. Not fixed, and left
-here rather than hidden: the gate reads staged diffs, that code is never staged,
-and the shape appeared zero times in the 232 files of real source. The
-forty-character ceiling on the path exemption is kept for the same reason it
-cost one of those 28 — fewer exemptions is the stricter reading.
-
-The three comments the contribution carried were removed. Its own checkout was
-the one whose hooks were not loading, so looper's comment rule never judged it.
+The guard is already in place: anyone who adds TypeScript later will be stopped
+by the same socket test, with the file named.
 
 ### 74 · `blunt` — a file of deliberately key-shaped fixtures has no legal spelling — cleared
 
