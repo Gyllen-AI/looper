@@ -3,7 +3,7 @@ import { judgeRustIn } from "./project.ts";
 import { rustRuleFor } from "./rust/rules.ts";
 import { roleOf, shapeOf } from "./shape.ts";
 import { existsSync, readFileSync } from "node:fs";
-import { relative, resolve } from "node:path";
+import { join, relative, resolve } from "node:path";
 
 import { JUDGED_EXTENSIONS, OUTSIDE_THE_LAW } from "../config.ts";
 import { SILENT } from "../capability.ts";
@@ -18,9 +18,10 @@ import type {
   ToolResult,
 } from "../capability.ts";
 import { changedLines, stagedFiles, stagedLines, stagedText } from "../git.ts";
+import { withLock } from "../atomic.ts";
 import { isRecorded, readBaseline, countsOf, shrinkToward, totalIn, writeBaseline } from "./baseline.ts";
 import { surveyProject, underAnotherLaw } from "./project.ts";
-import { BASELINE_PRIORITY } from "../config.ts";
+import { BASELINE_PATH, BASELINE_PRIORITY } from "../config.ts";
 import { intentOf } from "./commit-command.ts";
 import { readConcessions } from "./concessions.ts";
 import { judge } from "./engine.ts";
@@ -245,14 +246,28 @@ export function judgeStaged(root: string): Outcome {
 }
 
 export function shrinkBaseline(root: string): Outcome {
-  const recorded = readBaseline(root);
-  if (totalIn(recorded) === 0) return { kind: "pass" };
+  let said: Outcome = { kind: "pass" };
 
-  const shrink = shrinkToward(recorded, countsOf(surveyProject(root, "everything", EVERYTHING).violations));
-  if (shrink.kind === "unchanged") return { kind: "pass" };
+  const lock = withLock(join(root, BASELINE_PATH), () => {
+    const recorded = readBaseline(root);
+    if (totalIn(recorded) === 0) return;
 
-  writeBaseline(root, shrink.baseline);
-  return { kind: "pass" };
+    const shrink = shrinkToward(
+      recorded,
+      countsOf(surveyProject(root, "everything", EVERYTHING).violations),
+    );
+    if (shrink.kind === "unchanged") return;
+
+    writeBaseline(root, shrink.baseline);
+  });
+
+  if (lock.kind === "busy") {
+    said = {
+      kind: "mention",
+      note: `looper: the outstanding-work count was not updated (${lock.why}). Nothing was lost; it updates on the next turn.`,
+    };
+  }
+  return said;
 }
 
 export class Law implements Capability {

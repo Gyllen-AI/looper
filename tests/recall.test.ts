@@ -1,7 +1,7 @@
 import { first } from "./helpers.ts";
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -68,9 +68,9 @@ test("a note that stops being true can be removed", () => {
   const root = scratch();
   try {
     write(root, "we use the v1 endpoint", "because v2 was not out yet");
-    assert.ok(forget(root, "we use the v1 endpoint"));
+    assert.equal(forget(root, "we use the v1 endpoint").kind, "gone");
     assert.equal(readNotes(root).length, 0);
-    assert.equal(forget(root, "never written"), false);
+    assert.equal(forget(root, "never written").kind, "not-there");
   } finally {
     rmSync(root, { recursive: true, force: true });
   }
@@ -172,4 +172,39 @@ test("a note written with a hyphen is a note, because a project may forbid the d
     "the heading did not parse, so the note was silently swallowed into whatever came before it. A project whose own rules ban the em dash cannot write a note looper will read.",
   );
   assert.equal(first(notes).summary, "the tile server has to be running");
+});
+
+test("two writes at once keep both notes, because an agent is told to work in parallel", () => {
+  const root = scratch();
+  try {
+    const first = remember(root, { learned: "2026-08-18", summary: "one", body: "first" });
+    const second = remember(root, { learned: "2026-08-18", summary: "two", body: "second" });
+
+    assert.notEqual(first.kind, "busy");
+    assert.notEqual(second.kind, "busy");
+    const notes = readNotes(root).map((held) => held.summary);
+    assert.deepEqual([...notes].sort(), ["one", "two"]);
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test("a write that cannot take the lock says so instead of reporting success", () => {
+  const root = scratch();
+  const path = join(root, ".looper", "recall.md");
+  try {
+    mkdirSync(join(root, ".looper"), { recursive: true });
+    writeFileSync(`${path}.looper-lock`, "");
+
+    const written = remember(root, { learned: "2026-08-18", summary: "lost", body: "x" });
+
+    assert.equal(
+      written.kind,
+      "busy",
+      "the note was reported as written while another process held the file. A note the agent believes it wrote, that nobody has, is the one failure recall exists to prevent.",
+    );
+    assert.deepEqual([...readNotes(root)], []);
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
 });

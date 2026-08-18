@@ -1,7 +1,7 @@
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 
-import { writeAtomically } from "../atomic.ts";
+import { withLock, writeAtomically } from "../atomic.ts";
 import { required } from "../present.ts";
 import { RECALL_HEADER, RECALL_PATH } from "../config.ts";
 
@@ -56,23 +56,46 @@ export function render(notes: readonly Note[]): string {
 
 export type Written =
   | { readonly kind: "added"; readonly total: number }
-  | { readonly kind: "replaced"; readonly total: number };
+  | { readonly kind: "replaced"; readonly total: number }
+  | { readonly kind: "busy"; readonly why: string };
+
+export type Forgotten =
+  | { readonly kind: "gone" }
+  | { readonly kind: "not-there" }
+  | { readonly kind: "busy"; readonly why: string };
 
 export function remember(root: string, note: Note): Written {
-  const held = readNotes(root);
-  const without = held.filter((one) => one.summary !== note.summary);
-  const replaced = without.length !== held.length;
+  const path = join(root, RECALL_PATH);
+  let written: Written = { kind: "added", total: 0 };
 
-  writeAtomically(join(root, RECALL_PATH), render([...without, note]));
-  return { kind: replaced ? "replaced" : "added", total: without.length + 1 };
+  const lock = withLock(path, () => {
+    const held = readNotes(root);
+    const without = held.filter((one) => one.summary !== note.summary);
+    writeAtomically(path, render([...without, note]));
+    written = {
+      kind: without.length !== held.length ? "replaced" : "added",
+      total: without.length + 1,
+    };
+  });
+
+  if (lock.kind === "busy") return { kind: "busy", why: lock.why };
+  return written;
 }
 
-export function forget(root: string, summary: string): boolean {
-  const held = readNotes(root);
-  const without = held.filter((one) => one.summary !== summary);
-  if (without.length === held.length) return false;
-  writeAtomically(join(root, RECALL_PATH), render(without));
-  return true;
+export function forget(root: string, summary: string): Forgotten {
+  const path = join(root, RECALL_PATH);
+  let found = false;
+
+  const lock = withLock(path, () => {
+    const held = readNotes(root);
+    const without = held.filter((one) => one.summary !== summary);
+    if (without.length === held.length) return;
+    found = true;
+    writeAtomically(path, render(without));
+  });
+
+  if (lock.kind === "busy") return { kind: "busy", why: lock.why };
+  return found ? { kind: "gone" } : { kind: "not-there" };
 }
 
 export function matching(notes: readonly Note[], query: string): readonly Note[] {

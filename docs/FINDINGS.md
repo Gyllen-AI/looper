@@ -22,7 +22,7 @@ is a suspicion and belongs in the notes at the bottom, not in the list.
 
 ## Open
 
-_Empty. Every pass of both audits is closed, and findings 41 to 64 with them._
+_Empty. Every pass of both audits is closed, and findings 41 to 65 with them._
 
 ## The second audit — what it covered and what it found
 
@@ -68,6 +68,29 @@ tested, and every one was tested the way it was built rather than the way it
 will be used.
 
 ## Cleared
+
+### 65 · `wrong` — two notes written at once, one note kept — cleared
+
+Adopter issue #29. An agent is encouraged to call tools in parallel, and `recall`
+is a read-modify-write: read the file, add the note, write the whole thing back.
+`writeAtomically` keeps the file from tearing and does nothing about two readers
+starting from the same state. Their measurement, ten concurrent writes, three
+rounds: 28 of 30 survived, with no error and nothing in the file to show a note
+had gone.
+
+Reproduced here against the committed code — 5, 6 and 6 of 10 — and with the fix,
+10, 10 and 10. The fix is the lock they suggested: an exclusive `wx` lock file
+around the whole read-modify-write, with a bounded wait, a stale-lock sweep after
+five seconds, and the write that cannot take it saying so rather than reporting
+success. `recall`, `forget` and the baseline shrink all take it.
+
+Adoption writes are left as they are, deliberately: they happen inside one
+tool call somebody made on purpose, not on a hook that can overlap with itself.
+
+The sentence in their report that made this worth doing before the rest: a lost
+note is not written, not corrected, and believed to exist by the agent that wrote
+it — and it only shows up as work redone weeks later, which is what recall exists
+to prevent.
 
 ### 64 · `wrong` — a wrapper walked past the only gate that catches `--no-verify` — cleared
 

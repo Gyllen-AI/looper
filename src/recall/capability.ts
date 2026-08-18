@@ -96,9 +96,18 @@ export class Recall implements Capability {
     const dropping = request.args.get("forget");
     if (dropping !== undefined) {
       const gone = forget(request.root, dropping);
+      if (gone.kind === "busy") {
+        return {
+          kind: "text",
+          text: `looper could not remove that note: ${gone.why}. Nothing was changed — try again.`,
+        };
+      }
       return {
         kind: "text",
-        text: gone ? `forgotten: ${dropping}` : `there is no note called "${dropping}".`,
+        text:
+          gone.kind === "gone"
+            ? `forgotten: ${dropping}`
+            : `there is no note called "${dropping}".`,
       };
     }
 
@@ -110,6 +119,12 @@ export class Recall implements Capability {
         summary,
         body,
       });
+      if (written.kind === "busy") {
+        return {
+          kind: "text",
+          text: `looper did not write that note: ${written.why}. Nothing was lost and nothing was written — say it again.`,
+        };
+      }
       const verb = written.kind === "replaced" ? "corrected" : "remembered";
       return { kind: "text", text: `${verb}: ${summary} (${written.total} note(s) now)` };
     }
