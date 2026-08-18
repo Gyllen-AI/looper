@@ -1,7 +1,7 @@
 import { existsSync, readFileSync, readdirSync, realpathSync, statSync } from "node:fs";
 import { dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
 
-import { JUDGED_EXTENSIONS, LAW_PATH, OUTSIDE_THE_LAW, RUST_EXTENSION } from "../config.ts";
+import { JUDGED_EXTENSIONS, LAW_PATH, OUTSIDE_THE_LAW, PYTHON_EXTENSION, RUST_EXTENSION } from "../config.ts";
 import { ignoredHere, trackedFiles, type Ignoring } from "../git.ts";
 import { readConcessions } from "./concessions.ts";
 import { judge } from "./engine.ts";
@@ -14,6 +14,8 @@ import { commandsUnder, judgeRust } from "./rust/drive.ts";
 import { crossingsIn } from "./rust/boundary.ts";
 import { roleOf, shapeOf, type Shape } from "./shape.ts";
 import { rustRuleFor } from "./rust/rules.ts";
+import { PYTHON_RULES } from "./python/rules.ts";
+import { judgePython } from "./python/drive.ts";
 
 export type Survey = {
   readonly violations: readonly Violation[];
@@ -376,6 +378,37 @@ function under(root: string, paths: readonly string[], file: string): boolean {
   });
 }
 
+type PythonSaid = {
+  readonly violations: readonly Violation[];
+  readonly unreadable: readonly string[];
+};
+
+export function judgePythonIn(root: string, files: readonly string[]): PythonSaid {
+  if (files.length === 0) return { violations: [], unreadable: [] };
+
+  const said = judgePython(looperRoot(), files);
+  if (said.kind !== "found") {
+    return {
+      violations: [],
+      unreadable: files.map((path) => `${relative(root, path)} (${said.detail})`),
+    };
+  }
+
+  const violations: Violation[] = [];
+  const unreadable = said.unreadable.map(
+    (one) => `${relative(root, one.file)} (${one.detail})`,
+  );
+  for (const hit of said.hits) {
+    const known = PYTHON_RULES.find((rule) => rule.id === hit.rule);
+    if (known === undefined) {
+      unreadable.push(`the Python half reported ${hit.rule}, which looper has no words for`);
+      continue;
+    }
+    violations.push({ rule: known, file: relative(root, hit.file), line: hit.line });
+  }
+  return { violations, unreadable };
+}
+
 export function surveyProject(root: string, reach: Reach, only: readonly string[]): Survey {
   const concessions = readConcessions(root);
   const checks = [...CHECKS, ...checksAdoptedIn(root)];
@@ -392,8 +425,13 @@ export function surveyProject(root: string, reach: Reach, only: readonly string[
   violations.push(...rustSaid.violations);
   unreadable.push(...rustSaid.unreadable);
 
+  const pythonFiles = files.filter((path) => path.endsWith(PYTHON_EXTENSION));
+  const pythonSaid = judgePythonIn(root, pythonFiles);
+  violations.push(...pythonSaid.violations);
+  unreadable.push(...pythonSaid.unreadable);
+
   for (const path of files) {
-    if (path.endsWith(RUST_EXTENSION)) continue;
+    if (path.endsWith(RUST_EXTENSION) || path.endsWith(PYTHON_EXTENSION)) continue;
     const named = relative(root, path);
     let text = "";
     try {

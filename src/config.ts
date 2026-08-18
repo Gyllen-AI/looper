@@ -121,7 +121,7 @@ followed. The same rule as a general principle is skimmed.
 
 export const LAW_PATH = "law.toml";
 
-export const JUDGED_EXTENSIONS: readonly string[] = [".ts", ".tsx", ".mts", ".cts", ".rs"];
+export const JUDGED_EXTENSIONS: readonly string[] = [".ts", ".tsx", ".mts", ".cts", ".rs", ".py"];
 
 export const RUST_EXTENSION = ".rs";
 
@@ -142,6 +142,14 @@ export const RUST_ENGINE_DIR = "vendor/rust-law";
 export const RUST_ENGINE_NAME = "looper-rust";
 
 export const RUST_TIMEOUT_MS = 120_000;
+
+export const PYTHON_EXTENSION = ".py";
+
+export const PYTHON_COMMAND = "python3";
+
+export const PYTHON_READER = "src/law/python/read.py";
+
+export const PYTHON_TIMEOUT_MS = 60_000;
 
 export const HOOK_TIMEOUT_SECONDS = 30;
 

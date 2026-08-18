@@ -22,7 +22,56 @@ is a suspicion and belongs in the notes at the bottom, not in the list.
 
 ## Open
 
-_Empty. Findings 41 to 77 are closed._
+_Empty. Findings 41 to 78 are closed._
+
+### 78 · Python is read, one rule deep — cleared
+
+2026-08-18. The third language, and the first whose own toolchain checks nothing:
+TypeScript has a compiler and Rust refuses to build, while Python runs a file
+with a typo in it until the line is reached.
+
+**The reader costs no dependency.** Python ships its parser in its standard
+library as `ast`, so `src/law/python/read.py` is a script driven over the same
+one-JSON-object protocol as the Rust engine. The resolved npm tree is unchanged
+and still cannot open a socket. The one new requirement is `python3`, and when it
+or the reader is missing every `.py` file is named as unjudged rather than
+counted clean — checked by moving the reader aside and reading the message.
+
+**A third file may now start a process,** so `.looper/doctrine/law.md` and the
+invariant test that holds it both changed in the same commit. That sentence named
+two files and would otherwise have quietly become false.
+
+**Twelve cases first,** from the ban text: a bare `except:` fires even when its
+body works, because it also swallows the interrupt that stops the program; an
+`except` whose body is `pass` or `...` fires; logging, re-raising, and
+`raise Missing(path) from error` stay silent; and `with suppress(...)` stays
+silent because it names what is being ignored. A class or function body of `pass`
+is not an except, and a `try` with only a `finally` has no handler at all.
+
+**Two corpora nobody here wrote.** Python's own standard library, 167 files: 348
+findings. An adopting project's hand-written Python, 176 files: 51. Fourteen of
+the standard library's were read line by line and every one is the shape the ban
+text names, with no misreads. Several are considered decisions rather than
+accidents — `except KeyError: pass` where the key is genuinely optional — which
+is what makes the legal spelling load-bearing: `with suppress(KeyError):` says
+the same thing and names it. The volume is high there because that code predates
+`suppress`; an adopter's baseline carries it.
+
+Corroboration worth recording: several findings in the adopting project already
+carried `# noqa: BLE001`, Ruff's own blind-except rule switched off line by line.
+A second tool had reached the same verdict and been silenced, which is the
+failure a gate exists to prevent.
+
+looper's own reader is judged by its own rule — proven by adding a bare `except`
+to `read.py` and watching `PY-ERROR:1` fire on it.
+
+**The doctrine's own warning came true on the way in.** "Ask what a file is
+before asking what is wrong with it" was written after the gate reported every
+Rust file as unreadable TypeScript. `surveyProject` learned the third language
+first, and the two gates did not: looper refused this very commit with
+`TS-ERROR:8` on `read.py`, a file it had just written a Python parser for. Both
+`judgeStaged` and the edit gate now choose the law by extension, and a scratch
+project proves it — one `.py` file, one `PY-ERROR:1`, nothing committed.
 
 ### 77 · `wrong` — the doctrine banned four things and the rule caught three — cleared
 

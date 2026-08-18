@@ -2,7 +2,8 @@ Writing looper's own code, and writing the rules looper enforces.
 
 - looper is governed by its own canon at full strength. `src/config.ts` is the
   one file where a missing value may become a default; only `src/git.ts` and
-  `src/law/rust/drive.ts` start a process.
+  the two language drivers under `src/law/rust` and `src/law/python` start a
+  process.
 - **Fail open, but never fail silent.** The canon says a refusal has to be
   announced; here it also must not wedge the session it watches. Observe, then
   pass.

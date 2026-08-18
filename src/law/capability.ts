@@ -1,5 +1,5 @@
-import { NOT_A_WAY_THROUGH, RUST_EXTENSION } from "../config.ts";
-import { judgeRustIn } from "./project.ts";
+import { NOT_A_WAY_THROUGH, PYTHON_EXTENSION, RUST_EXTENSION } from "../config.ts";
+import { judgePythonIn, judgeRustIn } from "./project.ts";
 import { rustRuleFor } from "./rust/rules.ts";
 import { roleOf, shapeOf } from "./shape.ts";
 import { existsSync, readFileSync } from "node:fs";
@@ -91,6 +91,17 @@ type Judging = { readonly path: string; readonly relative: string };
 function judgedByTheRustLaw(root: string, target: Judging): readonly Violation[] {
   const said = judgeRustIn(root, [target.path]);
   return said.violations.filter((held) => held.file === target.relative);
+}
+
+function judgedByThePythonLaw(root: string, target: Judging): readonly Violation[] {
+  const said = judgePythonIn(root, [target.path]);
+  return said.violations.filter((held) => held.file === target.relative);
+}
+
+function lawFor(relative: string): "rust" | "python" | "typescript" {
+  if (relative.endsWith(RUST_EXTENSION)) return "rust";
+  if (relative.endsWith(PYTHON_EXTENSION)) return "python";
+  return "typescript";
 }
 
 export function targetOf(root: string, payload: string): Target {
@@ -206,10 +217,17 @@ export function judgeStaged(root: string): Outcome {
     }
   };
 
+  const inPython = judged.filter((path) => path.endsWith(PYTHON_EXTENSION));
+  const stagedPython = new Set(inPython);
+  const pythonSaid = judgePythonIn(root, inPython.map((path) => resolve(root, path)));
+  for (const violation of pythonSaid.violations) {
+    if (stagedPython.has(violation.file)) keep(violation, violation.file);
+  }
+
   const inRust = judged.filter((path) => path.endsWith(RUST_EXTENSION));
   const stagedRust = new Set(inRust);
   const rustSaid = judgeRustIn(root, inRust.map((path) => resolve(root, path)));
-  const blinding: string[] = [...rustSaid.unreadable];
+  const blinding: string[] = [...rustSaid.unreadable, ...pythonSaid.unreadable];
   for (const violation of rustSaid.violations) {
     if (stagedRust.has(violation.file)) {
       keep(violation, violation.file);
@@ -221,7 +239,7 @@ export function judgeStaged(root: string): Outcome {
   }
 
   for (const path of judged) {
-    if (path.endsWith(RUST_EXTENSION)) continue;
+    if (lawFor(path) !== "typescript") continue;
     const held = stagedText(root, path);
     if (held.kind === "unreadable") continue;
 
@@ -311,8 +329,11 @@ export class Law implements Capability {
     if (target.kind !== "judge") return { kind: "pass" };
     if (!existsSync(target.path)) return { kind: "pass" };
 
-    const found = target.relative.endsWith(RUST_EXTENSION)
+    const law = lawFor(target.relative);
+    const found = law === "rust"
       ? judgedByTheRustLaw(context.root, target)
+      : law === "python"
+      ? judgedByThePythonLaw(context.root, target)
       : judge(
           [...CHECKS, ...checksAdoptedIn(context.root)],
           "fast",

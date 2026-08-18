@@ -67,8 +67,8 @@ Compiler settings are part of the stack, not a preference:
 
 An adopter ships Python behind a TypeScript front end, which is the condition
 `docs/PLAN.md` sets for reading a language at all. Seven rules are named there
-and none is built yet, so today Python gets everything except the law: the rule
-sets, the secrets gate and the staleness check.
+and one — `PY-ERROR:1`, the swallowed error — is built and enforced on every
+edit and every commit. The other six are named and open.
 
 | job | tool |
 |---|---|

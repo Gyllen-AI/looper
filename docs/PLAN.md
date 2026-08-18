@@ -2761,12 +2761,11 @@ the server it runs under is Uvicorn.
 
 ### The rules, named before they are written
 
-Seven, taken from the failure shapes this document already listed, and none of
-them built:
+Seven, taken from the failure shapes this document already listed. One is built:
 
 | rule | bans | state |
 |---|---|---|
-| `PY-ERROR:1` | a bare `except:` or an `except` whose body is `pass` | **not built yet** |
+| `PY-ERROR:1` | a bare `except:`, and an `except` whose body does nothing — `pass` or `...` | built 2026-08-18 |
 | `PY-ERROR:2` | answering a failure with `None` | **not built yet** |
 | `PY-ERROR:3` | `raise Exception(...)` where a named class belongs | **not built yet** |
 | `PY-TYPE:1` | a `# type: ignore` comment | **not built yet** |
@@ -2783,3 +2782,21 @@ whole document exists to refuse.
 They ship one at a time, cases first from each ban text, and each run over real
 Python nobody here wrote before it counts as done. Naming all seven now is not a
 promise to build all seven; it is so that the gap is visible while it is open.
+
+`PY-ERROR:1` went first because it is the shape with the least room to argue and
+the clearest legal spelling. Twelve cases, then the reader, then two corpora
+nobody here wrote: 167 files of Python's own standard library, where it found
+348, and 176 hand-written files of an adopting project, where it found 51.
+Fourteen of the standard library's were read line by line and every one is the
+shape the ban text names. Several are considered decisions rather than
+accidents — `except KeyError: pass` where the key is genuinely optional — and
+that is what makes the legal spelling load-bearing rather than decorative:
+`with suppress(KeyError):` says the same thing and names it, so the rule sharpens
+the code instead of merely refusing it. The volume is high in the standard
+library because that code predates `suppress`; the baseline is what carries it
+for anyone adopting.
+
+Corroboration worth recording: several findings in the adopting project already
+carried `# noqa: BLE001`, which is Ruff's own blind-except rule being switched
+off line by line. A second tool had already reached the same verdict and been
+silenced, which is the failure mode a gate exists to prevent.

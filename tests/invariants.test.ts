@@ -127,7 +127,12 @@ function grepTree(dir: string): readonly string[] {
   return hits;
 }
 
-const MAY_SPAWN: readonly string[] = [SPAWN_SANCTUM, "law/rust/drive.ts", "seer/drive.ts"];
+const MAY_SPAWN: readonly string[] = [
+  SPAWN_SANCTUM,
+  "law/rust/drive.ts",
+  "law/python/drive.ts",
+  "seer/drive.ts",
+];
 
 test("only the named files may start another process, and each says what it starts", () => {
   for (const file of ourFiles()) {

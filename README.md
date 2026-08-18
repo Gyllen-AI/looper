@@ -44,10 +44,11 @@ A project with both is not confused by it. looper works out from what is on
 disk which half is the backend and which is the interface, and a rule about
 database queries never fires on a user interface that has no database.
 
-**Not Python, yet.** [STACK.md](STACK.md) prescribes a Python backend and
-`docs/PLAN.md` names the seven rules for it, none of them written. Until they
-are, a `.py` file gets everything except the law — the doctrine, the secrets
-gate and the staleness check — and nothing pretends otherwise.
+**Python, one rule so far.** A `.py` file is read with Python's own parser — no
+extra install, only `python3` on the machine — and judged by `PY-ERROR:1`, the
+swallowed error. [STACK.md](STACK.md) prescribes the rest of the Python stack and
+`docs/PLAN.md` names the other six rules, none of them written yet. Nothing
+pretends otherwise.
 
 ## When a rule is wrong
 
