@@ -1,5 +1,6 @@
 import { relative } from "node:path";
 
+import { AGENT_DIR } from "./config.ts";
 import { canonBranch } from "./canon.ts";
 import { listBranches, readProjectBranch } from "./doctrine.ts";
 import { trackedFiles } from "./git.ts";
@@ -67,6 +68,15 @@ export function describeStep(step: Step): readonly string[] {
       `  ${step.path} could not be read (${step.why}), so it was left exactly as it is.`,
       `           looper's tools are NOT available until this block is in it:`,
       ...step.block.split("\n").map((line) => `             ${line}`),
+    ];
+  }
+  if (step.kind === "outer-agent-project") {
+    return [
+      `  ${step.path} has its own ${AGENT_DIR} folder, so an agent has been`,
+      `           started there. An agent reads its hooks from the folder it starts in,`,
+      `           so a session started there will not see any of the above and will`,
+      `           check nothing, with nothing to show that it is not checking.`,
+      `           Start the agent in this folder, or run looper init in that one.`,
     ];
   }
   if (step.kind === "entry-unreachable") {

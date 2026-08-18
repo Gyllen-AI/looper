@@ -2,7 +2,15 @@ import { existsSync } from "node:fs";
 import { delimiter, dirname, join } from "node:path";
 import type { HookSpec } from "./types.ts";
 
+import { homedir } from "node:os";
+
 export const SETTINGS_PATH = ".claude/settings.json";
+
+export const AGENT_DIR = ".claude";
+
+export function whereTheUserLives(): string {
+  return homedir();
+}
 
 export const JSON_INDENT = 2;
 

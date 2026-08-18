@@ -1,4 +1,5 @@
 import { test } from "node:test";
+import { first } from "./helpers.ts";
 import { DEV, INSTALLED, LOCAL, PROJECT_DIR, gitHookEntryFor, inside, launchFor, looperHooks, projectRoot } from "../src/config.ts";
 import { reachedFrom } from "../src/init.ts";
 import { AFTER_INIT } from "../src/announce.ts";
@@ -297,4 +298,39 @@ test("init says that a session already open will not have the hooks", () => {
     said.includes("check nothing"),
     "telling somebody to restart without saying what happens if they do not leaves it sounding optional",
   );
+});
+
+test("hooks wired below a folder the agent starts in are said to be useless", () => {
+  const outer = scratch();
+  const inner = join(outer, "app");
+  try {
+    mkdirSync(join(outer, ".claude"), { recursive: true });
+    mkdirSync(inner, { recursive: true });
+
+    const report = runInit(inner, INSTALLED, NO_PATH);
+    const named = report.steps.filter((step) => step.kind === "outer-agent-project");
+
+    assert.equal(
+      named.length,
+      1,
+      "an agent started one folder up reads its hooks from up there, so everything init just wired is dead and the project looks perfectly set up. Eight sessions of one adopting project received no doctrine at all this way, and nothing anywhere said so.",
+    );
+    assert.equal(first(named).path, outer);
+  } finally {
+    rmSync(outer, { recursive: true, force: true });
+  }
+});
+
+test("a project with no agent folder above it is not warned about one", () => {
+  const root = scratch();
+  try {
+    const report = runInit(root, INSTALLED, NO_PATH);
+    assert.deepEqual(
+      report.steps.filter((step) => step.kind === "outer-agent-project"),
+      [],
+      "every ordinary project would carry a warning about a folder that does not exist",
+    );
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
 });

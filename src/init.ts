@@ -1,8 +1,10 @@
 import { chmodSync, existsSync, readFileSync, readdirSync } from "node:fs";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
 
 import { writeAtomically, writeKeepingPrior, type Backup } from "./atomic.ts";
 import {
+  AGENT_DIR,
+  whereTheUserLives,
   DEV_ENTRY,
   INSTALLED,
   LOCAL,
@@ -76,7 +78,8 @@ export type Step =
       readonly why: string;
       readonly block: string;
     }
-  | { readonly kind: "entry-unreachable"; readonly what: string };
+  | { readonly kind: "entry-unreachable"; readonly what: string }
+  | { readonly kind: "outer-agent-project"; readonly path: string };
 
 export type Report = {
   readonly steps: readonly Step[];
@@ -267,6 +270,21 @@ export function reachedFrom(root: string): Invocation {
   return INSTALLED;
 }
 
+export type AgentAbove =
+  | { readonly kind: "none" }
+  | { readonly kind: "started-in"; readonly path: string };
+
+export function agentProjectAbove(root: string): AgentAbove {
+  const home = whereTheUserLives();
+  let at = dirname(root);
+
+  while (at !== home && at !== dirname(at)) {
+    if (existsSync(join(at, AGENT_DIR))) return { kind: "started-in", path: at };
+    at = dirname(at);
+  }
+  return { kind: "none" };
+}
+
 export function runInit(
   root: string,
   invocation: Invocation,
@@ -279,6 +297,8 @@ export function runInit(
   steps.push(messageGate(root, invocation));
   const reach = entryReach(root, invocation, searchPath);
   if (reach.kind === "missing") steps.push({ kind: "entry-unreachable", what: reach.what });
+  const outer = agentProjectAbove(root);
+  if (outer.kind === "started-in") steps.push({ kind: "outer-agent-project", path: outer.path });
   if (!existsSync(join(root, BASELINE_PATH))) steps.push(survey(root));
   const gate = steps.some(
     (step) =>
