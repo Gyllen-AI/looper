@@ -1,6 +1,9 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { join } from "node:path";
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { assembleBranch } from "../src/doctrine.ts";
 
 import { handle } from "../src/mcp.ts";
 import { registry } from "../src/registry.ts";
@@ -129,4 +132,23 @@ test("a notification gets no reply, and unparseable input is discarded", () => {
   );
   const bad = handle(registry(), ROOT, "{ not json");
   assert.equal(bad.kind, "unreadable");
+});
+
+test("a branch name cannot reach a file outside the doctrine directory", () => {
+  const root = mkdtempSync(join(tmpdir(), "looper-traversal-"));
+  try {
+    mkdirSync(join(root, ".looper/doctrine"), { recursive: true });
+    writeFileSync(join(root, ".looper/doctrine/frontend.md"), "- the frontend rule.\n");
+    writeFileSync(join(root, "next-door.md"), "NOT DOCTRINE\n");
+
+    const reachable = assembleBranch(root, "frontend");
+    assert.equal(reachable.kind, "found");
+
+    for (const asked of ["../../next-door", "../../../etc/hostname", "..", "a/b", "/etc/hostname"]) {
+      const said = assembleBranch(root, asked);
+      assert.equal(said.kind, "nowhere", `${asked} was reachable`);
+    }
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
 });

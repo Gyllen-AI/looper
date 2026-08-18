@@ -1267,6 +1267,17 @@ window is roughly four times that again, so the ceiling is 64 MB — past any re
 screen, still short of a runaway. `tests/seer.test.ts` holds it with an answer the
 default would have thrown away.
 
+**A branch name is a file stem, not a path, 2026-08-18.** The `doctrine` tool
+takes a name from the agent and the project half joined it straight onto the
+doctrine directory, so `../../notes` read a file beside the project and
+`../../../elsewhere` read one outside it entirely. Any `.md` file the process
+could open was reachable by asking for it. The canon half was never exposed: it
+checks the name against a fixed list first. Names are now file stems
+(`^[A-Za-z0-9][A-Za-z0-9._-]*$`, no `..`), which is what `listBranches` can
+produce anyway, and `tests/mcp.test.ts` holds it. The seer had the property
+already, for the same reason it was designed with: what the agent supplies is one
+title, and nothing it names selects a path.
+
 **Off unless somebody built it.** No capture program ships in the package —
 `files` in `package.json` carries none, and a test refuses the suite if one
 appears. With no program on disk the `see` tool is not offered at all, and every

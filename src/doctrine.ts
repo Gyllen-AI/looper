@@ -47,7 +47,15 @@ export type BranchLookup =
   | { readonly kind: "nowhere" }
   | { readonly kind: "found"; readonly text: string; readonly halves: readonly string[] };
 
+const A_FILE_STEM = /^[A-Za-z0-9][A-Za-z0-9._-]*$/;
+
+export function isABranchName(name: string): boolean {
+  if (!A_FILE_STEM.test(name)) return false;
+  return !name.includes("..");
+}
+
 function readProjectBranch(root: string, name: string): ProjectHalf {
+  if (!isABranchName(name)) return { kind: "absent" };
   const path = join(root, DOCTRINE_DIR, `${name}.md`);
   if (!existsSync(path)) return { kind: "absent" };
   const text = readFileSync(path, "utf8").trim();
