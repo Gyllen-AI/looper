@@ -1,3 +1,4 @@
+import { MAX_LOC_DEFAULT } from "../src/config.ts";
 import { RUST_RULES } from "../src/law/rust/rules.ts";
 import { CROSSED_BOUNDARY } from "../src/law/rust/boundary.ts";
 import { test } from "node:test";
@@ -169,5 +170,22 @@ test("every rule the engine loads has a row in the table of what the law defends
     [...placed].filter((id) => !known.includes(id)),
     [],
     "the table names a rule the engine does not load",
+  );
+});
+
+test("the line cap the plan measured is the line cap the code uses", () => {
+  const plan = readFileSync(new URL("../docs/PLAN.md", import.meta.url), "utf8");
+  const after = plan.split("### The line cap, measured at last")[1];
+  assert.notEqual(after, undefined, "the measurement behind the line cap is gone from the plan");
+  if (after === undefined) return;
+
+  const said = after.split("\n### ")[0];
+  const argued = /argues for is `max_loc = (\d+)`/.exec(said);
+  assert.notEqual(argued, null, "the cap section no longer names the cap it argues for");
+  if (argued === null) return;
+  assert.equal(
+    Number(argued[1]),
+    MAX_LOC_DEFAULT,
+    "the code caps files at a number the plan does not argue, so it is once again a number nobody measured",
   );
 });
