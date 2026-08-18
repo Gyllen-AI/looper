@@ -220,7 +220,7 @@ function projectHolding(where: string, marker: string): string {
   const root = mkdtempSync(join(tmpdir(), "looper-elsewhere-"));
   mkdirSync(join(root, where, "src"), { recursive: true });
   writeFileSync(join(root, where, "src/theirs.ts"), SWALLOWS);
-  writeFileSync(join(root, where, marker), "");
+  writeFileSync(join(root, where, marker), marker.endsWith(".toml") ? "max_loc = 400\n" : "");
   mkdirSync(join(root, "src"), { recursive: true });
   writeFileSync(join(root, "src/ours.ts"), "export const a = 1;\n");
   return root;
@@ -239,6 +239,44 @@ test("a directory with its own law.toml is judged by that law, not by this proje
     assert.ok(
       !judgedFiles(root).some((path) => path.includes("tools")),
       "the walk went into a tree that governs itself",
+    );
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test("an empty law.toml is not a licence to stop being judged", () => {
+  const root = mkdtempSync(join(tmpdir(), "looper-empty-law-"));
+  try {
+    mkdirSync(join(root, "src", "legacy"), { recursive: true });
+    writeFileSync(join(root, "src/legacy/b.ts"), SWALLOWS);
+    writeFileSync(join(root, "src/legacy/law.toml"), "");
+
+    const survey = surveyProject(root, "everything", EVERYTHING);
+
+    assert.ok(
+      survey.violations.length > 0,
+      "one `touch law.toml` removed a whole directory from the law — every rule, every file, forever — which is broader than the three graded concessions and the quietest thing anybody can write",
+    );
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test("a directory that really governs itself is named, not silently skipped", () => {
+  const root = mkdtempSync(join(tmpdir(), "looper-named-law-"));
+  try {
+    mkdirSync(join(root, "src", "legacy"), { recursive: true });
+    writeFileSync(join(root, "src/legacy/b.ts"), SWALLOWS);
+    writeFileSync(join(root, "src/legacy/law.toml"), "max_loc = 400\n");
+
+    const survey = surveyProject(root, "everything", EVERYTHING);
+
+    assert.deepEqual(survey.violations.map((held) => held.file), []);
+    assert.deepEqual(
+      survey.selfGoverned.map((held) => `${held.where} (${held.files})`),
+      ["src/legacy (1)"],
+      "self-governed and unjudged are indistinguishable from outside unless the tool says which is which",
     );
   } finally {
     rmSync(root, { recursive: true, force: true });

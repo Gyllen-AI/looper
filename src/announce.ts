@@ -1,4 +1,13 @@
+import { relative } from "node:path";
+
+import { canonBranch } from "./canon.ts";
+import { listBranches, readProjectBranch } from "./doctrine.ts";
+import { trackedFiles } from "./git.ts";
+import { matches, readMap, unheardIn } from "./map.ts";
+import type { Weighed } from "./allocator.ts";
 import type { Step } from "./init.ts";
+
+const DOCTRINE_PREFIX = "doctrine:";
 
 export function describeStep(step: Step): readonly string[] {
   if (step.kind === "created") {
@@ -64,4 +73,36 @@ export function describeStep(step: Step): readonly string[] {
     return [`  yours already, left alone  ${step.path}`];
   }
   return [`  already wired, nothing to change  ${step.path}`];
+}
+
+
+export function halvesOf(root: string, source: string): string {
+  if (!source.startsWith(DOCTRINE_PREFIX)) return "";
+  const name = source.slice(DOCTRINE_PREFIX.length);
+  const canon = canonBranch(name);
+  const mine = readProjectBranch(root, name);
+  const ours = canon.kind === "found" ? canon.body.length : 0;
+  const yours = mine.kind === "present" ? mine.text.length : 0;
+  if (yours === 0) return "   all of it looper's";
+  if (ours === 0) return "   all of it yours";
+  return `   looper ${ours}, yours ${yours}`;
+}
+
+
+export function costLines(root: string, weighed: readonly Weighed[]): readonly string[] {
+  return weighed.map(
+    (held) => `    ${String(held.chars).padStart(6)}  ${held.source}${halvesOf(root, held.source)}`,
+  );
+}
+
+
+export function mapComplaints(root: string): readonly string[] {
+  const map = readMap(root);
+  if (map.kind === "absent") return [];
+  const tracked = trackedFiles(root);
+  const files = tracked.kind === "unavailable" ? [] : tracked.paths;
+  const said = unheardIn(map.governs, listBranches(root), (globs) =>
+    files.length === 0 || files.some((file) => globs.some((glob) => matches(glob, file))),
+  );
+  return said.map((held) => `  ${held.branch} governs nothing that arrives: ${held.why}`);
 }

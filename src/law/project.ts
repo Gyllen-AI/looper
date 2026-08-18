@@ -19,6 +19,7 @@ export type Survey = {
   readonly violations: readonly Violation[];
   readonly files: number;
   readonly unreadable: readonly string[];
+  readonly selfGoverned: readonly SelfGoverned[];
 };
 
 const SUBMODULES = ".gitmodules";
@@ -37,35 +38,57 @@ export function submodulesOf(root: string): readonly string[] {
   return found;
 }
 
-function governsItself(root: string, at: string, submodules: readonly string[]): boolean {
-  if (at === "" || at === ".") return false;
-  if (submodules.includes(at)) return true;
-  return existsSync(join(root, at, LAW_PATH));
+export type Governed =
+  | { readonly kind: "no" }
+  | { readonly kind: "yes"; readonly why: string };
+
+function saysSomething(path: string): boolean {
+  return readFileSync(path, "utf8")
+    .split("\n")
+    .some((line) => line.trim().length > 0 && !line.trim().startsWith("#"));
+}
+
+function governsItself(root: string, at: string, submodules: readonly string[]): Governed {
+  if (at === "" || at === ".") return { kind: "no" };
+  if (submodules.includes(at)) return { kind: "yes", why: "a submodule, so it is somebody else's" };
+
+  const own = join(root, at, LAW_PATH);
+  if (!existsSync(own)) return { kind: "no" };
+  if (!saysSomething(own)) return { kind: "no" };
+  return { kind: "yes", why: `it has its own ${LAW_PATH}` };
 }
 
 function anyAncestorGoverns(
   root: string,
   parts: readonly string[],
   submodules: readonly string[],
-): boolean {
+): Governed {
   let at = "";
   for (const part of parts) {
     if (part === "" || part === ".") continue;
     at = at === "" ? part : `${at}/${part}`;
-    if (governsItself(root, at, submodules)) return true;
+    const held = governsItself(root, at, submodules);
+    if (held.kind === "yes") return held;
   }
-  return false;
+  return { kind: "no" };
 }
 
 export function underAnotherLaw(root: string, path: string): boolean {
   const parts = relative(root, join(root, path)).split(/[\\/]/);
   parts.pop();
-  return anyAncestorGoverns(root, parts, submodulesOf(root));
+  return anyAncestorGoverns(root, parts, submodulesOf(root)).kind === "yes";
 }
+
+export type SelfGoverned = {
+  readonly where: string;
+  readonly why: string;
+  readonly files: number;
+};
 
 export type Walked = {
   readonly files: readonly string[];
   readonly unreadable: readonly string[];
+  readonly selfGoverned: readonly SelfGoverned[];
 };
 
 type Real =
@@ -88,6 +111,7 @@ function isInside(rootReal: string, fileReal: string): boolean {
 export function walkProject(root: string): Walked {
   const found: string[] = [];
   const unreadable: string[] = [];
+  const selfGoverned: SelfGoverned[] = [];
   const submodules = submodulesOf(root);
   const seen = new Set<string>();
 
@@ -126,7 +150,15 @@ export function walkProject(root: string): Walked {
 
       if (stat.isDirectory()) {
         const inside = relative(root, path).split(/[\\/]/);
-        if (anyAncestorGoverns(root, inside, submodules)) continue;
+        const governed = anyAncestorGoverns(root, inside, submodules);
+        if (governed.kind === "yes") {
+          selfGoverned.push({
+            where: relative(root, path),
+            why: governed.why,
+            files: walkProject(path).files.length,
+          });
+          continue;
+        }
         walkDirectory(path, rootReal);
         continue;
       }
@@ -146,10 +178,10 @@ export function walkProject(root: string): Walked {
 
   const rootReal = realOf(root);
   if (rootReal.kind === "unknown") {
-    return { files: [], unreadable: [`${root} (${rootReal.why})`] };
+    return { files: [], unreadable: [`${root} (${rootReal.why})`], selfGoverned: [] };
   }
   walkDirectory(root, rootReal.path);
-  return { files: found, unreadable };
+  return { files: found, unreadable, selfGoverned };
 }
 
 export function judgedFiles(root: string): readonly string[] {
@@ -165,7 +197,11 @@ function reached(root: string, reach: Reach): Walked {
   const tracked = trackedFiles(root);
   if (tracked.kind === "unavailable") return walked;
   const known = new Set(tracked.paths.map((path) => join(root, path)));
-  return { files: walked.files.filter((path) => known.has(path)), unreadable: walked.unreadable };
+  return {
+    files: walked.files.filter((path) => known.has(path)),
+    unreadable: walked.unreadable,
+    selfGoverned: walked.selfGoverned,
+  };
 }
 
 export type RustSaid = { readonly violations: readonly Violation[]; readonly unreadable: readonly string[] };
@@ -357,5 +393,5 @@ export function surveyProject(root: string, reach: Reach, only: readonly string[
     );
   }
 
-  return { violations, files: files.length, unreadable };
+  return { violations, files: files.length, unreadable, selfGoverned: walked.selfGoverned };
 }

@@ -981,6 +981,20 @@ Both apply to the walk, the edit gate and the commit gate together. An exclusion
 only the survey honours would leave every edit inside the excluded tree still
 refused, which is the failure wearing a different hat.
 
+**And both are said out loud. Corrected 2026-08-18, from adopter issue #28.** The
+first version took any `law.toml` as the declaration, including an empty one, and
+said nothing about it — so `touch law.toml` removed a directory from the law at
+the sweep and at the gate, and `looper status` reported nothing left to fix. That
+is broader than all three graded concessions — every rule, every file, one
+directory, forever — and the quietest thing anybody can write, with no line in a
+diff to argue with.
+
+A file with nothing in it is now not a declaration: the nested `law.toml` has to
+say something, or the directory is judged like any other. And `looper law` and
+`looper status` name every directory that governs itself, why, and how many files
+that covers, because self-governed and unjudged are indistinguishable from
+outside unless the tool says which is which.
+
 ### The baseline, because an existing repo starts non-compliant
 
 Point the slow pass at a real codebase written before looper existed and it will

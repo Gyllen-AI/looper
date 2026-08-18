@@ -10,7 +10,7 @@ import { trackedFiles } from "./git.ts";
 import { relative } from "node:path";
 import { isHookEvent, type Payload } from "./capability.ts";
 import { DEV, INJECTION_BUDGET, namedProject, projectRoot, searchPath, type Invocation } from "./config.ts";
-import { describeStep } from "./announce.ts";
+import { costLines, describeStep, mapComplaints } from "./announce.ts";
 import { reachedFrom, runInit, type Report, type Step } from "./init.ts";
 import { totalIn, readBaseline } from "./law/baseline.ts";
 import { formatReport } from "./law/report.ts";
@@ -108,38 +108,14 @@ function inject(): number {
 
 const DOCTRINE_PREFIX = "doctrine:";
 
+const NOTHING_NAMED: readonly string[] = [];
+
 function here(): string {
   return projectRoot(process.cwd(), namedProject()).root;
 }
 
-function halvesOf(source: string): string {
-  if (!source.startsWith(DOCTRINE_PREFIX)) return "";
-  const name = source.slice(DOCTRINE_PREFIX.length);
-  const canon = canonBranch(name);
-  const mine = readProjectBranch(here(), name);
-  const ours = canon.kind === "found" ? canon.body.length : 0;
-  const yours = mine.kind === "present" ? mine.text.length : 0;
-  if (yours === 0) return "   all of it looper's";
-  if (ours === 0) return "   all of it yours";
-  return `   looper ${ours}, yours ${yours}`;
-}
 
-function costLines(weighed: readonly Weighed[]): readonly string[] {
-  return weighed.map(
-    (held) => `    ${String(held.chars).padStart(6)}  ${held.source}${halvesOf(held.source)}`,
-  );
-}
 
-function mapComplaints(): readonly string[] {
-  const map = readMap(here());
-  if (map.kind === "absent") return [];
-  const tracked = trackedFiles(here());
-  const files = tracked.kind === "unavailable" ? [] : tracked.paths;
-  const said = unheardIn(map.governs, listBranches(here()), (globs) =>
-    files.length === 0 || files.some((file) => globs.some((glob) => matches(glob, file))),
-  );
-  return said.map((held) => `  ${held.branch} governs nothing that arrives: ${held.why}`);
-}
 
 function status(): number {
   const allocation = currentAllocation();
@@ -152,11 +128,18 @@ function status(): number {
     `  injection budget   ${INJECTION_BUDGET} chars`,
     `  used this turn     ${allocation.chars} chars`,
     `  contributors`,
-    ...costLines(allocation.weighed),
+    ...costLines(here(), allocation.weighed),
     `  dropped            ${describeList(allocation.dropped)}`,
     `  left to fix        ${outstanding === 0 ? "nothing" : `${outstanding} from before looper arrived`}`,
   ];
-  const unheard = mapComplaints();
+  const governed = surveyProject(here(), "everything", NOTHING_NAMED).selfGoverned;
+  if (governed.length > 0) {
+    lines.push(`  governs itself`);
+    for (const held of governed) {
+      lines.push(`    ${held.where} — ${held.why}, ${held.files} file(s) not judged here`);
+    }
+  }
+  const unheard = mapComplaints(here());
   if (unheard.length > 0) {
     lines.push(`  rule sets that will never arrive`, ...unheard);
   }
@@ -236,6 +219,11 @@ function law(asked: readonly string[]): number {
   const survey = surveyProject(here(), "everything", asked);
   for (const named of survey.unreadable) {
     console.error(`looper: could not read ${named}; it was not judged`);
+  }
+  for (const held of survey.selfGoverned) {
+    console.error(
+      `looper: ${held.where} governs itself (${held.why}), so its ${held.files} file(s) were not judged here`,
+    );
   }
   const forgiven = totalIn(readBaseline(here()));
   if (survey.files === 0) {

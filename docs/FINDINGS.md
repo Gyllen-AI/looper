@@ -22,7 +22,7 @@ is a suspicion and belongs in the notes at the bottom, not in the list.
 
 ## Open
 
-_Empty. Every pass of both audits is closed, and findings 41 to 65 with them._
+_Empty. Every pass of both audits is closed, and findings 41 to 66 with them._
 
 ## The second audit — what it covered and what it found
 
@@ -68,6 +68,25 @@ tested, and every one was tested the way it was built rather than the way it
 will be used.
 
 ## Cleared
+
+### 66 · `wrong` — one empty file removed a directory from the law, in silence — cleared
+
+Adopter issue #28. `underAnotherLaw` treated any `law.toml` as a nested project
+governing itself, including an empty one, and said nothing. Their measurement: two
+sinful files judged, then `: > src/legacy/law.toml`, then one judged — the
+directory gone from the sweep, gone from the commit gate, and `looper status`
+reporting nothing left to fix.
+
+Their framing is what makes this a defect rather than a feature: the README grades
+the three ways out — a pardon, a knob, off — and this was broader than all of them
+and quieter than any of them, with no line in a diff to argue with. Undocumented
+anywhere, too.
+
+Two changes, and neither removes the behaviour, which is right and is what makes
+a submodule work. An empty file is no longer a declaration: the nested `law.toml`
+must say something. And `looper law` and `looper status` name every directory that
+governs itself, why, and how many files it covers — because self-governed and
+unjudged are indistinguishable from outside unless the tool says which is which.
 
 ### 65 · `wrong` — two notes written at once, one note kept — cleared
 
