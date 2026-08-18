@@ -72,6 +72,17 @@ pub fn or_cases(pat: &syn::Pat) -> Vec<&syn::Pat> {
     }
 }
 
+pub fn path_is_option_none(path: &syn::Path) -> bool {
+    if path_last(path) != "None" {
+        return false;
+    }
+    let segs = path_segs(path);
+    if segs.len() == 1 {
+        return true;
+    }
+    matches!(segs.get(segs.len() - 2), Some(owner) if owner == "Option")
+}
+
 pub fn pat_is_none(pat: &syn::Pat) -> bool {
     match pat {
         syn::Pat::Ident(pi) => {
@@ -80,9 +91,59 @@ pub fn pat_is_none(pat: &syn::Pat) -> bool {
             };
             false
         }
-        syn::Pat::Path(pp) => path_last(&pp.path) == "None",
+        syn::Pat::Path(pp) => path_is_option_none(&pp.path),
         _ => false,
     }
+}
+
+pub fn path_is_fallible_family(path: &syn::Path, family: &[&str]) -> bool {
+    let segs = path_segs(path);
+    if segs.len() < 2 {
+        return false;
+    }
+    let Some(owner) = segs.get(segs.len() - 2) else {
+        return false;
+    };
+    if owner != "Option" && owner != "Result" {
+        return false;
+    }
+    family.contains(&path_last(path).as_str())
+}
+
+const EMPTY_STRING_MAKERS: &[&str] = &["to_string", "to_owned", "into"];
+
+pub fn expr_is_empty_string(expr: &syn::Expr) -> bool {
+    match expr {
+        syn::Expr::MethodCall(mc) => {
+            if !EMPTY_STRING_MAKERS.contains(&mc.method.to_string().as_str()) {
+                return false;
+            }
+            expr_is_empty_literal(&mc.receiver)
+        }
+        syn::Expr::Call(c) => {
+            let syn::Expr::Path(p) = &*c.func else {
+                return false;
+            };
+            let segs = path_segs(&p.path);
+            let from_string = path_last(&p.path) == "from"
+                && matches!(segs.get(segs.len().saturating_sub(2)), Some(owner) if owner == "String");
+            if !from_string {
+                return false;
+            }
+            matches!(c.args.first(), Some(arg) if expr_is_empty_literal(arg))
+        }
+        _ => false,
+    }
+}
+
+fn expr_is_empty_literal(expr: &syn::Expr) -> bool {
+    let syn::Expr::Lit(lit) = expr else {
+        return false;
+    };
+    let syn::Lit::Str(text) = &lit.lit else {
+        return false;
+    };
+    text.value().is_empty()
 }
 
 pub fn pat_mentions_ctor(pat: &syn::Pat, ctor: &str) -> bool {
@@ -255,6 +316,7 @@ pub fn tail_is_stub(expr: &syn::Expr) -> bool {
         syn::Expr::Group(g) => tail_is_stub(&g.expr),
         syn::Expr::Lit(_) => true,
         syn::Expr::Tuple(t) => t.elems.is_empty(),
+        syn::Expr::MethodCall(_) => expr_is_empty_string(expr),
         syn::Expr::Path(p) => path_last(&p.path) == "None",
         syn::Expr::Call(c) => call_is_stub(c),
         syn::Expr::Macro(m) => path_last(&m.mac.path) == "vec" && m.mac.tokens.is_empty(),
@@ -438,11 +500,25 @@ pub fn flatten_use(tree: &syn::UseTree, prefix: Vec<String>, out: &mut Vec<UsePa
     }
 }
 
+fn owned_by_another_type(trees: &[TokenTree], idx: usize) -> bool {
+    let separated = idx >= 2
+        && matches!(&trees[idx - 1], TokenTree::Punct(p) if p.as_char() == ':')
+        && matches!(&trees[idx - 2], TokenTree::Punct(p) if p.as_char() == ':');
+    if !separated || idx < 3 {
+        return false;
+    }
+    matches!(&trees[idx - 3], TokenTree::Ident(owner) if owner.to_string() != "Option")
+}
+
 pub fn tokens_contain_fallible_ctor(tokens: TokenStream) -> bool {
-    for tree in tokens {
+    let trees: Vec<TokenTree> = tokens.into_iter().collect();
+    for (idx, tree) in trees.iter().enumerate() {
         match tree {
             TokenTree::Ident(ident) => {
                 let name = ident.to_string();
+                if name == "None" && owned_by_another_type(&trees, idx) {
+                    continue;
+                }
                 if name == "Some" || name == "Ok" || name == "Err" || name == "None" {
                     return true;
                 }

@@ -66,9 +66,8 @@ directory is outside the law by default — it holds somebody else's code — an
 that file is inside it only because it has to compile with the crate. A test
 judges it anyway.
 
-**What it does not catch yet.** Found by the audit of 2026-08-17 and by an
-adopter on 2026-08-18. These are open work, listed in `docs/FINDINGS.md` like any
-other defect in what looper enforces:
+**What it used to miss, fixed here on 2026-08-18.** Found by the audit of
+2026-08-17, and left alone while this was somebody else's copy:
 
 - `Err(_) => "".to_string()` — `ERROR:3` names `String::new()` and an empty
   collection; this is the same empty string, built differently.
@@ -82,8 +81,12 @@ other defect in what looper enforces:
   `Option::None`. A syntax-only reader cannot tell one `None` from another, and
   this fires toward strictness.
 
-The last three are rare enough in real Rust to argue about. The first two are
-one word from a spelling the rule already catches.
+All five are closed — see finding 70. The fifth was not a miss at all but a
+false positive: `ERROR:1` read every type's `None` variant as `Option::None`,
+which on 40 crates from a cargo registry was 37 wrong verdicts, in `syn`,
+`chrono`, `serde_derive` and others. A `None` is Option's when it stands alone
+or is written `Option::None`, and that is now what both the typed reader and the
+token scan check.
 
 **Four rules that were blind inside a macro argument — fixed here, 2026-08-18.**
 `TYPE:4` (`as`), `TRUTH:2` (`std::env`), `DEAD:3` (`todo!`) and `LAYER:2` (a

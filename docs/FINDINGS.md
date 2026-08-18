@@ -22,24 +22,7 @@ is a suspicion and belongs in the notes at the bottom, not in the list.
 
 ## Open
 
-**Five gaps in the Rust engine, ours since 2026-08-18.** They were filed as
-upstream's and are not: see finding 36. The four macro blind spots from adopter
-issue #19 are closed — finding 69. These five remain, all from the audit of
-2026-08-17:
-
-- `Err(_) => "".to_string()` — `ERROR:3` names `String::new()` and an empty
-  collection; this is the same empty string, built differently.
-- `panic!("not implemented yet")` — `DEAD:3` names `todo!`, and this is the same
-  half-built code that compiles. Narrower than banning every `panic!`, which
-  `ERROR:4` permits as the crash door.
-- `let g = Option::unwrap; g(x)` — `ERROR:1` reads the method, not an alias.
-- `Command::new("printenv")` — `TRUTH:2` names `std::env`, not the environment
-  reached through a subprocess.
-- `x == Delimiter::None` read as `Option::None` — this one fires where it should
-  not, which makes it the most urgent of the five.
-
-Each wants cases in `audit/rust-cases.ts` before it wants code, which is the
-order `CONTRIBUTING.md` sets out.
+_Empty. Findings 41 to 70 are closed, and the nine engine gaps with them._
 
 ## The second audit — what it covered and what it found
 
@@ -85,6 +68,30 @@ tested, and every one was tested the way it was built rather than the way it
 will be used.
 
 ## Cleared
+
+### 70 · the last five engine gaps, and thirty-seven false positives nobody had counted — cleared
+
+The five that came out of the audit of 2026-08-17, fixed 2026-08-18 now that this
+copy is ours. Cases first, nine of them including the traps:
+
+- `x == Delimiter::None` fired as though it were `Option::None`. A `None` is
+  Option's only when it stands alone or is written `Option::None`; any other
+  owner is a different type's variant. Fixed in the typed reader and again in the
+  token scan, because `matches!(d, Delimiter::None)` reaches the second one.
+- `Err(_) => "".to_string()` now reads as the empty string it is, along with
+  `String::from("")` and `.to_owned()`.
+- `panic!("not implemented yet")` joins `todo!`. A panic that names a real
+  failure is still the crash door and stays silent.
+- `let g = Option::unwrap; g(v)` — the family reached as a path rather than a
+  method, which also catches `Option::is_some` handed to `.any()`.
+- `Command::new("printenv")` is an environment read; `Command::new("git")` is not.
+
+**Measured on 40 crates from `~/.cargo/registry`, 2,538 files, before this week
+and after: 197 hits started, 37 stopped.** The 37 are the finding nobody had
+counted — every one read by hand is another type's `None`: `syn::PathArguments::None`,
+`State::None`, `attr::Default::None`, `MappedLocalTime::None`. That rule had been
+wrong on real code all along, and the only reason it was listed as "fires toward
+strictness" is that nobody had looked at what it fired on.
 
 ### 69 · `wrong` — four rules went blind one character inside a macro — cleared
 

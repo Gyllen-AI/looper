@@ -11,6 +11,7 @@ use crate::patterns::{
     attrs_of, err_bindings, expr_is_fallible_ctor, expr_is_fallible_source, expr_is_place,
     flatten_use, ident_is_discard, ident_is_mangle, is_test_marker, last_is, meta_tokens, or_cases,
     pat_contains_wild, pat_is_bare_binding, pat_is_none, pat_mentions_ctor, pat_mentions_fallible,
+    path_is_fallible_family,
     path_last, path_segs, scan_tokens_for_banned, scan_tokens_for_calls, scan_tokens_for_environ,
     scan_tokens_for_casts, scan_tokens_for_env_calls, scan_tokens_for_macros,
     scan_tokens_for_mangle, scan_tokens_for_names, scan_tokens_for_paths, tail_diverges,
@@ -62,6 +63,10 @@ const ENV_MACROS: &[&str] = &["env", "option_env"];
 const LAYER_ROOTS: &[&str] = &["crate", "self", "super"];
 
 const HALF_BUILT_MACROS: &[&str] = &["todo", "unimplemented", "unreachable"];
+
+const HALF_BUILT_WORDS: &[&str] = &["not implemented", "unimplemented", "not yet implemented", "todo"];
+
+const ENV_PROGRAMS: &[&str] = &["printenv", "env"];
 
 pub struct Judge<'c> {
     cfg: &'c LawConfig,
@@ -281,6 +286,7 @@ impl<'c> Judge<'c> {
             self.hit(Rule::SilentMangle, line);
         }
         self.scan_macro_environ(node);
+        self.check_half_built_panic(node);
 
         let mut casts = Vec::new();
         scan_tokens_for_casts(node.tokens.clone(), &mut casts);
@@ -312,6 +318,42 @@ impl<'c> Judge<'c> {
         for line in crashes {
             self.hit(Rule::CaughtCrash, line);
         }
+    }
+
+    fn check_env_program(&mut self, node: &syn::ExprCall) {
+        if self.env_allowed {
+            return;
+        }
+        let syn::Expr::Path(ep) = &*node.func else {
+            return;
+        };
+        if path_last(&ep.path) != "new" {
+            return;
+        }
+        if !path_segs(&ep.path).iter().any(|s| s == "Command") {
+            return;
+        }
+        let Some(syn::Expr::Lit(lit)) = node.args.first() else {
+            return;
+        };
+        let syn::Lit::Str(named) = &lit.lit else {
+            return;
+        };
+        if !ENV_PROGRAMS.contains(&named.value().as_str()) {
+            return;
+        }
+        self.hit(Rule::EnvOutsideSanctum, callee_line(&ep.path));
+    }
+
+    fn check_half_built_panic(&mut self, node: &syn::Macro) {
+        if path_last(&node.path) != "panic" {
+            return;
+        }
+        let said = node.tokens.to_string().to_lowercase();
+        if !HALF_BUILT_WORDS.iter().any(|word| said.contains(word)) {
+            return;
+        }
+        self.hit(Rule::Unfinished, node.path.segments[0].ident.span().start().line);
     }
 
     fn scan_macro_environ(&mut self, node: &syn::Macro) {
@@ -532,7 +574,15 @@ impl<'ast, 'c> Visit<'ast> for Judge<'c> {
         syn::visit::visit_expr_method_call(self, node);
     }
 
+    fn visit_expr_path(&mut self, node: &'ast syn::ExprPath) {
+        if path_is_fallible_family(&node.path, BANNED_METHODS) {
+            self.hit(Rule::SilentOp, callee_line(&node.path));
+        }
+        syn::visit::visit_expr_path(self, node);
+    }
+
     fn visit_expr_call(&mut self, node: &'ast syn::ExprCall) {
+        self.check_env_program(node);
         if let syn::Expr::Path(ep) = &*node.func {
             let line = callee_line(&ep.path);
             let segs = path_segs(&ep.path);

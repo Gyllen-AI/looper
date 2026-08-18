@@ -325,9 +325,13 @@ test("a Python virtualenv is not walked, and says nothing about the aliases insi
   try {
     mkdirSync(join(root, "src"), { recursive: true });
     writeFileSync(join(root, "src/a.ts"), "export const a = 1;\n");
-    // what every Python venv on Linux looks like: lib64 is another name for lib
-    mkdirSync(join(root, ".venv", "lib"), { recursive: true });
-    symlinkSync("lib", join(root, ".venv", "lib64"), "dir");
+    const asEveryVenvOnLinuxIsBuilt = { lib: "lib", anotherNameForIt: "lib64" };
+    mkdirSync(join(root, ".venv", asEveryVenvOnLinuxIsBuilt.lib), { recursive: true });
+    symlinkSync(
+      asEveryVenvOnLinuxIsBuilt.lib,
+      join(root, ".venv", asEveryVenvOnLinuxIsBuilt.anotherNameForIt),
+      "dir",
+    );
     writeFileSync(join(root, ".venv", "lib", "vendored.ts"), "export const v = 1;\n");
 
     const survey = surveyProject(root, "everything", EVERYTHING);
