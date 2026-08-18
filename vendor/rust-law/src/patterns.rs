@@ -626,6 +626,19 @@ pub fn scan_tokens_for_environ(tokens: TokenStream, out: &mut Vec<usize>) {
     }
 }
 
+const NUMERIC_TARGETS: &[&str] = &[
+    "u8", "u16", "u32", "u64", "u128", "usize", "i8", "i16", "i32", "i64", "i128", "isize", "f32",
+    "f64", "_",
+];
+
+fn narrows_a_number(trees: &[TokenTree], idx: usize) -> bool {
+    match trees.get(idx + 1) {
+        Some(TokenTree::Ident(target)) => NUMERIC_TARGETS.contains(&target.to_string().as_str()),
+        Some(TokenTree::Punct(punct)) => punct.as_char() == '*',
+        _ => false,
+    }
+}
+
 pub fn scan_tokens_for_casts(tokens: TokenStream, out: &mut Vec<usize>) {
     let trees: Vec<TokenTree> = tokens.into_iter().collect();
     if starts_a_use(&trees) {
@@ -640,6 +653,9 @@ pub fn scan_tokens_for_casts(tokens: TokenStream, out: &mut Vec<usize>) {
             continue;
         };
         if ident.to_string() != "as" {
+            continue;
+        }
+        if !narrows_a_number(&trees, idx) {
             continue;
         }
         out.push(ident.span().start().line);
