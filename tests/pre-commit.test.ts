@@ -169,3 +169,25 @@ test("a Rust file at the commit gate is judged as Rust, not as unreadable TypeSc
     rmSync(root, { recursive: true, force: true });
   }
 });
+
+const UNPARSEABLE_RUST = "pub fn wrong( -> u8 {\n    let x = ;\n}\n";
+
+test("a crate the Rust half cannot read is said out loud, not passed in silence", () => {
+  const root = startedRust();
+  try {
+    writeFileSync(join(root, "src/broken.rs"), UNPARSEABLE_RUST);
+    git(root, "add", "-A");
+    git(root, "commit", "-qm", "a file nothing can parse");
+
+    writeFileSync(join(root, "src/mine.rs"), SINFUL_RUST);
+    git(root, "add", "src/mine.rs");
+
+    const said = verdictOn(root);
+    assert.equal(said.kind, "mention");
+    if (said.kind !== "mention") return;
+    assert.ok(said.note.includes("src/broken.rs"));
+    assert.ok(said.note.includes("not judged at all"));
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});

@@ -1,5 +1,6 @@
 import { NOT_A_WAY_THROUGH, RUST_EXTENSION } from "../config.ts";
 import { judgeRustIn } from "./project.ts";
+import { rustRuleFor } from "./rust/rules.ts";
 import { roleOf, shapeOf } from "./shape.ts";
 import { existsSync, readFileSync } from "node:fs";
 import { relative, resolve } from "node:path";
@@ -124,6 +125,11 @@ export function aboutToCommit(payload: string): boolean {
   return intentOf(typed.text).kind === "commit";
 }
 
+function isUnreadableRust(violation: Violation): boolean {
+  const known = rustRuleFor("ERROR:9");
+  return known.kind === "known" && violation.rule.id === known.rule.id;
+}
+
 type Split = {
   readonly yours: readonly Violation[];
   readonly older: readonly Violation[];
@@ -151,6 +157,14 @@ function separate(
     older.push(violation);
   }
   return { yours, older };
+}
+
+function wentUnjudged(blinding: readonly string[], staged: readonly string[]): string {
+  return [
+    `looper: ${blinding.join("; ")}, so the Rust half could not read that crate.`,
+    `The ${staged.length} Rust file(s) staged here were not judged at all, which is not the same as being clean.`,
+    "Nothing is blocked. Fix what the reader names and they can be seen again.",
+  ].join(" ");
 }
 
 function alsoHere(older: readonly Violation[]): string {
@@ -192,9 +206,15 @@ export function judgeStaged(root: string): Outcome {
   const inRust = judged.filter((path) => path.endsWith(RUST_EXTENSION));
   const stagedRust = new Set(inRust);
   const rustSaid = judgeRustIn(root, inRust.map((path) => resolve(root, path)));
+  const blinding: string[] = [...rustSaid.unreadable];
   for (const violation of rustSaid.violations) {
-    if (!stagedRust.has(violation.file)) continue;
-    keep(violation, violation.file);
+    if (stagedRust.has(violation.file)) {
+      keep(violation, violation.file);
+      continue;
+    }
+    if (isUnreadableRust(violation)) {
+      blinding.push(`${violation.file} cannot be read as Rust`);
+    }
   }
 
   for (const path of judged) {
@@ -212,7 +232,10 @@ export function judgeStaged(root: string): Outcome {
     for (const violation of found) keep(violation, path);
   }
 
-  if (violations.length === 0) return { kind: "pass" };
+  if (violations.length === 0) {
+    if (blinding.length > 0) return { kind: "mention", note: wentUnjudged(blinding, inRust) };
+    return { kind: "pass" };
+  }
   return {
     kind: "block",
     reason: `${formatReport(violations, "some-new")}\nNothing was committed.\n\n${NOT_A_WAY_THROUGH}`,

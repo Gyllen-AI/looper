@@ -964,6 +964,14 @@ judges a crate at a time and names its hits crate-relative, so the gate passes t
 staged paths in for naming and then keeps only the hits that belong to them, which
 is what the edit gate already does. `tests/pre-commit.test.ts` holds it.
 
+When the Rust half cannot read the crate at all, the gate says so instead of
+passing quietly. The engine judges a crate at a time, so one unparseable file
+blinds it for every other file in that crate; the staged files are then not
+clean, they are unjudged, and those are different. The gate passes (it must not
+wedge a commit over somebody else's broken file) and names the file the reader
+choked on and how many staged files went unjudged. Measured 2026-08-18: without
+this, a staged file containing `v.unwrap()` passed in silence.
+
 One property this does not have: the Rust half reads files from disk, not the
 staged content, because the engine is a separate program that opens paths. A file
 staged and then edited further is judged as it is on disk. The TypeScript half
