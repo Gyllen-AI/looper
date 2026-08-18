@@ -149,7 +149,7 @@ the corresponding violation.
 helpers. Two tests, both failing before: the staged text equals the file on disk,
 and the gate names the line the problem is actually on.
 
-### 99 · `missing` — `looper report` refused the line it was most needed for — cleared for two of three languages
+### 99 · `missing` — `looper report` refused the line it was most needed for — cleared
 
 2026-08-18. Found while trying to reproduce adopter issue #44, which could not be
 reproduced without the adopter's staged blob and baseline — neither of which may
@@ -187,13 +187,36 @@ Nothing begins on the line the rule named. The shape below is the statement
 that contains it, which begins at line 2.
 ```
 
-**Two of three languages.** TypeScript and Python are done and each has a failing
-test from before the change; Python's reader carries `startsAt` back through the
-payload. Rust is not: `skeleton.rs` finds tokens *on* the line rather than a node
-beginning there, so its refusal has a different cause and its fix is different
-surgery in vendored code. Filed rather than rushed. This is knowingly the same
-asymmetry finding 93's successor closed in the other direction, and it is named
-here so it is not discovered as a surprise.
+**All three languages, the third finished later the same day.** TypeScript and
+Python went first, each with a test that failed before the change; Python's reader
+carries `startsAt` back through the payload.
+
+Rust took a different fix, which is why it was filed as issue #58 rather than
+rushed into the same change. `skeleton.rs` collects tokens that *start* on the
+line and refuses when there are none, so its cause was never "no node begins
+here". `shape_at` now asks `syn` which item contains the line, re-reads that
+item's own first line, and answers with `startsAt` set to it. The Rust binary
+carries the field out through its JSON, where `shapeFrom` already knew how to read
+it.
+
+Rust also has a different shape of line that begins nothing: a method chain
+continues with `.filter(...)`, which *does* start tokens, so it is a `found` and
+always was. The line that begins nothing in Rust is a blank one inside an item —
+which is what the test uses, and what the first version of that test got wrong.
+
+**Measured, on the command an adopter runs:**
+
+```
+$ looper report --rule RUST-TYPE:4 --file src/totals.rs --line 3 --tried "..."
+
+## Line 3 starts no statement
+Nothing begins on the line the rule named. The shape below is the statement
+that contains it, which begins at line 1.
+```
+
+The test fails without the change and passes with it, checked in both directions
+with the engine rebuilt each time: 18 pass 1 fail, then 19 pass 0 fail. A line
+beyond the end of the file is still refused, and that test is unchanged.
 
 ### 98 · `missing` — JavaScript entered a governed project and nothing saw it — cleared
 
