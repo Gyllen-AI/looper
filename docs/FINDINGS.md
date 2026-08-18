@@ -22,7 +22,52 @@ is a suspicion and belongs in the notes at the bottom, not in the list.
 
 ## Open
 
-_Empty. Findings 41 to 83 are closed._
+_Empty. Findings 41 to 84 are closed._
+
+### 84 · the failure raised without a name, and the seventh rule closing the set — cleared
+
+2026-08-18. `raise Exception("something went wrong")` names no failure at all.
+The only way to catch it on purpose is `except Exception`, which catches every
+other failure in the program at the same time, so the caller cannot retry the one
+worth retrying or report the one a person could fix. The message in the brackets
+is readable by a human and by nothing else.
+
+**This is where the stricter-reading tie-break did not apply, and saying so
+matters.** Two readings were available: `Exception` and `BaseException` alone, or
+`RuntimeError` with them. Measured before choosing: `raise Exception` appears
+twice in 167 files of the standard library and not once in 176 files of the
+adopting project, while `RuntimeError` appears 54 and 29 times. The tie-break
+reads "where two readings are defensible" — and these are not equally so. The
+harm named is that nothing downstream can act on the failure differently. That is
+exactly true of `Exception` and not true of `RuntimeError`, which a caller can
+catch on its own. The narrow reading is the accurate one, not the weaker one.
+
+Nine cases first, and three of them guard the boundary: `Exception` as a **base
+class** is how a named exception is made and stays silent; `except Exception` is
+catching rather than raising and stays silent; a bare `raise` keeps whatever it
+already was.
+
+Both of the standard library's hits are the shape — `raise Exception('verify:
+unknown type %r')` in `enum.py`, and one in `inspect.py` — each a "this should
+never happen" that a named class would say better. Zero in the adopting project.
+It is the quietest of the seven on mature code, and that is the point: its value
+is on code being written now, where `raise Exception(...)` is what gets typed
+first.
+
+**All seven Python rules are built.** Across 167 files of Python's own standard
+library and 176 hand-written files of an adopting project, nothing was unreadable
+at any point, and every rule was judged against code nobody here wrote before it
+counted as done.
+
+| rule | standard library | adopting project |
+|---|---|---|
+| `PY-ERROR:1` swallowed error | 348 | 51 |
+| `PY-ERROR:2` made-up answer | 147 | 63 |
+| `PY-ERROR:3` failure with no name | 2 | 0 |
+| `PY-TRUTH:1` mutable default | 23 | 0 |
+| `PY-TRUTH:2` `assert` outside tests | 206 | 4 |
+| `PY-TYPE:1` silenced checker | 1 | 8 |
+| `PY-LAYER:1` star import | 23 | 0 |
 
 ### 83 · the star import, and the standard library demonstrating why — cleared
 

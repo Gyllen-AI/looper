@@ -16,6 +16,10 @@ SILENCED_CHECKER = "PY-TYPE:1"
 
 LAUNDERED_NAMESPACE = "PY-LAYER:1"
 
+UNNAMED_FAILURE = "PY-ERROR:3"
+
+SAYS_NOTHING = frozenset({"Exception", "BaseException"})
+
 MUTABLE_BUILDERS = frozenset(
     {"list", "dict", "set", "bytearray", "defaultdict", "Counter", "deque", "OrderedDict"}
 )
@@ -123,6 +127,13 @@ def defaults_of(node):
 def violations_in(tree, in_a_test_file):
     found = []
     for node in ast.walk(tree):
+        if isinstance(node, ast.Raise):
+            thrown = node.exc
+            if isinstance(thrown, ast.Call):
+                thrown = thrown.func
+            if isinstance(thrown, ast.Name) and thrown.id in SAYS_NOTHING:
+                found.append({"rule": UNNAMED_FAILURE, "line": node.lineno})
+            continue
         if isinstance(node, ast.ImportFrom):
             if any(alias.name == "*" for alias in node.names):
                 found.append({"rule": LAUNDERED_NAMESPACE, "line": node.lineno})

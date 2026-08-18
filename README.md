@@ -44,15 +44,14 @@ A project with both is not confused by it. looper works out from what is on
 disk which half is the backend and which is the interface, and a rule about
 database queries never fires on a user interface that has no database.
 
-**Python, six rules so far.** A `.py` file is read with Python's own parser — no
+**Python, seven rules.** A `.py` file is read with Python's own parser — no
 extra install, only `python3` on the machine — and judged by `PY-ERROR:1`, the
 swallowed error, `PY-ERROR:2`, the made-up answer that hides it, `PY-TRUTH:1`,
 the mutable default argument, `PY-TRUTH:2`, `assert` used where `python -O` will
-delete it, `PY-TYPE:1`, the silenced type checker, and `PY-LAYER:1`, the star
-import.
-[STACK.md](STACK.md) prescribes the rest of the Python stack and `docs/PLAN.md`
-names the last rule, which is not written yet. Nothing pretends
-otherwise.
+delete it, `PY-TYPE:1`, the silenced type checker, `PY-LAYER:1`, the star import,
+and `PY-ERROR:3`, the failure raised without a name.
+[STACK.md](STACK.md) prescribes the rest of the Python stack, and every rule
+`docs/PLAN.md` names for Python is now built.
 
 ## When a rule is wrong
 

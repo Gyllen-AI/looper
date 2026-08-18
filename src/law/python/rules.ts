@@ -90,4 +90,19 @@ export const PYTHON_RULES: readonly Rule[] = [
     ],
     valve: { kind: "none" },
   },
+  {
+    id: "PY-ERROR:3",
+    category: "ERROR",
+    pass: "fast",
+    bans: "`raise Exception(...)` and `raise BaseException(...)`, which name no failure at all",
+    why:
+      "the only way to catch this on purpose is `except Exception`, which catches every other failure in the program at the same time — including the ones you meant to let through. So the caller cannot retry the one that is worth retrying, or report the one the person can fix, and the message in the brackets is readable by a human and by nothing else. A name is what lets code downstream tell one failure from another",
+    instead: [
+      "a class of your own, one per failure: `class AmountNotPositive(Exception): pass` then `raise AmountNotPositive(amount)`",
+      "a built-in that already names this kind: `raise ValueError(\"amount must be positive\")`, `raise KeyError(name)`",
+      "keeping the cause when you rename it: `raise CouldNotRead(path) from error`",
+      "`Exception` as a base class is how a named one is made, and this rule says nothing about that",
+    ],
+    valve: { kind: "none" },
+  },
 ];

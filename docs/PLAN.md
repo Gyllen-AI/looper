@@ -2761,13 +2761,14 @@ the server it runs under is Uvicorn.
 
 ### The rules, named before they are written
 
-Seven, taken from the failure shapes this document already listed. Six are built:
+Seven, taken from the failure shapes this document already listed. All seven are
+built, as of 2026-08-18:
 
 | rule | bans | state |
 |---|---|---|
 | `PY-ERROR:1` | a bare `except:`, and an `except` whose body does nothing — `pass` or `...` | built 2026-08-18 |
 | `PY-ERROR:2` | answering a failure with a made-up value inside an `except` | built 2026-08-18 |
-| `PY-ERROR:3` | `raise Exception(...)` where a named class belongs | **not built yet** |
+| `PY-ERROR:3` | `raise Exception(...)` and `raise BaseException(...)` | built 2026-08-18 |
 | `PY-TYPE:1` | `# type: ignore` on a line, `# mypy: ignore-errors` on a file | built 2026-08-18 |
 | `PY-TRUTH:1` | a default argument that is a mutable container | built 2026-08-18 |
 | `PY-TRUTH:2` | `assert` outside a test file, whatever it is checking | built 2026-08-18 |
@@ -2779,9 +2780,10 @@ when the interpreter is asked to optimise. A validation written with it works in
 every test and is absent in production, which is the exact shape of failure this
 whole document exists to refuse.
 
-They ship one at a time, cases first from each ban text, and each run over real
-Python nobody here wrote before it counts as done. Naming all seven now is not a
-promise to build all seven; it is so that the gap is visible while it is open.
+They shipped one at a time, cases first from each ban text, and each run over real
+Python nobody here wrote before it counted as done. Naming all seven up front was
+not a promise to build all seven; it was so the gap stayed visible while it was
+open. It was open for a few hours, and the record of each is below.
 
 `PY-ERROR:1` went first because it is the shape with the least room to argue and
 the clearest legal spelling. Twelve cases, then the reader, then two corpora
@@ -2872,6 +2874,24 @@ happens and why nothing anywhere can say where a name came from. CPython does it
 deliberately and can defend it; the point is that the shape is indefensible
 anywhere it is not deliberate, and there is no way to tell those apart by reading
 the file.
+
+`PY-ERROR:3` closed the set, and it is where the stricter-reading rule did not
+apply. Two readings were available: ban `Exception` and `BaseException`, or ban
+`RuntimeError` with them. Measured first: `raise Exception` appears twice in 167
+files of the standard library and not once in 176 files of the adopting project,
+while `RuntimeError` appears 54 and 29 times. The tie-break says take the
+stricter reading **where two are defensible**, and here they are not equally so.
+The harm this rule names is that nothing downstream can act on the failure
+differently, and that is exactly true of `Exception` — catching it catches every
+other failure in the program — and not true of `RuntimeError`, which a caller can
+catch on its own. The narrow reading is the accurate one rather than the weaker
+one, and saying which of those it is matters more than the count.
+
+Both of the standard library's are the shape: `raise Exception('verify: unknown
+type %r')` in `enum.py` and one in `inspect.py`, each a "this should never
+happen" that a named class would say better. This is the quietest rule of the
+seven on mature code, and that is the point — its value is on code being written
+now, where `raise Exception("something went wrong")` is what gets typed first.
 
 What `PY-TRUTH:1` deliberately does not do is fire on every call in a default position.
 `def f(t=datetime.now())` has the same underlying cause — the default is built
