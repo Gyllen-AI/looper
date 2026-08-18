@@ -33,22 +33,67 @@ function runsInBrowser(root: Node): boolean {
   });
 }
 
-function settingRead(node: Node): string | null {
+function isTheSettings(node: unknown): boolean {
+  if (fieldAt(node, "type") !== "MemberExpression") return false;
+  const holder = fieldAt(node, "object");
+  const env = fieldAt(node, "property");
+  if (holder === null || typeof holder !== "object") return false;
+  if (env === null || typeof env !== "object") return false;
+  return fieldAt(holder, "name") === "process" && fieldAt(env, "name") === "env";
+}
+
+function nameRead(node: Node): string | null {
+  const named = node["property"];
+  const plain = fieldAt(named, "name");
+  if (typeof plain === "string") return plain;
+  const quoted = fieldAt(named, "value");
+  return typeof quoted === "string" ? quoted : null;
+}
+
+function settingRead(node: Node, aliases: ReadonlySet<string>): string | null {
   if (node.type !== "MemberExpression") return null;
   const object = node["object"];
-  if (fieldAt(object, "type") !== "MemberExpression") {
-    return null;
-  }
-  const holder = fieldAt(object, "object");
-  const env = fieldAt(object, "property");
-  if (holder === null || typeof holder !== "object") return null;
-  if (env === null || typeof env !== "object") return null;
-  if (fieldAt(holder, "name") !== "process") return null;
-  if (fieldAt(env, "name") !== "env") return null;
+  const named = fieldAt(object, "name");
+  const onTheSettings =
+    isTheSettings(object) || (typeof named === "string" && aliases.has(named));
+  if (!onTheSettings) return null;
+  return nameRead(node);
+}
 
-  const named = node["property"];
-  const name = fieldAt(named, "name");
-  return typeof name === "string" ? name : null;
+function aliasesOfSettings(root: Node): ReadonlySet<string> {
+  const named = new Set<string>();
+  walk(root, (node) => {
+    if (node.type !== "VariableDeclarator") return;
+    if (!isTheSettings(node["init"])) return;
+    const held = fieldAt(node["id"], "name");
+    if (typeof held === "string") named.add(held);
+  });
+  return named;
+}
+
+function takenApart(node: Node): readonly string[] {
+  if (node.type !== "VariableDeclarator") return [];
+  if (!isTheSettings(node["init"])) return [];
+  const id = node["id"];
+  if (fieldAt(id, "type") !== "ObjectPattern") return [];
+  const properties = fieldAt(id, "properties");
+  if (!Array.isArray(properties)) return [];
+  const found: string[] = [];
+  for (const held of properties) {
+    if (fieldAt(held, "type") === "RestElement") {
+      found.push("");
+      continue;
+    }
+    const key = fieldAt(held, "key");
+    const plain = fieldAt(key, "name");
+    if (typeof plain === "string") {
+      found.push(plain);
+      continue;
+    }
+    const quoted = fieldAt(key, "value");
+    if (typeof quoted === "string") found.push(quoted);
+  }
+  return found;
 }
 
 export const clientSecretCheck: Check = {
@@ -61,9 +106,14 @@ export const clientSecretCheck: Check = {
     if (parsed.kind === "unreadable") return [];
     if (!runsInBrowser(parsed.root)) return [];
 
+    const aliases = aliasesOfSettings(parsed.root);
     const found: Finding[] = [];
     walk(parsed.root, (node) => {
-      const name = settingRead(node);
+      for (const name of takenApart(node)) {
+        if (name.startsWith(PUBLIC_PREFIX)) continue;
+        found.push({ line: lineOfNode(node) });
+      }
+      const name = settingRead(node, aliases);
       if (name === null || name.startsWith(PUBLIC_PREFIX)) return;
       found.push({ line: lineOfNode(node) });
     });
