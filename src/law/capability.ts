@@ -171,14 +171,37 @@ export function judgeStaged(root: string): Outcome {
   const baseline = readBaseline(root);
   const violations = [];
 
-  for (const path of staged.paths) {
-    if (!JUDGED_EXTENSIONS.some((suffix) => path.endsWith(suffix))) continue;
-    if (OUTSIDE_THE_LAW.some((part) => path.split("/").includes(part))) continue;
-    if (underAnotherLaw(root, path)) continue;
+  const judged = staged.paths.filter(
+    (path) =>
+      JUDGED_EXTENSIONS.some((suffix) => path.endsWith(suffix)) &&
+      !OUTSIDE_THE_LAW.some((part) => path.split("/").includes(part)) &&
+      !underAnotherLaw(root, path),
+  );
+
+  const keep = (violation: Violation, path: string): void => {
+    if (!isRecorded(baseline, path, violation.rule.id)) {
+      violations.push(violation);
+      return;
+    }
+    const touched = stagedLines(root, path);
+    if (touched.kind === "lines" && touched.lines.has(violation.line)) {
+      violations.push(violation);
+    }
+  };
+
+  const inRust = judged.filter((path) => path.endsWith(RUST_EXTENSION));
+  const stagedRust = new Set(inRust);
+  const rustSaid = judgeRustIn(root, inRust.map((path) => resolve(root, path)));
+  for (const violation of rustSaid.violations) {
+    if (!stagedRust.has(violation.file)) continue;
+    keep(violation, violation.file);
+  }
+
+  for (const path of judged) {
+    if (path.endsWith(RUST_EXTENSION)) continue;
     const held = stagedText(root, path);
     if (held.kind === "unreadable") continue;
 
-    const touched = stagedLines(root, path);
     const found = judge(
       [...CHECKS, ...checksAdoptedIn(root)],
       "fast",
@@ -186,15 +209,7 @@ export function judgeStaged(root: string): Outcome {
       concessions,
     ).violations;
 
-    for (const violation of found) {
-      if (!isRecorded(baseline, path, violation.rule.id)) {
-        violations.push(violation);
-        continue;
-      }
-      if (touched.kind === "lines" && touched.lines.has(violation.line)) {
-        violations.push(violation);
-      }
-    }
+    for (const violation of found) keep(violation, path);
   }
 
   if (violations.length === 0) return { kind: "pass" };

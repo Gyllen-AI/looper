@@ -954,6 +954,21 @@ setting nobody knows to write is not an answer:
 - **A path named in `.gitmodules` belongs to whoever wrote it.** Free and exact,
   and it covers the checkouts that carry no `law.toml` at all.
 
+**Each gate asks what the file is, 2026-08-18.** The walk and the edit gate route
+a `.rs` file to the Rust half and everything else to the TypeScript checks. The
+commit gate did not: it ran every staged file through the TypeScript checks, so a
+valid Rust file failed to parse and was reported as `TS-ERROR:8`, a file that
+cannot be read as TypeScript. A Rust project could not commit a Rust file at all.
+Found by an adopter with 257 Rust files who had not yet staged one. The Rust half
+judges a crate at a time and names its hits crate-relative, so the gate passes the
+staged paths in for naming and then keeps only the hits that belong to them, which
+is what the edit gate already does. `tests/pre-commit.test.ts` holds it.
+
+One property this does not have: the Rust half reads files from disk, not the
+staged content, because the engine is a separate program that opens paths. A file
+staged and then edited further is judged as it is on disk. The TypeScript half
+reads the index. That difference is worth closing and is not closed here.
+
 Both apply to the walk, the edit gate and the commit gate together. An exclusion
 only the survey honours would leave every edit inside the excluded tree still
 refused, which is the failure wearing a different hat.

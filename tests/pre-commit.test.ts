@@ -130,3 +130,42 @@ test("outside a git repository there is nothing to wire, and it says so", () => 
     rmSync(root, { recursive: true, force: true });
   }
 });
+
+const CLEAN_RUST = "pub fn tally(n: u8) -> u8 {\n    n\n}\n";
+
+const SINFUL_RUST = "pub fn tally(v: Result<u8, u8>) -> u8 {\n    v.unwrap()\n}\n";
+
+function startedRust(): string {
+  const root = mkdtempSync(join(tmpdir(), "looper-pcrs-"));
+  mkdirSync(join(root, "src"), { recursive: true });
+  git(root, "init", "-q");
+  git(root, "config", "user.email", "t@example.com");
+  git(root, "config", "user.name", "t");
+  writeFileSync(join(root, "Cargo.toml"), '[package]\nname = "t"\nversion = "0.1.0"\nedition = "2021"\n');
+  writeFileSync(join(root, "src/main.rs"), "#![deny(unused_must_use)]\n#![deny(for_loops_over_fallibles)]\n#![deny(dead_code)]\n#![deny(unused_variables)]\n#![deny(unused_assignments)]\nfn main() {}\n");
+  git(root, "add", "-A");
+  git(root, "commit", "-qm", "before");
+  return root;
+}
+
+test("a Rust file at the commit gate is judged as Rust, not as unreadable TypeScript", () => {
+  const root = startedRust();
+  try {
+    writeFileSync(join(root, "src/b.rs"), CLEAN_RUST);
+    git(root, "add", "-A");
+
+    const clean = verdictOn(root);
+    assert.equal(clean.kind, "pass");
+
+    writeFileSync(join(root, "src/b.rs"), SINFUL_RUST);
+    git(root, "add", "-A");
+
+    const sinful = verdictOn(root);
+    assert.equal(sinful.kind, "block");
+    if (sinful.kind !== "block") return;
+    assert.ok(sinful.reason.includes("RUST-ERROR:1"));
+    assert.ok(!sinful.reason.includes("TS-ERROR:8"));
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});
