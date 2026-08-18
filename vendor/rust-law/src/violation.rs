@@ -83,6 +83,7 @@ pub enum Rule {
     EnvOutsideSanctum,
     StrayPrint,
     StrayHandle,
+    ValueInMessage,
     InlineTest,
 }
 
@@ -114,6 +115,7 @@ impl Rule {
         Rule::ScatteredDefault,
         Rule::EnvOutsideSanctum,
         Rule::StrayPrint,
+        Rule::ValueInMessage,
         Rule::StrayHandle,
         Rule::InlineTest,
     ];
@@ -146,6 +148,7 @@ impl Rule {
             Rule::ScatteredDefault => "TRUTH:1",
             Rule::EnvOutsideSanctum => "TRUTH:2",
             Rule::StrayPrint => "LOG:1",
+            Rule::ValueInMessage => "LOG:3",
             Rule::StrayHandle => "LOG:2",
             Rule::InlineTest => "TESTS:1",
         }
@@ -172,7 +175,7 @@ impl Rule {
                 Category::Dead
             }
             Rule::ScatteredDefault | Rule::EnvOutsideSanctum => Category::Truth,
-            Rule::StrayPrint | Rule::StrayHandle => Category::Log,
+            Rule::StrayPrint | Rule::StrayHandle | Rule::ValueInMessage => Category::Log,
             Rule::InlineTest => Category::Tests,
         }
     }

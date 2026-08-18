@@ -1223,6 +1223,7 @@ Every rule the engine loads appears exactly once below, and
 | the checker is told to trust you | `TS-TYPE:3` `TS-TYPE:4` `TS-DEAD:1` | `RUST-TYPE:4` `RUST-DEAD:1` | `PY-TYPE:1` |
 | "what happens when nobody said" is answered in more than one place | `TS-TRUTH:1` `TS-TRUTH:2` | `RUST-TRUTH:1` `RUST-TRUTH:2` | `PY-TRUTH:1` |
 | output is taken from whoever ran the program | `TS-LOG:1` | `RUST-LOG:1` `RUST-LOG:2` | `PY-LOG:1` |
+| a log line cannot be asked a question, because the value is inside the sentence | `TS-LOG:3` | `RUST-LOG:3` | `PY-LOG:3` |
 | the shape of the code hides what it does | `TS-DECOMPOSITION:1` `TS-LAYER:2` `TS-DEAD:4` | `RUST-DECOMPOSITION:1` `RUST-DECOMPOSITION:2` `RUST-DECOMPOSITION:3` `RUST-LAYER:1` `RUST-LAYER:2` `RUST-LAYER:3` `RUST-DEAD:4` | `PY-LAYER:1`, and **open** — a file and a function cap |
 | unfinished work reads as finished | `TS-DEAD:2` `TS-DEAD:3` | `RUST-DEAD:2` `RUST-DEAD:3` | **open** — a body that is only `pass`, `...` or `raise NotImplementedError` |
 | the language's own guarantees are stepped around | none built | `RUST-ERROR:5` `RUST-ERROR:7` `RUST-TESTS:1` | none built |
@@ -1943,6 +1944,38 @@ tripped `TS-DECOMPOSITION:1`. The cap was not widened. The decisions module name
 its own file and tool, which is defensible on its merits since nothing outside it
 needs them, and it leaves a note for whoever adds the next capability: that file
 is full.
+
+### Chunk 1e — `LOG:3`, because a log you cannot query is a log you re-read
+
+**Built 2026-08-18, from an adopting project's measurement.** They had 269 log
+calls across a Rust workspace and not one interpolated message, because a person
+had spent hours on it after a silent outage. That is the unusual case. The normal
+case is every line reading `logger.info(f"saved {order}")`, and the cost only
+arrives on the night somebody needs to count how many orders failed and finds
+that the value is inside a sentence rather than beside it.
+
+`LOG:1` in all three languages already says the output belongs to whoever ran the
+program. `LOG:3` says the shape of what you do emit: **the message is a constant
+and everything that varies is a field.** A constant message can be grouped,
+counted and filtered; a sentence can only be grepped, and only if you guess the
+wording.
+
+**Each language keys on its own logger, which is what keeps it precise.** Rust
+reads the `tracing` and `log` macros, where the first string literal is the
+message and a `{` in it is a value. Python reads a call to a level name in a file
+that imports `logging` or `structlog`, and refuses an f-string, a `%`, a
+`.format()` or a concatenation — **while leaving `logger.info("saved %s", order)`
+legal**, because that is the standard library's own lazy form and refusing it
+would be refusing the language. TypeScript has no standard logger, so it judges
+nothing until a file imports one of the known packages, and `[ts] loggers` lets a
+project name its own. A file that imports no logger cannot trip this rule, which
+is how `report.info(...)` on some unrelated object stays silent.
+
+**What it deliberately does not do.** It never asks for a log line to exist. That
+is a judgement about what is worth saying, no rule can make it, and a rule that
+demanded one per function would produce noise, which is how a tool gets switched
+off. The presence half belongs in the canon, where it can say where an event is
+worth emitting without refusing anything.
 
 ### Chunk 2 — the law engine, language-neutral half
 

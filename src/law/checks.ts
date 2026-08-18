@@ -18,6 +18,7 @@ import { fileLengthCheck } from "./ts/file-length.ts";
 import { floatingPromiseCheck } from "./ts/floating-promise.ts";
 import { outsideWorldCheck } from "./ts/outside-world.ts";
 import { strayPrintCheck } from "./ts/stray-print.ts";
+import { valueInMessageCheck } from "./ts/value-in-message.ts";
 import { bornDefaultCheck } from "./ts/born-default.ts";
 import { stubValueCheck } from "./ts/stub-value.ts";
 import { unreadableFileCheck } from "./ts/unreadable.ts";
@@ -38,6 +39,7 @@ export const CHECKS: readonly Check[] = [
   suppressionCheck,
   outsideWorldCheck,
   strayPrintCheck,
+  valueInMessageCheck,
   commentCheck,
   fileLengthCheck,
   anonymousProvenanceCheck,

@@ -589,6 +589,40 @@ pub fn scan_tokens_for_calls(tokens: TokenStream, names: &[&str], out: &mut Vec<
     }
 }
 
+pub fn message_carries_a_value(tokens: TokenStream) -> Option<usize> {
+    for tree in tokens {
+        let TokenTree::Literal(literal) = tree else {
+            continue;
+        };
+        let written = literal.to_string();
+        if !written.starts_with('"') {
+            continue;
+        }
+        if holds_a_placeholder(&written) {
+            return Some(literal.span().start().line);
+        }
+        return None;
+    }
+    None
+}
+
+fn holds_a_placeholder(written: &str) -> bool {
+    let bytes: Vec<char> = written.chars().collect();
+    let mut idx = 0;
+    while idx < bytes.len() {
+        if bytes[idx] != '{' {
+            idx += 1;
+            continue;
+        }
+        if bytes.get(idx + 1) == Some(&'{') {
+            idx += 2;
+            continue;
+        }
+        return true;
+    }
+    false
+}
+
 pub fn scan_tokens_for_mangle(tokens: TokenStream, out: &mut Vec<usize>) {
     let trees: Vec<TokenTree> = tokens.into_iter().collect();
     for idx in 0..trees.len() {

@@ -60,8 +60,8 @@ test("every rule the Rust half can report has words looper wrote for it", () => 
   }
   assert.equal(
     RUST_RULES.length,
-    29,
-    "28 come from the engine; RUST-ERROR:9 is looper's own, for a file the engine could not read",
+    30,
+    "29 come from the engine; RUST-ERROR:9 is looper's own, for a file the engine could not read",
   );
 });
 
@@ -147,12 +147,13 @@ const INTERNAL_NAMES: Readonly<Record<string, string>> = {
   "RUST-TRUTH:2": "EnvOutsideSanctum",
   "RUST-LOG:1": "StrayPrint",
   "RUST-LOG:2": "StrayHandle",
+  "RUST-LOG:3": "ValueInMessage",
   "RUST-TESTS:1": "InlineTest",
 };
 
 test("every rule the engine can report has words of ours mapped to it", () => {
   const engine = bansTheEngineDeclares(join(import.meta.dirname, ".."));
-  assert.equal(engine.size, 28);
+  assert.equal(engine.size, 29);
   const unmapped = [...engine.keys()].filter(
     (internal) => !Object.values(INTERNAL_NAMES).includes(internal),
   );

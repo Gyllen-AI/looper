@@ -362,6 +362,20 @@ export const RUST_RULES: readonly Rule[] = [
     valve: NO_VALVE,
   },
   {
+    id: "RUST-LOG:3",
+    category: "LOG",
+    pass: "fast",
+    bans: "a value interpolated into a log message instead of carried as a field — `info!(\"saved {id}\")` or `info!(\"saved {}\", id)` in any `tracing` or `log` macro",
+    why:
+      "a message with the value baked in is a sentence, and every line is a different sentence. The only way to find them later is to guess the wording, and the value cannot be filtered, counted or grouped by anything. A field keeps the message constant and the value queryable, which is the difference between a log you read at three in the morning and one you can ask a question of",
+    instead: [
+      "`tracing::info!(order = %id, \"saved\")` — the message is a constant, everything that varies sits beside it",
+      "`tracing::warn!(attempt, delay_ms, \"retrying\")` — several fields, still one message",
+      "a value nobody will ever query does not need to be in the line at all",
+    ],
+    valve: NO_VALVE,
+  },
+  {
     id: "RUST-TESTS:1",
     category: "TESTS",
     pass: "fast",

@@ -28,6 +28,7 @@ pub fn help_for(rule: Rule) -> &'static str {
         Rule::ScatteredDefault => SCATTERED_DEFAULT,
         Rule::EnvOutsideSanctum => ENV_OUTSIDE_SANCTUM,
         Rule::StrayPrint => STRAY_PRINT,
+        Rule::ValueInMessage => VALUE_IN_MESSAGE,
         Rule::StrayHandle => STRAY_HANDLE,
         Rule::InlineTest => INLINE_TEST,
     }
@@ -357,6 +358,17 @@ const ENV_OUTSIDE_SANCTUM: &str = concat!(
     "    list by name, and the entry is one visible line.\n",
     "    other procfs paths (`self/status`, `uptime`, `stat`) are untouched: a system tool reading them\n",
     "    honestly is not smuggling configuration through the back door.",
+);
+
+const VALUE_IN_MESSAGE: &str = concat!(
+    "a value interpolated into a log message instead of carried as a field.\n",
+    "    why: a message with the value baked in is a sentence. every line is a different sentence,\n",
+    "    so the only way to find them later is to guess the wording, and the value cannot be filtered,\n",
+    "    counted or grouped by anything. a field keeps the message constant and the value queryable,\n",
+    "    which is the whole difference between a log you read at 3am and one you grep at 3am.\n",
+    "    legal: info!(order = %id, \"saved\") rather than info!(\"saved {id}\") or info!(\"saved {}\", id).\n",
+    "    the message stays a constant; everything that varies is a field beside it.\n",
+    "    valve: none. a message with no value in it is always available.",
 );
 
 const STRAY_PRINT: &str = concat!(
