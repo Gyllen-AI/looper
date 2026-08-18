@@ -97,8 +97,17 @@ function looksAtTheError(handler: Node): boolean {
   return found;
 }
 
-function fabricatedReturnsIn(body: Node): readonly Finding[] {
-  const bindings = valuesBoundIn(body);
+function alsoKnowing(outer: Bindings, inner: Bindings): Bindings {
+  const merged = new Map<string, readonly unknown[]>(outer);
+  for (const [name, values] of inner) {
+    const held = merged.get(name);
+    merged.set(name, held === undefined ? values : [...held, ...values]);
+  }
+  return merged;
+}
+
+function fabricatedReturnsIn(body: Node, outer: Bindings): readonly Finding[] {
+  const bindings = alsoKnowing(outer, valuesBoundIn(body));
   const found: Finding[] = [];
   walk(body, (node) => {
     if (node.type !== "ReturnStatement") return;
@@ -109,7 +118,7 @@ function fabricatedReturnsIn(body: Node): readonly Finding[] {
   return found;
 }
 
-function catchHandlerFindings(node: Node, block: unknown): readonly Finding[] {
+function catchHandlerFindings(node: Node, block: unknown, outer: Bindings): readonly Finding[] {
   const body = node["body"];
   if (body === null || typeof body !== "object") return [];
   if (looksAtTheError(node)) return [];
@@ -121,7 +130,7 @@ function catchHandlerFindings(node: Node, block: unknown): readonly Finding[] {
     const argument = held["argument"];
     const shape = shapeOf(argument);
     if (shape !== null && already.has(shape)) return;
-    const bindings = valuesBoundIn(body);
+    const bindings = alsoKnowing(outer, valuesBoundIn(body));
     if (!anyTraced(argument, bindings, isFabricated)) return;
     found.push({ line: lineOfNode(held) });
   });
@@ -158,7 +167,7 @@ function catchArgumentFindings(node: Node, bindings: Bindings): readonly Finding
         continue;
       }
       if (body !== null && typeof body === "object") {
-        found.push(...fabricatedReturnsIn(body as Node));
+        found.push(...fabricatedReturnsIn(body as Node, bindings));
       }
     }
   }
@@ -178,7 +187,7 @@ export const stubValueCheck: Check = {
       if (node.type === "TryStatement") {
         const handler = node["handler"];
         if (handler === null || typeof handler !== "object") return;
-        found.push(...catchHandlerFindings(handler as Node, node["block"]));
+        found.push(...catchHandlerFindings(handler as Node, node["block"], bindings));
         return;
       }
       if (isCatchCall(node)) found.push(...catchArgumentFindings(node, bindings));
