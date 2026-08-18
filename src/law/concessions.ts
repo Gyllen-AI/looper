@@ -42,6 +42,7 @@ export type Concessions = {
   readonly envFiles: readonly string[];
   readonly entryFiles: readonly string[];
   readonly traceSymbols: readonly string[];
+  readonly loggers: readonly string[];
 };
 
 export const CONCEDING_NOTHING: Concessions = {
@@ -53,6 +54,7 @@ export const CONCEDING_NOTHING: Concessions = {
   envFiles: [SANCTUM_DEFAULT],
   entryFiles: [],
   traceSymbols: TRACE_SYMBOLS,
+  loggers: [],
 };
 
 export function isNamed(file: string, names: readonly string[]): boolean {
@@ -133,6 +135,7 @@ export function readConcessions(root: string): Concessions {
     envFiles: orElse(eitherWay("env_files"), [sanctum, ...entries]),
     entryFiles: orElse(stringsAt(tableIn(document, ENTRY_SECTION), "files", LAW_PATH), entries),
     traceSymbols: orElse(eitherWay("trace_symbols"), TRACE_SYMBOLS),
+    loggers: eitherWay("loggers"),
   };
 }
 

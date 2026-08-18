@@ -125,6 +125,21 @@ export const PYTHON_RULES: readonly Rule[] = [
     valve: { kind: "none" },
   },
   {
+    id: "PY-LOG:3",
+    category: "LOG",
+    pass: "fast",
+    bans:
+      "a value baked into a log message instead of carried beside it — an f-string, a `%`, a `.format()` or a concatenation handed to a logger, in a file that imports `logging` or `structlog`. `logger.info(\"saved %s\", order)` is not this rule: the standard library defers that formatting and the value stays a separate argument",
+    why:
+      "a message with the value inside it is a sentence, and every line is a different sentence. The only way to find them later is to guess the wording, and the value cannot be filtered, counted or grouped by anything. Formatting eagerly also does the work even when the level is off, which is the second cost and the smaller one",
+    instead: [
+      "`logger.info(\"saved\", extra={\"order\": order})` — the message is a constant and the value is a field",
+      "`logger.info(\"saved %s\", order)` — the standard library's own lazy form, formatted only if something is listening",
+      "a value nobody will ever query does not need to be in the line at all",
+    ],
+    valve: { kind: "none" },
+  },
+  {
     id: "PY-LAYER:1",
     category: "LAYER",
     pass: "fast",

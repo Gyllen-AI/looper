@@ -9,7 +9,8 @@ use crate::shapes::{
 };
 use crate::patterns::{
     attrs_of, err_bindings, expr_is_fallible_ctor, expr_is_fallible_source, expr_is_place,
-    flatten_use, ident_is_discard, ident_is_mangle, is_test_marker, last_is, meta_tokens, or_cases,
+    flatten_use, ident_is_discard, ident_is_mangle, is_test_marker, last_is, message_carries_a_value,
+    meta_tokens, or_cases,
     pat_contains_wild, pat_is_bare_binding, pat_is_none, pat_mentions_ctor, pat_mentions_fallible,
     path_is_fallible_family,
     path_last, path_segs, scan_tokens_for_banned, scan_tokens_for_calls, scan_tokens_for_environ,
@@ -686,6 +687,11 @@ impl<'ast, 'c> Visit<'ast> for Judge<'c> {
                 }
             }
             "dbg" => self.hit(Rule::StrayPrint, line),
+            "info" | "warn" | "error" | "debug" | "trace" => {
+                if let Some(at) = message_carries_a_value(node.tokens.clone()) {
+                    self.hit(Rule::ValueInMessage, at);
+                }
+            }
             "env" | "option_env" if !self.env_allowed => {
                 self.hit(Rule::EnvOutsideSanctum, line);
             }

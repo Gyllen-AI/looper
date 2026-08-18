@@ -268,6 +268,17 @@ export const CASES: readonly Case[] = [
   { rule: "TS-LOG:1", name: "destructure log", expect: "fires", code: `const { log } = console; log("hi");` },
   { rule: "TS-LOG:1", name: "stdout belongs to TS-LOG:2, which is not built (finding 26)", expect: "silent", code: `process.stdout.write("hi\\n");` },
 
+  { rule: "TS-LOG:3", name: "control: template literal into a logger", expect: "fires",
+    code: `import pino from "pino"; const log = pino(); log.info(\`saved \${id}\`);` },
+  { rule: "TS-LOG:3", name: "concatenation is the same offence", expect: "fires",
+    code: `import pino from "pino"; const log = pino(); log.warn("saved " + id);` },
+  { rule: "TS-LOG:3", name: "a field beside a constant message is the shape that works", expect: "silent",
+    code: `import pino from "pino"; const log = pino(); log.info({ order: id }, "saved");` },
+  { rule: "TS-LOG:3", name: "a template literal with nothing in it is a string", expect: "silent",
+    code: `import pino from "pino"; const log = pino(); log.info(\`saved\`);` },
+  { rule: "TS-LOG:3", name: "no logger imported, so nothing here is a log line", expect: "silent",
+    code: `const report = { info: (s: string) => s }; report.info(\`saved \${id}\`);` },
+
   { rule: "TS-DEAD:4", name: "control: export star", expect: "fires", code: `export * from "./types";` },
   { rule: "TS-DEAD:4", name: "export star as namespace", expect: "fires", code: `export * as types from "./types";` },
   { rule: "TS-DEAD:4", name: "control: import star from own file", expect: "fires", code: `import * as t from "./types";` },

@@ -25,3 +25,11 @@ without a warning from anything. These are rules, not preferences.
   instead — the same rules judge their commit. Run `looper report`, which writes
   the shape it fired on and nothing else of yours, for a human to read first.
   Rules are meant to be argued with: say so once and point at CONTRIBUTING.md.
+- **A log line is a question somebody will ask later, so write it as fields.** The
+  message is a constant and everything that varies sits beside it, which is what
+  makes a log something you can count and filter rather than reread. An event is
+  worth emitting where the program crosses a boundary it does not control: a
+  process starts, a connection opens, a request is answered, a scheduled job
+  fires. Between those, silence is correct. And whatever ties those lines to one
+  request belongs on all of them, because fifteen true lines nobody can join are
+  worth less than three that carry the same id.

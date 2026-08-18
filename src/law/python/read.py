@@ -20,6 +20,14 @@ UNNAMED_FAILURE = "PY-ERROR:3"
 
 PRINTS_ITS_OWN_OUTPUT = "PY-LOG:1"
 
+VALUE_IN_THE_MESSAGE = "PY-LOG:3"
+
+LOG_LEVELS = frozenset(
+    {"debug", "info", "warning", "warn", "error", "exception", "critical", "fatal", "log"}
+)
+
+LOGGING_MODULES = frozenset({"logging", "structlog"})
+
 A_BUILT_COMMAND = "PY-SECURITY:1"
 
 A_BUILT_QUERY = "PY-SECURITY:2"
@@ -321,9 +329,56 @@ def defaults_of(node):
     return given
 
 
+def a_logger_is_imported(tree):
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Import):
+            if any(alias.name.split(".")[0] in LOGGING_MODULES for alias in node.names):
+                return True
+        if isinstance(node, ast.ImportFrom):
+            root = (node.module or "").split(".")[0]
+            if root in LOGGING_MODULES:
+                return True
+    return False
+
+
+def is_a_string(node):
+    return isinstance(node, ast.Constant) and isinstance(node.value, str)
+
+
+def value_baked_into(node):
+    if isinstance(node, ast.JoinedStr):
+        return any(isinstance(part, ast.FormattedValue) for part in node.values)
+    if isinstance(node, ast.BinOp) and isinstance(node.op, (ast.Mod, ast.Add)):
+        return is_a_string(node.left) or is_a_string(node.right)
+    if isinstance(node, ast.Call) and isinstance(node.func, ast.Attribute):
+        return node.func.attr == "format" and is_a_string(node.func.value)
+    return False
+
+
+def is_a_logger(held):
+    if isinstance(held, ast.Name):
+        return "log" in held.id.lower()
+    if isinstance(held, ast.Attribute):
+        return "log" in held.attr.lower()
+    if isinstance(held, ast.Call):
+        return is_a_logger(held.func)
+    return False
+
+
+def message_carries_a_value(node):
+    if not isinstance(node.func, ast.Attribute):
+        return False
+    if node.func.attr not in LOG_LEVELS:
+        return False
+    if not is_a_logger(node.func.value):
+        return False
+    return any(value_baked_into(given) for given in node.args)
+
+
 def violations_in(tree, in_a_test_file, is_where_it_starts):
     settled = names_that_carry_nothing(tree)
     found = []
+    a_logger_here = a_logger_is_imported(tree)
     for node in ast.walk(tree):
         if isinstance(node, ast.Call):
             if builds_a_query(node, settled):
@@ -332,6 +387,8 @@ def violations_in(tree, in_a_test_file, is_where_it_starts):
                 found.append({"rule": A_BUILT_COMMAND, "line": node.lineno})
             if not is_where_it_starts and writes_to_the_terminal(node):
                 found.append({"rule": PRINTS_ITS_OWN_OUTPUT, "line": node.lineno})
+            if a_logger_here and message_carries_a_value(node):
+                found.append({"rule": VALUE_IN_THE_MESSAGE, "line": node.lineno})
             continue
         if isinstance(node, ast.Raise):
             thrown = node.exc
