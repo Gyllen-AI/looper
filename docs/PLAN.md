@@ -1224,7 +1224,7 @@ Every rule the engine loads appears exactly once below, and
 | "what happens when nobody said" is answered in more than one place | `TS-TRUTH:1` `TS-TRUTH:2` | `RUST-TRUTH:1` `RUST-TRUTH:2` | `PY-TRUTH:1` |
 | output is taken from whoever ran the program | `TS-LOG:1` | `RUST-LOG:1` `RUST-LOG:2` | `PY-LOG:1` |
 | the shape of the code hides what it does | `TS-DECOMPOSITION:1` `TS-LAYER:2` `TS-DEAD:4` | `RUST-DECOMPOSITION:1` `RUST-DECOMPOSITION:2` `RUST-DECOMPOSITION:3` `RUST-LAYER:1` `RUST-LAYER:2` `RUST-LAYER:3` `RUST-DEAD:4` | `PY-LAYER:1`, and **open** — a file and a function cap |
-| unfinished work reads as finished | `TS-DEAD:2` `TS-DEAD:3` | `RUST-DEAD:2` `RUST-DEAD:3` | **open** — a body that is only `pass`, `...` or `raise NotImplementedError` |
+| unfinished work reads as finished | `TS-DEAD:2` `TS-DEAD:3` | `RUST-DEAD:2` `RUST-DEAD:3` | **tried and not shippable**, measured 2026-08-18 — the argument is below |
 | the language's own guarantees are stepped around | none built | `RUST-ERROR:5` `RUST-ERROR:7` `RUST-TESTS:1` | none built |
 | something from outside is used as an instruction | `DATA:1` `DATA:2` `NODE:1` `NEXT:1` | none built | **open** — the same harm, `subprocess` with `shell=True` and a query built by pasting |
 | a framework's own contract is broken in silence | `REACT:1` `REACT:2` `TAURI:1` | — | — |
@@ -1275,6 +1275,46 @@ there and nowhere else. Which rules run is part of asking what a file is before
 asking what is wrong with it, and a gate that answers it differently from the
 survey is two laws wearing one name. The shape is read once per commit rather than
 once per file.
+
+**A Python rule for the unfinished stub was built, measured, and thrown away.
+2026-08-18, from the table above.** Rust bans `todo!` and `unimplemented!`;
+TypeScript bans a named function that does nothing, and
+`throw new Error('not implemented')` with it. Python's spelling looked obvious: a
+body that is only `pass`, only `...`, only a docstring, or only
+`raise NotImplementedError`, with `@abstractmethod`, `@overload` and `Protocol`
+methods exempt, because those declare a shape on purpose.
+
+Twelve cases passed. Then 167 files of Python's own standard library gave **98
+hits, and reading them says the rule is blunt rather than strict.**
+
+- **47 are docstring-only bodies, and they are documented no-op hooks**:
+  `bdb.user_call` and `user_line`, `cmd.preloop` and `postloop`, `tzinfo.dst`, and
+  `cgi.nolog` whose own name says it does nothing. The docstring says *when the
+  method is called*, not what it does. Somebody wrote that prose deliberately.
+- **25 are `pass`**, and they are hooks too: `contextlib.__enter__`,
+  `enum.__init__`, `_markupbase.unknown_decl`.
+- **11 are `raise NotImplementedError`, which in Python means two different
+  things.** `argparse.Action.__call__` and `optparse.HelpFormatter.format_usage`
+  mean *a subclass implements this*. `ssl.SSLSocket.recvmsg` and
+  `pathlib.PurePath.__new__` mean *this operation is refused here*, which is a
+  finished decision and the opposite of unfinished.
+
+Narrowing to the shape with no override story at all — a module-level function,
+undecorated, whose whole body is `pass` or `...` — still gives eleven, and at
+least nine are deliberate: `shutil._nop` by name, three `onerror` callbacks, the
+`_copyxattr` platform fallback, and `types._f` and `_c`, which exist only so that
+`type(_f)` yields a function type.
+
+**Why it cannot be sharpened.** The difference between a deliberate no-op and an
+abandoned stub is intent, and Python carries no marker for it. That is what
+`@abstractmethod` is for, and code using it was already exempt. A rule that
+refuses `shutil._nop` is refusing a decision, and a blunt rule is not a strict
+one.
+
+The cell stays open with this measurement against it, so the next attempt begins
+from evidence instead of repeating this one. What would change the answer is a
+signal for intent that Python actually carries — not a cleverer reading of the
+same shapes.
 
 **`config.ts` holds what looper runs by, and `stubs.ts` holds what it writes
 out. Split 2026-08-18, issue #67.** The file had reached 497 lines against its own
