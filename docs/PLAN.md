@@ -2533,6 +2533,15 @@ The attribution stays. It costs a paragraph, the licence asks for nothing, and a
 project whose whole claim is that it can be checked does not quietly absorb
 somebody else's engine.
 
+**And the two controls follow it.** The `contribution` rule set is mapped to
+`vendor/rust-law/src/**` as well as our own rule files, so an agent editing the
+engine is told what a rule change owes before it writes one. The CI check that
+refuses a rule change with no cases reads that directory too, matched on what the
+engine uses to judge rather than on any file being touched — a comment there
+passes, a change to what it catches does not. Anything less would leave one half
+of the law with looser rules than the other, which is how the old policy felt
+reasonable in the first place.
+
 **What was checked rather than assumed.** The repository was scanned for every
 name that must not ship: no employer, no adopter, no personal path. The only
 hits are `tests/canon.test.ts`, where those words are the blocklist that keeps

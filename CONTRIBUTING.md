@@ -79,6 +79,18 @@ that changes `src/law/` without touching `audit/cases.ts` is refused by
 code, is the one no machine here can check: it goes in the pull request in your
 own words, and it is the part that decides whether the rule is taken.
 
+## Everything here is fixable, including the half written in Rust
+
+There is no part of looper that belongs to somebody else. The Rust engine under
+`vendor/rust-law` was copied in — `PROVENANCE.md` says exactly where from and
+under what licence — and it is fixed here like any other file. Changing it means
+the same three steps as changing anything else, and the same two controls apply:
+the `contribution` rules arrive while you edit it, and a change to what it
+catches is refused by CI unless `audit/rust-cases.ts` moves with it.
+
+The one thing that change owes is a line in `PROVENANCE.md` saying what was
+changed and why, so whoever brings a newer copy in knows what to re-apply.
+
 ## Why it is built under its own rules
 
 looper is written for a person with an idea and no way to read the code that

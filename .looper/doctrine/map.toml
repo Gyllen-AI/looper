@@ -6,7 +6,7 @@
 law = ["src/**/*.ts", "tests/**/*.ts"]
 process = ["docs/PLAN.md"]
 doctrine = [".looper/doctrine/**", "src/canon/**"]
-contribution = ["src/law/**", "src/canon/**", "audit/**"]
+contribution = ["src/law/**", "src/canon/**", "audit/**", "vendor/rust-law/src/**"]
 
 # Which branch goes stale when what changes. [governs] above is for injection and
 # wants to be broad — pull the law branch whenever any code is touched. Staleness

@@ -32,13 +32,18 @@ jobs:
           said=$(git diff -U0 "$range" -- 'src/law/**' \
                  | grep -E '^[+-][^+-]' \
                  | grep -E 'bans:|instead:|id: "' || true)
-          cases=$(git diff --name-only "$range" | grep -E '^audit/cases\.ts$' || true)
+          rust=$(git diff -U0 "$range" -- 'vendor/rust-law/src/**' \
+                 | grep -E '^[+-][^+-]' \
+                 | grep -E 'Rule::|fn judge|violations\.push|help_for|bans' || true)
+          cases=$(git diff --name-only "$range" \
+                  | grep -E '^audit/(cases|rust-cases)\.ts$' || true)
 
-          if [ -n "$said" ] && [ -z "$cases" ]; then
+          if { [ -n "$said" ] || [ -n "$rust" ]; } && [ -z "$cases" ]; then
             echo "This changes what a rule says:"
-            echo "$said" | sed 's/^/  /' | head -20
+            echo "$said$rust" | sed 's/^/  /' | head -20
             echo
-            echo "and audit/cases.ts is untouched. A rule's cases are written first,"
+            echo "and neither audit/cases.ts nor audit/rust-cases.ts moved with it."
+            echo "A rule's cases are written first,"
             echo "from its own ban text: what must fire and what must stay silent."
             echo "A test written after the code can only agree with the code."
             echo
