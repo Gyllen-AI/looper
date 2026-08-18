@@ -8,7 +8,9 @@ import { join } from "node:path";
 
 import { commitMessageScript } from "../src/config.ts";
 import { intentOf } from "../src/law/commit-command.ts";
-import { Law, aboutToCommit } from "../src/law/capability.ts";
+import { Law, aboutToCommit, judgeStaged } from "../src/law/capability.ts";
+import { stagedText } from "../src/git.ts";
+import { readFileSync } from "node:fs";
 import { dispatchHook } from "../src/registry.ts";
 
 const GUILTY = `export function find(id: string) {
@@ -207,4 +209,52 @@ test("the message gate says when it could not run, like the commit gate already 
     script.includes("was not checked"),
     "when the entry cannot be found the message scan is skipped, and the message gate is what catches a password pasted into a commit message",
   );
+});
+
+const BLANK_LINES_ABOVE = `export function totals(rows: readonly Row[]) {
+
+
+
+  const each = rows.map((row) => row.amount ?? 0);
+
+  return each;
+}
+`;
+
+test("the staged text a commit is judged on is the file, not the file with its blank lines deleted", () => {
+  const root = repo();
+  try {
+    stage(root, "src/totals.ts", BLANK_LINES_ABOVE);
+
+    const held = stagedText(root, "src/totals.ts");
+    assert.equal(held.kind, "text");
+    if (held.kind !== "text") return;
+
+    assert.equal(
+      held.text,
+      readFileSync(join(root, "src/totals.ts"), "utf8"),
+      "every blank line is dropped before the file is judged, so every line below one is numbered wrong and the gate names a line that holds something else",
+    );
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test("the commit gate names the line the problem is actually on", () => {
+  const root = repo();
+  try {
+    stage(root, "src/totals.ts", BLANK_LINES_ABOVE);
+    const onDisk = readFileSync(join(root, "src/totals.ts"), "utf8").split("\n");
+    const wanted = onDisk.findIndex((line) => line.includes("?? 0")) + 1;
+
+    const outcome = judgeStaged(root);
+    assert.equal(outcome.kind, "block");
+    if (outcome.kind !== "block") return;
+    assert.ok(
+      outcome.reason.includes(`src/totals.ts:${wanted}`),
+      `the gate named a line other than ${wanted}, which is where the problem is: ${outcome.reason.split("\n").filter((l) => l.includes("totals.ts")).join(" ")}`,
+    );
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
 });
