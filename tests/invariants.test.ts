@@ -215,6 +215,22 @@ test("looper cannot record consent, because consent is not its to record", () =>
   }
 });
 
+const OUR_ENGINE_CHANGES: readonly string[] = [
+  "scan_tokens_for_casts",
+  "scan_tokens_for_paths",
+  "scan_tokens_for_env_calls",
+];
+
+test("the engine still carries what we added to it", () => {
+  const patterns = readFileSync(join(ROOT, "vendor", "rust-law", "src", "patterns.rs"), "utf8");
+  for (const named of OUR_ENGINE_CHANGES) {
+    assert.ok(
+      patterns.includes(named),
+      `${named} is gone. Four rules were blind inside a macro argument until it existed, and a newer copy of lawkeeper will not have it — PROVENANCE.md lists what to re-apply.`,
+    );
+  }
+});
+
 test("the version a report carries is the version this is", () => {
   const manifest = manifestAt(join(ROOT, "package.json"));
   assert.equal(

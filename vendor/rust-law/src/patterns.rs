@@ -550,6 +550,85 @@ pub fn scan_tokens_for_environ(tokens: TokenStream, out: &mut Vec<usize>) {
     }
 }
 
+pub fn scan_tokens_for_casts(tokens: TokenStream, out: &mut Vec<usize>) {
+    let trees: Vec<TokenTree> = tokens.into_iter().collect();
+    if starts_a_use(&trees) {
+        return;
+    }
+    for idx in 0..trees.len() {
+        if let TokenTree::Group(group) = &trees[idx] {
+            scan_tokens_for_casts(group.stream(), out);
+            continue;
+        }
+        let TokenTree::Ident(ident) = &trees[idx] else {
+            continue;
+        };
+        if ident.to_string() != "as" {
+            continue;
+        }
+        out.push(ident.span().start().line);
+    }
+}
+
+fn starts_a_use(trees: &[TokenTree]) -> bool {
+    matches!(trees.first(), Some(TokenTree::Ident(ident)) if ident.to_string() == "use")
+}
+
+pub fn scan_tokens_for_paths(tokens: TokenStream, roots: &[&str], out: &mut Vec<usize>) {
+    let trees: Vec<TokenTree> = tokens.into_iter().collect();
+    if starts_a_use(&trees) {
+        return;
+    }
+    for idx in 0..trees.len() {
+        if let TokenTree::Group(group) = &trees[idx] {
+            scan_tokens_for_paths(group.stream(), roots, out);
+            continue;
+        }
+        let TokenTree::Ident(ident) = &trees[idx] else {
+            continue;
+        };
+        if !roots.contains(&ident.to_string().as_str()) {
+            continue;
+        }
+        if !followed_by_path_separator(&trees, idx) {
+            continue;
+        }
+        out.push(ident.span().start().line);
+    }
+}
+
+fn followed_by_path_separator(trees: &[TokenTree], idx: usize) -> bool {
+    let first = matches!(trees.get(idx + 1), Some(TokenTree::Punct(p)) if p.as_char() == ':');
+    let second = matches!(trees.get(idx + 2), Some(TokenTree::Punct(p)) if p.as_char() == ':');
+    first && second
+}
+
+pub fn scan_tokens_for_env_calls(tokens: TokenStream, names: &[&str], out: &mut Vec<usize>) {
+    let trees: Vec<TokenTree> = tokens.into_iter().collect();
+    for idx in 0..trees.len() {
+        if let TokenTree::Group(group) = &trees[idx] {
+            scan_tokens_for_env_calls(group.stream(), names, out);
+            continue;
+        }
+        let TokenTree::Ident(ident) = &trees[idx] else {
+            continue;
+        };
+        if ident.to_string() != "env" {
+            continue;
+        }
+        if !followed_by_path_separator(&trees, idx) {
+            continue;
+        }
+        let Some(TokenTree::Ident(called)) = trees.get(idx + 3) else {
+            continue;
+        };
+        if !names.contains(&called.to_string().as_str()) {
+            continue;
+        }
+        out.push(ident.span().start().line);
+    }
+}
+
 pub fn scan_tokens_for_macros(tokens: TokenStream, names: &[&str], out: &mut Vec<usize>) {
     let trees: Vec<TokenTree> = tokens.into_iter().collect();
     for idx in 0..trees.len() {

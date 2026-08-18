@@ -57,12 +57,15 @@ export const RUST_CASES: readonly RustCase[] = [
     code: `this is not rust {{{` },
 
   { rule: "RUST-TYPE:4", name: "a cast inside a macro argument", expect: "fires",
-    notFixedYet: "these rules match on typed syntax, and a macro's arguments never become that",
     code: `pub fn f(n: u32) { println!("{}", n as u8); }` },
   { rule: "RUST-TRUTH:2", name: "an environment read inside a macro argument", expect: "fires",
-    notFixedYet: "same shape as the cast above",
     code: `pub fn f() { println!("{:?}", std::env::var("HOME")); }` },
   { rule: "RUST-DEAD:3", name: "todo! inside a macro argument", expect: "fires",
-    notFixedYet: "same shape as the cast above",
     code: `pub fn f() { println!("{}", todo!()); }` },
+  { rule: "RUST-LAYER:2", name: "a crate path inside a macro argument", expect: "fires",
+    code: `pub fn f() { println!("{:?}", crate::f); }` },
+  { rule: "RUST-LAYER:2", name: "a use statement is where a crate path belongs", expect: "silent",
+    code: `use crate::f as g;\npub fn h() -> u8 { let _ = g; 1 }` },
+  { rule: "RUST-TYPE:4", name: "a rename inside a macro body is not a cast", expect: "silent",
+    code: `macro_rules! bring { () => { use std::collections::HashMap as Map; }; }\npub fn f() { bring!(); }` },
 ];

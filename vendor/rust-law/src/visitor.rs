@@ -12,7 +12,8 @@ use crate::patterns::{
     flatten_use, ident_is_discard, ident_is_mangle, is_test_marker, last_is, meta_tokens, or_cases,
     pat_contains_wild, pat_is_bare_binding, pat_is_none, pat_mentions_ctor, pat_mentions_fallible,
     path_last, path_segs, scan_tokens_for_banned, scan_tokens_for_calls, scan_tokens_for_environ,
-    scan_tokens_for_macros, scan_tokens_for_mangle, scan_tokens_for_names, tail_diverges,
+    scan_tokens_for_casts, scan_tokens_for_env_calls, scan_tokens_for_macros,
+    scan_tokens_for_mangle, scan_tokens_for_names, scan_tokens_for_paths, tail_diverges,
     tail_is_stub, text_reads_env_door, tokens_contain_fallible_ctor, type_is_guard, vis_is_public,
     wild_under_fallible_ctor,
 };
@@ -57,6 +58,10 @@ const HANDLE_TYPES: &[&str] = &["Stdout", "Stderr", "StdoutLock", "StderrLock"];
 const CRASH_FNS: &[&str] = &["catch_unwind", "set_hook", "take_hook", "panic_any"];
 const CRASH_TYPES: &[&str] = &["AssertUnwindSafe"];
 const ENV_MACROS: &[&str] = &["env", "option_env"];
+
+const LAYER_ROOTS: &[&str] = &["crate", "self", "super"];
+
+const HALF_BUILT_MACROS: &[&str] = &["todo", "unimplemented", "unreachable"];
 
 pub struct Judge<'c> {
     cfg: &'c LawConfig,
@@ -276,6 +281,22 @@ impl<'c> Judge<'c> {
             self.hit(Rule::SilentMangle, line);
         }
         self.scan_macro_environ(node);
+
+        let mut casts = Vec::new();
+        scan_tokens_for_casts(node.tokens.clone(), &mut casts);
+        for line in casts {
+            self.hit(Rule::CastErasure, line);
+        }
+        let mut unfinished = Vec::new();
+        scan_tokens_for_macros(node.tokens.clone(), HALF_BUILT_MACROS, &mut unfinished);
+        for line in unfinished {
+            self.hit(Rule::Unfinished, line);
+        }
+        let mut paths = Vec::new();
+        scan_tokens_for_paths(node.tokens.clone(), LAYER_ROOTS, &mut paths);
+        for line in paths {
+            self.hit(Rule::InlinePath, line);
+        }
         if self.is_bin {
             return;
         }
@@ -300,6 +321,7 @@ impl<'c> Judge<'c> {
         let mut envs = Vec::new();
         scan_tokens_for_environ(node.tokens.clone(), &mut envs);
         scan_tokens_for_macros(node.tokens.clone(), ENV_MACROS, &mut envs);
+        scan_tokens_for_env_calls(node.tokens.clone(), ENV_FNS, &mut envs);
         for line in envs {
             self.hit(Rule::EnvOutsideSanctum, line);
         }

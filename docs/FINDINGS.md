@@ -22,18 +22,24 @@ is a suspicion and belongs in the notes at the bottom, not in the list.
 
 ## Open
 
-**Nine gaps in the Rust engine, reopened as ours on 2026-08-18.** They were filed
-as upstream's and are not: see finding 36. Five from the audit of 2026-08-17 —
-`Err(_) => "".to_string()` reading as a fresh empty string, `panic!("not
-implemented yet")` beside `todo!`, `Option::unwrap` through an alias,
-`Command::new("printenv")` as an environment read, and `== Delimiter::None` read
-as `Option::None`. Four from adopter issue #19 — `TYPE:4`, `TRUTH:2`, `DEAD:3`
-and `LAYER:2` all going silent inside a macro argument, where four other rules
-see through perfectly well because they scan tokens rather than typed syntax.
+**Five gaps in the Rust engine, ours since 2026-08-18.** They were filed as
+upstream's and are not: see finding 36. The four macro blind spots from adopter
+issue #19 are closed — finding 69. These five remain, all from the audit of
+2026-08-17:
 
-Three of the four macro cases are in `audit/rust-cases.ts` already, marked as not
-fixed yet, so the day one starts firing the suite says so. The other six want
-cases before they want code, which is the order `CONTRIBUTING.md` sets out.
+- `Err(_) => "".to_string()` — `ERROR:3` names `String::new()` and an empty
+  collection; this is the same empty string, built differently.
+- `panic!("not implemented yet")` — `DEAD:3` names `todo!`, and this is the same
+  half-built code that compiles. Narrower than banning every `panic!`, which
+  `ERROR:4` permits as the crash door.
+- `let g = Option::unwrap; g(x)` — `ERROR:1` reads the method, not an alias.
+- `Command::new("printenv")` — `TRUTH:2` names `std::env`, not the environment
+  reached through a subprocess.
+- `x == Delimiter::None` read as `Option::None` — this one fires where it should
+  not, which makes it the most urgent of the five.
+
+Each wants cases in `audit/rust-cases.ts` before it wants code, which is the
+order `CONTRIBUTING.md` sets out.
 
 ## The second audit — what it covered and what it found
 
@@ -79,6 +85,30 @@ tested, and every one was tested the way it was built rather than the way it
 will be used.
 
 ## Cleared
+
+### 69 · `wrong` — four rules went blind one character inside a macro — cleared
+
+Adopter issue #19, the half that was theirs to report. `TYPE:4` (`as`),
+`TRUTH:2` (`std::env`), `DEAD:3` (`todo!`) and `LAYER:2` (a `crate::` path) all
+went silent inside `format!`, `assert_eq!`, `tracing::info!` or any
+`macro_rules!` passing its argument through, while the same expression on its own
+line fired. Four other rules see through macros perfectly well, because they read
+tokens rather than typed syntax — so these four now do too.
+
+Cases first, as the contribution rules require: the fourth blind spot had no case
+and now does, along with two traps — a `use ... as ...` rename inside a macro
+body, and a `use crate::x` statement, both of which must stay silent. 29 cases,
+0 mismatches, 0 not fixed yet.
+
+Then the part the rules demand before a rule change ships — run it over code
+nobody here wrote. 40 crates from `~/.cargo/registry`, 2,538 files: **195 new
+hits over 18 crates**, ten read line by line, every one the shape the rule bans
+(`index.length as usize` inside `vec!`, `crate::Protocol` in a macro argument,
+`MAX_OL as i32` inside `debug_assert!`). No false positive found.
+
+This is the first rule change made inside the copied engine since it became ours.
+`tests/invariants.test.ts` fails if a newer copy arrives without the three
+scanners, and `PROVENANCE.md` says what to re-apply.
 
 ### 68 · `missing` — nothing in `audit/` spoke Rust, and a crate died in silence — cleared
 

@@ -85,18 +85,27 @@ other defect in what looper enforces:
 The last three are rare enough in real Rust to argue about. The first two are
 one word from a spelling the rule already catches.
 
-**Four more, found by an adopter and reproduced here, 2026-08-18.** `TYPE:4`
-(`as`), `TRUTH:2` (`std::env`), `DEAD:3` (`todo!`) and `LAYER:2` (a `crate::`
-path) all go silent inside a macro argument — `format!`, `assert_eq!`,
-`tracing::info!`, or any `macro_rules!` that passes its argument through. The
-same expression on its own line fires. It is not that a syntax reader cannot see
-into macros: `ERROR:1`, `TYPE:5`, `LOG:2` and `ERROR:7` scan tokens and keep
-working there. It is four rules matching on typed syntax that a macro's tokens
-never become.
+**Four rules that were blind inside a macro argument — fixed here, 2026-08-18.**
+`TYPE:4` (`as`), `TRUTH:2` (`std::env`), `DEAD:3` (`todo!`) and `LAYER:2` (a
+`crate::` path) went silent inside `format!`, `assert_eq!`, `tracing::info!` or
+any `macro_rules!` that passes its argument through, while the same expression on
+its own line fired. Reported by an adopter and reproduced here.
 
-Three of the four are held as cases in `audit/rust-cases.ts`, marked as not fixed
-yet, so the day they start firing the suite says so and the cases move into the
-ordinary set.
+They match on typed syntax, which a macro's tokens never become — so they now
+also read the token stream, the way `ERROR:1`, `TYPE:5`, `LOG:2` and `ERROR:7`
+always did. Three scanners were added to `patterns.rs`:
+`scan_tokens_for_casts`, `scan_tokens_for_paths` and `scan_tokens_for_env_calls`,
+and `todo!` reuses the macro scanner that already existed. A `use` statement
+inside a macro body is skipped, so a rename is not read as a cast.
+
+Measured before shipping, on 40 crates from `~/.cargo/registry` that nobody here
+wrote — 2,538 files: **195 new hits, spread over 18 crates**. Ten were read line
+by line and every one is the shape the rule bans: `index.length as usize` inside
+`vec!`, `crate::Protocol` inside a macro argument, `MAX_OL as i32` inside
+`debug_assert!`. No false positive was found.
+
+`tests/invariants.test.ts` fails if a newer copy of lawkeeper arrives without
+these scanners.
 
 **Updating it.** Nothing fetches this. If lawkeeper gains something worth having,
 someone copies the new source in by hand, deliberately, re-applies the changes
