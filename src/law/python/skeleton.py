@@ -108,6 +108,23 @@ def statement_on(tree, line):
     return held
 
 
+def statement_around(tree, line):
+    held = None
+    for node in ast.walk(tree):
+        if not isinstance(node, ENCLOSING):
+            continue
+        first = getattr(node, "lineno", None)
+        last = getattr(node, "end_lineno", None)
+        if first is None or last is None:
+            continue
+        if first > line or last < line:
+            continue
+        if held is not None and last - first > held.end_lineno - held.lineno:
+            continue
+        held = node
+    return held
+
+
 def shape_at(path, line, depth):
     with open(path, "r", encoding="utf-8") as handle:
         source = handle.read()
@@ -118,9 +135,12 @@ def shape_at(path, line, depth):
             "error": "could not read {} as Python: line {}: {}".format(path, error.lineno, error.msg)
         }
     found = statement_on(tree, line)
-    if found is None:
+    if found is not None:
+        return {"shape": shape_of(found, Names(), depth)}
+    around = statement_around(tree, line)
+    if around is None:
         return {"error": "nothing looked like a statement on line {}".format(line)}
-    return {"shape": shape_of(found, Names(), depth)}
+    return {"shape": shape_of(around, Names(), depth), "startsAt": around.lineno}
 
 
 def main(argv):

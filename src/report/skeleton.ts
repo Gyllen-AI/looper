@@ -133,7 +133,8 @@ export function render(shape: Shape, indent: number): string {
 
 export type Located =
   | { readonly kind: "not-found"; readonly why: string }
-  | { readonly kind: "found"; readonly shape: Shape };
+  | { readonly kind: "found"; readonly shape: Shape }
+  | { readonly kind: "around"; readonly shape: Shape; readonly startsAt: number };
 
 const ENCLOSING: readonly string[] = [
   "ExpressionStatement",
@@ -148,6 +149,28 @@ const ENCLOSING: readonly string[] = [
   "ExportNamedDeclaration",
 ];
 
+type Span = { readonly node: Node; readonly from: number; readonly to: number };
+
+function spanOf(node: Node): Span | null {
+  if (node.loc === null) return null;
+  const ending = fieldAt(fieldAt(node["loc"], "end"), "line");
+  if (typeof ending !== "number") return null;
+  return { node, from: node.loc.start.line, to: ending };
+}
+
+function smallestAround(root: Node, line: number): Span | null {
+  let held: Span | null = null;
+  walk(root, (node) => {
+    if (!ENCLOSING.includes(node.type)) return;
+    const span = spanOf(node);
+    if (span === null) return;
+    if (span.from > line || span.to < line) return;
+    if (held !== null && span.to - span.from > held.to - held.from) return;
+    held = span;
+  });
+  return held;
+}
+
 export function shapeAt(file: string, text: string, line: number, depth: number): Located {
   const parsed = parseSource(file, text);
   if (parsed.kind === "unreadable") {
@@ -161,10 +184,19 @@ export function shapeAt(file: string, text: string, line: number, depth: number)
     smallest = node;
   });
 
-  if (smallest === null) {
+  if (smallest !== null) {
+    return { kind: "found", shape: shapeOf(smallest, anonymiser(), depth) };
+  }
+
+  const around = smallestAround(parsed.root, line);
+  if (around === null) {
     return { kind: "not-found", why: `nothing looked like a statement on line ${line}` };
   }
-  return { kind: "found", shape: shapeOf(smallest, anonymiser(), depth) };
+  return {
+    kind: "around",
+    shape: shapeOf(around.node, anonymiser(), depth),
+    startsAt: around.from,
+  };
 }
 
 function shapeFrom(payload: unknown): Located {
@@ -172,6 +204,8 @@ function shapeFrom(payload: unknown): Located {
   if (typeof refused === "string") return { kind: "not-found", why: refused };
   const built = builtShape(fieldAt(payload, "shape"));
   if (built === null) return { kind: "not-found", why: "the reader did not answer with a shape" };
+  const startsAt = fieldAt(payload, "startsAt");
+  if (typeof startsAt === "number") return { kind: "around", shape: built, startsAt };
   return { kind: "found", shape: built };
 }
 

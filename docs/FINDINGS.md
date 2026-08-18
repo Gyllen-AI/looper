@@ -22,7 +22,50 @@ is a suspicion and belongs in the notes at the bottom, not in the list.
 
 ## Open
 
-_Empty. Findings 41 to 98 are closed._
+_Empty. Findings 41 to 99 are closed, and one is open._
+
+### 99 · `missing` — `looper report` refused the line it was most needed for — cleared for two of three languages
+
+2026-08-18. Found while trying to reproduce adopter issue #44, which could not be
+reproduced without the adopter's staged blob and baseline — neither of which may
+enter this repo. `looper report` is the mechanism that makes adopter evidence
+shareable at all, and the adopter had already reported that it refused them:
+
+```
+$ npx looper report --rule TS-TRUTH:1 --file .../operate.tsx --line 885 --tried "..."
+looper: no report written — nothing looked like a statement on line 885.
+```
+
+`shapeAt` required an enclosing node to **begin** on exactly the line given. Two
+ordinary lines fail that test: a continuation line of a multi-line expression,
+which begins nothing and is not a bug at all, and a line the tool named wrongly,
+which is the entire complaint in #44. The route the `law` rule set names as the
+only way to argue with a rule was open while looper was right about the line and
+shut when it was wrong about it.
+
+**The fix.** A shape lookup has three answers. Found, when something begins there.
+`around`, when nothing begins there but a statement contains it — the report is
+written against that statement and says which line it really begins on, because
+the distance between the named line and the real one is the evidence somebody
+needs. Not-found only when nothing contains the line, which is the one honest
+refusal, and there is a test for that too.
+
+**Measured, on the shape the adopter's command had:**
+
+```
+## Line 4 starts no statement
+
+Nothing begins on the line the rule named. The shape below is the statement
+that contains it, which begins at line 2.
+```
+
+**Two of three languages.** TypeScript and Python are done and each has a failing
+test from before the change; Python's reader carries `startsAt` back through the
+payload. Rust is not: `skeleton.rs` finds tokens *on* the line rather than a node
+beginning there, so its refusal has a different cause and its fix is different
+surgery in vendored code. Filed rather than rushed. This is knowingly the same
+asymmetry finding 93's successor closed in the other direction, and it is named
+here so it is not discovered as a surprise.
 
 ### 98 · `missing` — JavaScript entered a governed project and nothing saw it — cleared
 
