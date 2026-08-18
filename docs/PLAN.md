@@ -1295,6 +1295,15 @@ report is written anyway, against that statement, and says which line it actuall
 begins on, because the gap between the named line and the real one is the evidence.
 Not-found only when no statement contains the line at all.
 
+**All three readers answer it, finished 2026-08-18 from issue #58.** Rust needed a
+different fix and got its own change rather than being forced into the same one:
+`skeleton.rs` collects tokens that *start* on the line, so its refusal never had
+the same cause. It now asks `syn` which item contains the line, re-reads that
+item's first line, and carries `startsAt` out through the binary's JSON, which the
+TypeScript side already read. Rust's line that begins nothing is also a different
+shape — a method chain continues with `.filter(...)`, which does start tokens — so
+it is a blank line inside an item.
+
 **JavaScript is a language this project judges, and was not one. Corrected
 2026-08-18, from adopter issue #46, finding 98.** `JUDGED_EXTENSIONS` listed
 `.ts`, `.tsx`, `.mts`, `.cts`, `.rs` and `.py`. A `.mjs` was walked past by the
