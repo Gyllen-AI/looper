@@ -20,3 +20,7 @@ Writing looper's own code, and writing the rules looper enforces.
 - **A refusal closes the routes around it and names the one that is open.** An
   agent that cannot commit will ask its human to type the command; a refusal that
   does not say so has left the door it was standing in front of.
+- **Fixing this in a fork means it is broken for everyone running it, so send it
+  back.** A pull request or an issue at `github.com/gyllen-ai/looper`, with what
+  you saw — fifteen arrived from one adopting project on 2026-08-18 and fourteen
+  are already in, including the one that made the seer work at all.

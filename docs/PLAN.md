@@ -1388,6 +1388,19 @@ because no machine here can check that somebody read fifty thousand lines of
 somebody else's code. It goes in the pull request in their own words, and it is
 what decides whether the rule is taken.
 
+**One sentence, at the moment it is true. Added 2026-08-18.** A fork that fixes
+something in looper has already done the work; what was missing was anything
+telling them the fix belongs upstream, at the moment they are making it. That
+line now sits at the end of looper's own code branch, so it arrives whenever
+anybody edits looper's TypeScript in any clone — proven on a fresh fork editing
+one file: 9,105 characters, the sentence among them.
+
+It is deliberately not in the canon. A line about this repository's pull requests
+would be paid for by every project that adopts looper and has nothing to do with
+it, which is the always-on tier wearing a disguise. And it is deliberately prose
+rather than a gate: a gate is for what must not happen, and an invitation that
+refuses a commit is not an invitation.
+
 **looper does not send it. The agent does.** This is not a compromise around the
 no-network invariant, it is the only correct shape. looper stays incapable of
 opening a socket — that is the first line of its own constitution and the reason
