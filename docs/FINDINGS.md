@@ -22,7 +22,7 @@ is a suspicion and belongs in the notes at the bottom, not in the list.
 
 ## Open
 
-_Empty. Every pass of both audits is closed, and findings 41 to 63 with them._
+_Empty. Every pass of both audits is closed, and findings 41 to 64 with them._
 
 ## The second audit — what it covered and what it found
 
@@ -68,6 +68,26 @@ tested, and every one was tested the way it was built rather than the way it
 will be used.
 
 ## Cleared
+
+### 64 · `wrong` — a wrapper walked past the only gate that catches `--no-verify` — cleared
+
+Adopter issue #30. `--no-verify` tells git to skip its own hook, so for that
+commit the agent-side gate is the only check standing; and `bash -c "git commit
+--no-verify -m x"`, `env git commit …` and `(git commit …)` all passed, because
+`intentOf` requires the first word of a segment to be `git`.
+
+Their suggested shape was taken exactly, including the part about what not to do:
+not a better shell parser — that is unwinnable, and the here-document false
+positive from earlier the same week is what over-reaching looks like. Instead the
+one flag that disables the other gate is commit intent wherever it appears, and a
+bare `-n` is too when the segment mentions git. All five spellings from their
+report are refused through the real gate; `echo -n`, `grep -n` and `sort -n` are
+untouched.
+
+Alongside it: `commitMessageScript` printed the shell's error and passed in
+silence when the entry could not be found, while `preCommitScript` explained
+itself. The message gate is what catches a password pasted into a commit message,
+so it says the same two lines now.
 
 ### 63 · `wrong` — a wandering shell silently swapped the doctrine and stopped the gates — cleared
 

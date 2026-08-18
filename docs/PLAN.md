@@ -1164,6 +1164,21 @@ reports the gate as **not wired**, and prints the one line to add. Reporting a
 gate as installed when it is not is the failure this whole section exists to
 prevent.
 
+**`--no-verify` is commit intent wherever it appears. Closed 2026-08-18, from
+adopter issue #30.** The `PreToolUse` gate is the only check left when somebody
+writes `--no-verify`, because git skips its own hook by design — and a wrapper
+walked past it: `bash -c "git commit --no-verify …"`, `env git commit …` and a
+subshell all passed, because the parser requires the first word of a segment to
+be `git`.
+
+The fix is deliberately not a better shell parser; parsing shell properly is
+unwinnable, and the here-document false positive earlier the same week is what
+over-reaching looks like. Instead the one flag that disables the other gate
+counts as a commit wherever it appears in the command, and a bare `-n` counts
+when the same segment mentions git. `echo -n`, `grep -n` and `sort -n` are
+untouched. Wrappers that do not carry the flag matter less, because for those the
+git hook still runs.
+
 **Only a real verdict refuses.** The hook exits non-zero only when looper reached
 a verdict of "block". If looper is missing, broken, or unreachable, the commit
 goes through with a line saying it was not checked. The first version got this

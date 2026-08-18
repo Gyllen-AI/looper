@@ -207,6 +207,11 @@ export function commitMessageScript(entry: string): string {
     "if [ $verdict -eq 2 ]; then",
     "  exit 1",
     "fi",
+    "if [ $verdict -ne 0 ]; then",
+    '  echo "looper could not read this commit message, so it was not checked." >&2',
+    '  echo "  A password pasted into the message would not have been caught." >&2',
+    "  exit 0",
+    "fi",
     "exit 0",
     "",
   ].join("\n");

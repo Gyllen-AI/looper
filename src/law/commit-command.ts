@@ -44,9 +44,23 @@ function subcommandOf(segment: string): string | null {
   return null;
 }
 
+const SKIPS_THE_HOOK = "--no-verify";
+
+const SKIPS_THE_HOOK_SHORT = "-n";
+
+function skipsTheHook(segment: string): boolean {
+  const parts = words(segment);
+  if (parts.includes(SKIPS_THE_HOOK)) return true;
+  return parts.includes(GIT) && parts.includes(SKIPS_THE_HOOK_SHORT);
+}
+
 export function intentOf(command: string): Intent {
   for (const segment of command.split(SEPARATORS)) {
     if (subcommandOf(segment) === COMMIT) return { kind: "commit" };
+  }
+  if (words(command).includes(SKIPS_THE_HOOK)) return { kind: "commit" };
+  for (const segment of command.split(SEPARATORS)) {
+    if (skipsTheHook(segment)) return { kind: "commit" };
   }
   return { kind: "other" };
 }

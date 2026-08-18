@@ -6,6 +6,7 @@ import { mkdtempSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
+import { commitMessageScript } from "../src/config.ts";
 import { intentOf } from "../src/law/commit-command.ts";
 import { Law, aboutToCommit } from "../src/law/capability.ts";
 import { dispatchHook } from "../src/registry.ts";
@@ -170,4 +171,40 @@ test("outside a git repository the gate stays quiet rather than guessing", () =>
   } finally {
     rmSync(root, { recursive: true, force: true });
   }
+});
+
+const WALKS_PAST_THE_HOOK: readonly string[] = [
+  "git commit --no-verify -m x",
+  'bash -c "git commit --no-verify -m x"',
+  "env git commit --no-verify -m x",
+  "(git commit --no-verify -m x)",
+  "xargs -I{} git commit --no-verify -m {}",
+];
+
+test("the one flag that skips the git hook is a commit however it is wrapped", () => {
+  for (const command of WALKS_PAST_THE_HOOK) {
+    assert.equal(
+      intentOf(command).kind,
+      "commit",
+      `${command} was not read as a commit. --no-verify tells git to skip the hook, so this gate is the only one left — and a wrapper around it puts a word other than git first.`,
+    );
+  }
+});
+
+test("a flag that merely looks like it is left alone", () => {
+  for (const command of ["echo -n hello", "grep -n needle file.txt", "sort -n numbers.txt"]) {
+    assert.equal(
+      intentOf(command).kind,
+      "other",
+      `${command} was read as a commit, which stages a judgement on every ordinary command that carries -n`,
+    );
+  }
+});
+
+test("the message gate says when it could not run, like the commit gate already did", () => {
+  const script = commitMessageScript("looper");
+  assert.ok(
+    script.includes("was not checked"),
+    "when the entry cannot be found the message scan is skipped, and the message gate is what catches a password pasted into a commit message",
+  );
 });
