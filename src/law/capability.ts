@@ -241,6 +241,8 @@ export function judgeStaged(root: string): Outcome {
     }
   }
 
+  const shape = shapeOf(root);
+
   for (const path of judged) {
     if (lawFor(path) !== "typescript") continue;
     const held = stagedText(root, path);
@@ -249,7 +251,7 @@ export function judgeStaged(root: string): Outcome {
     const found = judge(
       [...CHECKS, ...checksAdoptedIn(root)],
       "fast",
-      { file: path, text: held.text },
+      { file: path, text: held.text, role: roleOf(shape, path) },
       concessions,
     ).violations;
 
