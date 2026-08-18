@@ -2932,6 +2932,19 @@ it. It is also machine-read, in a fixed table, because a document nothing parses
 cannot gate anything, and this project does not describe barriers that are not
 wired.
 
+### Nobody types a command to get it
+
+`looper init` writes it, and that is not enough. The person whose project this is
+does not run commands — they talk to an agent, which is the whole premise looper
+is built on, and every project that adopted looper before this existed would
+never see the file. A rule that cannot fire without a document, and a document
+only a command produces, is this project's own load-bearing-behind-a-command
+failure wearing a new hat.
+
+So the `Stop` hook writes it when it is absent, at the end of an ordinary turn,
+and says out loud that it did. It is written once and never rewritten: after that
+the file is the project's, and looper only reads it.
+
 ### Where it comes from, and what it never does
 
 **Written from measurement, never from a guess.** `Cargo.toml` means Rust.

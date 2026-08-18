@@ -1,4 +1,7 @@
-import { NOT_A_WAY_THROUGH, PYTHON_EXTENSION, RUST_EXTENSION } from "../config.ts";
+import { NOT_A_WAY_THROUGH, PYTHON_EXTENSION, RUST_EXTENSION, STACK_PATH } from "../config.ts";
+import { writeAtomically } from "../atomic.ts";
+import { stackOf } from "../stack/read.ts";
+import { stackDocument } from "../stack/write.ts";
 import { judgePythonIn, judgeRustIn } from "./project.ts";
 import { rustRuleFor } from "./rust/rules.ts";
 import { roleOf, shapeOf } from "./shape.ts";
@@ -263,8 +266,16 @@ export function judgeStaged(root: string): Outcome {
   };
 }
 
+export function writeStackIfAbsent(root: string): string {
+  const path = join(root, STACK_PATH);
+  if (existsSync(path)) return "";
+  writeAtomically(path, stackDocument(stackOf(root), new Date().toISOString().slice(0, 10)));
+  return `looper: wrote ${STACK_PATH}, the record of what this project is built from, measured from what is on disk. Read it — adding a language later is a decision, and that file is where it becomes visible.`;
+}
+
 export function shrinkBaseline(root: string): Outcome {
   let said: Outcome = { kind: "pass" };
+  const wrote = writeStackIfAbsent(root);
 
   const lock = withLock(join(root, BASELINE_PATH), () => {
     const recorded = readBaseline(root);
@@ -285,6 +296,7 @@ export function shrinkBaseline(root: string): Outcome {
       note: `looper: the outstanding-work count was not updated (${lock.why}). Nothing was lost; it updates on the next turn.`,
     };
   }
+  if (wrote.length > 0 && said.kind === "pass") return { kind: "mention", note: wrote };
   return said;
 }
 

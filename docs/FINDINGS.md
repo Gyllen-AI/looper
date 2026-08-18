@@ -22,7 +22,27 @@ is a suspicion and belongs in the notes at the bottom, not in the list.
 
 ## Open
 
-_Empty. Findings 41 to 87 are closed._
+_Empty. Findings 41 to 88 are closed._
+
+### 88 · a rule that could only reach people who type commands — cleared
+
+2026-08-18, immediately after finding 86, and it is the same failure this project
+already has a rule against. `STACK:1` cannot fire without `CURRENTSTACK.md`, and
+`CURRENTSTACK.md` was written only by `looper init`. Every project that adopted
+looper before today would never have one, so the rule would be shipped, tested,
+documented and unreachable.
+
+The person whose project it is does not run commands. That is the premise the
+whole product rests on — they talk to an agent — and "nothing load-bearing sits
+behind a command they must know to type" has been in the project doctrine the
+entire time. I wrote the feature that broke it and did not notice until it was
+pointed out.
+
+The `Stop` hook writes the document when it is absent, at the end of an ordinary
+turn, and says out loud that it did. Written once, never rewritten: after that the
+file belongs to the project and looper only reads it. Demonstrated on a project
+that had adopted looper and never re-ran `init` — one turn ended, the file
+appeared, and the message explaining it came back with it.
 
 ### 87 · a rule fired and the report threw it away without a word — cleared
 

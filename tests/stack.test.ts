@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -8,6 +8,7 @@ import { STACK_PATH } from "../src/config.ts";
 import { languagesListedIn, stackOf } from "../src/stack/read.ts";
 import { stackDocument } from "../src/stack/write.ts";
 import { undeclaredLanguagesIn } from "../src/law/stack.ts";
+import { writeStackIfAbsent } from "../src/law/capability.ts";
 
 function project(): string {
   return mkdtempSync(join(tmpdir(), "looper-stack-"));
@@ -116,6 +117,37 @@ test("the heading row is not read as a language", () => {
     assert.equal(written.kind, "listed");
     if (written.kind !== "listed") return;
     assert.deepEqual([...written.languages], ["Rust"]);
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test("the record writes itself at the end of a turn, because nobody types a command", () => {
+  const root = project();
+  try {
+    writeFileSync(join(root, "Cargo.toml"), "[package]\nname = \"x\"\n");
+    mkdirSync(join(root, "src"), { recursive: true });
+    writeFileSync(join(root, "src", "lib.rs"), "pub fn f() {}\n");
+
+    assert.equal(existsSync(join(root, STACK_PATH)), false);
+    const said = writeStackIfAbsent(root);
+
+    assert.ok(
+      existsSync(join(root, STACK_PATH)),
+      "STACK:1 cannot fire without this document, so a document only `looper init` writes is a rule nobody who already adopted looper will ever get",
+    );
+    assert.ok(said.includes(STACK_PATH), "writing a file into somebody's project without saying so is not a thing looper does");
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test("a record somebody already has is never rewritten", () => {
+  const root = project();
+  try {
+    writeFileSync(join(root, STACK_PATH), "| language | how looper knows |\n|---|---|\n| Rust | ours |\n");
+    assert.equal(writeStackIfAbsent(root), "");
+    assert.ok(readFileSync(join(root, STACK_PATH), "utf8").includes("ours"));
   } finally {
     rmSync(root, { recursive: true, force: true });
   }
