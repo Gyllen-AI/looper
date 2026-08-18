@@ -3,57 +3,16 @@ import { join } from "node:path";
 
 import { writeAtomically } from "../atomic.ts";
 import { REPORT_DEPTH, REPORT_PATH, SERVER_VERSION } from "../config.ts";
+import { SKELETON_WORDS, render, shapeAt } from "./skeleton.ts";
 import { judgedFiles } from "../law/project.ts";
-import { render, shapeAt } from "./skeleton.ts";
 import { reasonFrom } from "../fields.ts";
 
 const WORD = /[A-Za-z_$][A-Za-z0-9_$]{2,}/g;
 
-const OURS: ReadonlySet<string> = new Set([
-  "looper",
-  "report",
-  "rule",
-  "shape",
-  "tried",
-  "version",
-  "name",
+const SAYABLE: ReadonlySet<string> = new Set([
+  ...SKELETON_WORDS,
   "value",
   "removed",
-  "async",
-  "computed",
-  "static",
-  "optional",
-  "prefix",
-  "generator",
-  "operator",
-  "kind",
-  "TypeScript",
-  "This",
-  "The",
-  "and",
-  "the",
-  "was",
-  "not",
-  "for",
-  "from",
-  "with",
-  "that",
-  "what",
-  "left",
-  "here",
-  "nothing",
-  "your",
-  "code",
-  "line",
-  "file",
-  "read",
-  "sent",
-  "you",
-  "can",
-  "see",
-  "before",
-  "goes",
-  "anywhere",
 ]);
 
 export type Leak = { readonly word: string };
@@ -63,12 +22,49 @@ export function wordsIn(text: string): ReadonlySet<string> {
   return new Set(words === null ? [] : words);
 }
 
-export function leaksFrom(report: string, source: string): readonly Leak[] {
-  const theirs = wordsIn(source);
+const A_NODE_TYPE = /^[A-Z][A-Za-z0-9]*$/;
+
+const A_GIVEN_NAME = /^name[0-9]+$/;
+
+export function leaksInShape(shape: string): readonly Leak[] {
   const leaks: Leak[] = [];
-  for (const word of wordsIn(report)) {
-    if (OURS.has(word)) continue;
-    if (theirs.has(word)) leaks.push({ word });
+  for (const word of wordsIn(shape)) {
+    if (SAYABLE.has(word)) continue;
+    if (A_GIVEN_NAME.test(word)) continue;
+    if (A_NODE_TYPE.test(word)) continue;
+    leaks.push({ word });
+  }
+  return leaks;
+}
+
+export type Vocabulary = {
+  readonly words: ReadonlySet<string>;
+  readonly unreadable: readonly string[];
+};
+
+export function everyWordInProject(root: string): Vocabulary {
+  const words = new Set<string>();
+  const unreadable: string[] = [];
+
+  for (const path of judgedFiles(root)) {
+    try {
+      for (const word of wordsIn(readFileSync(path, "utf8"))) words.add(word);
+    } catch (cause) {
+      unreadable.push(`${path} (${reasonFrom(cause)})`);
+    }
+  }
+
+  return { words, unreadable };
+}
+
+const A_NAME_FROM_CODE = /[A-Z0-9_$]/;
+
+export function leaksInTyped(typed: string, theirs: ReadonlySet<string>): readonly Leak[] {
+  const leaks: Leak[] = [];
+  for (const word of wordsIn(typed)) {
+    if (!theirs.has(word)) continue;
+    if (!A_NAME_FROM_CODE.test(word.slice(1))) continue;
+    leaks.push({ word });
   }
   return leaks;
 }
@@ -87,41 +83,12 @@ export type Request = {
   readonly tried: string;
 };
 
-export type Vocabulary = {
-  readonly words: ReadonlySet<string>;
-  readonly unreadable: readonly string[];
-};
-
-export function everyWordInProject(root: string): Vocabulary {
-  const words = new Set<string>();
-  const unreadable: string[] = [];
-
-  for (const path of judgedFiles(root)) {
-    try {
-      for (const word of wordsIn(readFileSync(path, "utf8"))) words.add(word);
-    } catch (cause) {
-      const detail = reasonFrom(cause);
-      unreadable.push(`${path} (${detail})`);
-    }
-  }
-
-  return { words, unreadable };
-}
-
-export function leaksAgainst(report: string, theirs: ReadonlySet<string>): readonly Leak[] {
-  const leaks: Leak[] = [];
-  for (const word of wordsIn(report)) {
-    if (OURS.has(word)) continue;
-    if (theirs.has(word)) leaks.push({ word });
-  }
-  return leaks;
-}
-
 export function buildReport(request: Request): Written {
   const source = readFileSync(join(request.root, request.file), "utf8");
   const located = shapeAt(request.file, source, request.line, REPORT_DEPTH);
   if (located.kind === "not-found") return { kind: "no-shape", why: located.why };
 
+  const shape = render(located.shape, 0);
   const body = [
     `# looper report`,
     ``,
@@ -135,28 +102,34 @@ export function buildReport(request: Request): Written {
     `## The shape it fired on`,
     ``,
     "```",
-    render(located.shape, 0),
+    shape,
     "```",
     ``,
     `## What is not here`,
     ``,
-    `No name, no value and no path from the project this came from. The shape`,
-    `above was built from a fixed list of syntax kinds; nothing was copied out of`,
-    `the file. looper checked this report against that file before writing it and`,
-    `would have refused to write it if a single word had matched.`,
+    `The shape above carries no name, no value and no path. It is built only from`,
+    `words looper itself can write — syntax kinds, structural keys, and a numbered`,
+    `stand-in for each name — and every word of it was checked against that list`,
+    `before this file was written.`,
+    ``,
+    `The sentence under "What was tried" is yours, not looper's. Anything shaped`,
+    `like a name from your code was refused, but a plain English word that is also`,
+    `a name here would pass. Read that line before this goes anywhere.`,
     ``,
     `Read it yourself before it goes anywhere. looper cannot send it: it has no`,
     `way to reach the network at all.`,
     ``,
   ].join("\n");
 
+  const leaks = leaksInShape(shape);
+  if (leaks.length > 0) return { kind: "would-leak", leaks };
+
   const vocabulary = everyWordInProject(request.root);
   if (vocabulary.unreadable.length > 0) {
     return { kind: "cannot-be-sure", unreadable: vocabulary.unreadable };
   }
-  const theirs = new Set([...vocabulary.words, ...wordsIn(source)]);
-  const leaks = leaksAgainst(body, theirs);
-  if (leaks.length > 0) return { kind: "would-leak", leaks };
+  const typed = leaksInTyped(request.tried, new Set([...vocabulary.words, ...wordsIn(source)]));
+  if (typed.length > 0) return { kind: "would-leak", leaks: typed };
 
   const path = join(request.root, REPORT_PATH);
   writeAtomically(path, body);

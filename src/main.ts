@@ -413,12 +413,12 @@ function report(args: readonly string[]): number {
   if (written.kind === "cannot-be-sure") {
     console.error(
       [
-        "looper refused to write the report. It checks what it is about to write",
+        "looper refused to write the report. What you typed into --tried is checked",
         "against every file in the project, and it could not read these:",
         ...written.unreadable.map((one) => `  ${one}`),
         "",
-        "A file it could not read is a file it could not check against, which is not",
-        "the same as a file with nothing in it. Nothing was written.",
+        "A file it could not read is a file it could not check against. Nothing was",
+        "written.",
       ].join("\n"),
     );
     return 2;
@@ -428,6 +428,10 @@ function report(args: readonly string[]): number {
       [
         "looper refused to write the report, because it would have carried something",
         `from your code: ${written.leaks.map((one) => one.word).join(", ")}.`,
+        "",
+        "What you typed into --tried is checked word by word against your project.",
+        "Say it without the names — the shape below the text is what a rule is argued",
+        "with, and it carries no name at all.",
         "",
         "That is a bug in looper, not in your project. Nothing was written.",
       ].join("\n"),

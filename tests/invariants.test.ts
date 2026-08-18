@@ -4,6 +4,8 @@ import { readFileSync, readdirSync, statSync, existsSync } from "node:fs";
 import { execFileSync } from "node:child_process";
 import { join } from "node:path";
 
+import { SERVER_VERSION } from "../src/config.ts";
+
 const ROOT = join(import.meta.dirname, "..");
 
 const SOCKET_CAPABLE: readonly string[] = [
@@ -211,6 +213,15 @@ test("looper cannot record consent, because consent is not its to record", () =>
       );
     }
   }
+});
+
+test("the version a report carries is the version this is", () => {
+  const manifest = manifestAt(join(ROOT, "package.json"));
+  assert.equal(
+    SERVER_VERSION,
+    manifest["version"],
+    "a report names the version it came from, and triage starts from that line. Two versions means the line is decoration.",
+  );
 });
 
 test("the lockfile is committed, because the invariant is about resolved versions", () => {

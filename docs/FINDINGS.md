@@ -22,7 +22,7 @@ is a suspicion and belongs in the notes at the bottom, not in the list.
 
 ## Open
 
-_Empty. Every pass of both audits is closed, and findings 41 to 60 with them._
+_Empty. Every pass of both audits is closed, and findings 41 to 61 with them._
 
 ## The second audit — what it covered and what it found
 
@@ -68,6 +68,35 @@ tested, and every one was tested the way it was built rather than the way it
 will be used.
 
 ## Cleared
+
+### 61 · `blunt` — the escape hatch refused every real file, including looper's own — cleared
+
+Adopter issue #25, and it is the worst kind of defect this project can have: the
+canon tells an agent that when a rule is wrong the answer is `looper report`, and
+`looper report` refused 13 out of 13 real files. Their measurement, on looper's
+own source.
+
+The check compared **every word of the finished report** against every word in
+the project, with a hand-written list of 43 words exempted as "ours". So the
+report's own prose — `checking`, `against`, `writing`, `refused`, `network` — and
+its own structural vocabulary — `ImportDeclaration`, `Identifier`, `name1`,
+`kind=const` — collided with the project and were called a leak. Nothing from the
+project ever leaked; the tool was refusing to send its own sentences back to
+itself. An allowlist of our own words can never be complete, because our prose
+grows.
+
+The check is now the other way round, in two parts that are checked differently
+because they are written by different people. **The shape** may contain only what
+the skeleton itself can emit — syntax kinds, structural keys, grammar words, and
+a numbered stand-in per name — and the skeleton now replaces any structural value
+it does not recognise with `removed`, so the vocabulary is closed by
+construction. **The sentence the agent typed** is checked against the project,
+but only for words shaped like names from code, because the first version refused
+`the suggested spellings do not apply here` on `the` and `apply`.
+
+Measured after, on the same 13 files: 10 written, 3 with no shape at that line,
+0 refused. The report also carried `version: 0.0.0` while the package said 0.1.0,
+which is fixed with a test holding them equal — triage starts from that line.
 
 ### 60 · `wrong` — a symlink loop killed the walk, and a link out of the tree was judged as ours — cleared
 

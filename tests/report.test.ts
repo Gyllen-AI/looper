@@ -4,7 +4,7 @@ import { mkdirSync, mkdtempSync, existsSync, rmSync, writeFileSync } from "node:
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
-import { buildReport, leaksFrom, wordsIn } from "../src/report/write.ts";
+import { buildReport, leaksInShape, wordsIn } from "../src/report/write.ts";
 import { render, shapeAt } from "../src/report/skeleton.ts";
 
 const PRIVATE = `import { acmeBillingGateway } from "@acme/billing-internal";
@@ -123,9 +123,17 @@ test("a line with nothing on it is refused rather than guessed at", () => {
   }
 });
 
-test("the leak check reads whole words, so a shared prefix is not a leak", () => {
-  const source = "const settlement = 1;";
-  assert.deepEqual([...leaksFrom("settle happened", source)], []);
+test("the shape may carry only words looper itself can write", () => {
+  assert.deepEqual(
+    [...leaksInShape("VariableDeclaration (kind=const)\n  VariableDeclarator\n    Identifier (name1)")],
+    [],
+    "a syntax kind, a structural key, a grammar word and a numbered stand-in are the whole vocabulary, and refusing them refuses every real file — which is what happened to every one of looper's own",
+  );
+  assert.deepEqual(
+    [...leaksInShape("Identifier (settlementAccount)")].map((held) => held.word),
+    ["settlementAccount"],
+    "a name that reached the shape un-anonymised is the only thing this check exists to catch",
+  );
   assert.ok(wordsIn("a.b(c)").has("a") === false, "one-letter names are not words");
 });
 

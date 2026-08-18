@@ -274,7 +274,7 @@ export const GIT_TIMEOUT_MS = 3000;
 
 export const SERVER_NAME = "looper";
 
-export const SERVER_VERSION = "0.0.0";
+export const SERVER_VERSION = "0.1.0";
 
 export const JSONRPC_VERSION = "2.0";
 

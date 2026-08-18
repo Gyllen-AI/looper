@@ -16,6 +16,23 @@ const NAMED: readonly string[] = ["Identifier", "JSXIdentifier", "TSTypeReferenc
 
 const LITERAL = /Literal$/;
 
+const GRAMMAR: readonly string[] = [
+  "const", "let", "var", "init", "get", "set", "method", "constructor", "value",
+  "public", "private", "protected", "readonly", "abstract", "declare", "in",
+  "out", "typeof", "keyof", "unique", "asserts", "infer", "instanceof", "void",
+  "delete", "await", "yield", "new", "this", "super", "null", "undefined",
+];
+
+const PUNCTUATION = /^[^A-Za-z0-9_$]+$/;
+
+function sayableValue(held: string): string {
+  if (PUNCTUATION.test(held)) return held;
+  if (GRAMMAR.includes(held)) return held;
+  return "removed";
+}
+
+export const SKELETON_WORDS: readonly string[] = [...STRUCTURAL, ...GRAMMAR, ...NAMED];
+
 export type Shape = {
   readonly node: string;
   readonly detail: readonly string[];
@@ -44,7 +61,7 @@ function detailsOf(node: Node, names: Anonymiser): readonly string[] {
   for (const key of STRUCTURAL) {
     if (key === "type") continue;
     const held = node[key];
-    if (typeof held === "string") detail.push(`${key}=${held}`);
+    if (typeof held === "string") detail.push(`${key}=${sayableValue(held)}`);
     if (held === true) detail.push(key);
   }
   if (NAMED.includes(node.type)) {
