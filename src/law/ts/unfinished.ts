@@ -7,13 +7,15 @@ export const UNFINISHED: Rule = {
   id: "TS-DEAD:3",
   category: "DEAD",
   pass: "fast",
-  bans: "a function that exists but does nothing, and `throw new Error('not implemented')`",
+  bans:
+    "a function that exists under a name but does nothing — a declaration, a method, or one bound to a variable — and `throw new Error('not implemented')`",
   why:
     "half-built code that compiles is worse than code that is missing. It passes every check, it looks finished to anyone reading the list of what exists, and it fails in front of whoever is using the thing rather than in front of you. Missing code fails immediately and loudly, which is the cheapest failure there is",
   instead: [
     "write it now, even roughly, so it does something real",
     "delete it, and let whatever calls it fail to build — that is the loudest and cheapest error available",
     "if a step genuinely does nothing yet, say so where the caller can see it, not inside a body that looks complete",
+    "an empty callback written inline — `addEventListener('click', () => {})` — is not this rule: it has no name to go stale and says that nothing happens, which is a decision",
   ],
   valve: { kind: "none" },
 };
@@ -72,6 +74,31 @@ function saysUnbuilt(node: Node): boolean {
   return found;
 }
 
+function writtenInlineAsAnArgument(root: Node): ReadonlySet<Node> {
+  const inline = new Set<Node>();
+
+  const take = (value: unknown): void => {
+    if (value === null || typeof value !== "object") return;
+    const held = fieldAt(value, "type");
+    if (held === "ArrowFunctionExpression" || held === "FunctionExpression") {
+      inline.add(value as Node);
+    }
+  };
+
+  walk(root, (node) => {
+    if (node.type === "CallExpression" || node.type === "NewExpression") {
+      const args = node["arguments"];
+      if (Array.isArray(args)) for (const one of args) take(one);
+      return;
+    }
+    if (node.type === "JSXExpressionContainer") {
+      take(node["expression"]);
+    }
+  });
+
+  return inline;
+}
+
 export const unfinishedCheck: Check = {
   rule: UNFINISHED,
 
@@ -80,11 +107,13 @@ export const unfinishedCheck: Check = {
     if (parsed.kind === "unreadable") return [];
 
     const found: Finding[] = [];
+    const inline = writtenInlineAsAnArgument(parsed.root);
     walk(parsed.root, (node) => {
       if (node.type === "ThrowStatement" && saysUnbuilt(node)) {
         found.push({ line: lineOfNode(node) });
         return;
       }
+      if (inline.has(node)) return;
       if (isEmptyBody(functionBody(node))) found.push({ line: lineOfNode(node) });
     });
     return found;

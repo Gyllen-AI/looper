@@ -15,7 +15,8 @@ export const FLOATING_PROMISE: Rule = {
   id: "TS-ERROR:1",
   category: "ERROR",
   pass: "slow",
-  bans: "calling something that takes time to finish and not waiting for it",
+  bans:
+    "calling something that takes time to finish and not waiting for it, including giving it a name that nothing then uses",
   why:
     "the program carries straight on while the job is still running. If it fails, nothing catches it and nobody is told — the save that did not happen, the email that never went. This is the most common way work is silently lost in this language, and it looks completely normal on the page",
   instead: [
@@ -86,6 +87,34 @@ function droppedCallName(node: Node): string | null {
   return typeof name === "string" ? name : null;
 }
 
+type Named = { readonly name: string; readonly called: string; readonly node: Node };
+
+function promiseGivenAName(node: Node): Named | null {
+  if (node.type !== "VariableDeclarator") return null;
+  const id = node["id"];
+  if (fieldAt(id, "type") !== "Identifier") return null;
+  const name = fieldAt(id, "name");
+  if (typeof name !== "string") return null;
+
+  const init = node["init"];
+  if (fieldAt(init, "type") !== "CallExpression") return null;
+  const callee = fieldAt(init, "callee");
+  if (fieldAt(callee, "type") !== "Identifier") return null;
+  const called = fieldAt(callee, "name");
+  if (typeof called !== "string") return null;
+
+  return { name, called, node };
+}
+
+function timesMentioned(root: Node, name: string): number {
+  let seen = 0;
+  walk(root, (node) => {
+    if (node.type !== "Identifier") return;
+    if (fieldAt(node, "name") === name) seen += 1;
+  });
+  return seen;
+}
+
 export const floatingPromiseCheck: Check = {
   rule: FLOATING_PROMISE,
 
@@ -102,7 +131,14 @@ export const floatingPromiseCheck: Check = {
     const found: Finding[] = [];
     walk(parsed.root, (node) => {
       const called = droppedCallName(node);
-      if (called !== null && waits.has(called)) found.push({ line: lineOfNode(node) });
+      if (called !== null && waits.has(called)) {
+        found.push({ line: lineOfNode(node) });
+        return;
+      }
+      const named = promiseGivenAName(node);
+      if (named === null || !waits.has(named.called)) return;
+      if (timesMentioned(parsed.root, named.name) > 1) return;
+      found.push({ line: lineOfNode(node) });
     });
     return found;
   },

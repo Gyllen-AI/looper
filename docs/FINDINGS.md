@@ -22,7 +22,7 @@ is a suspicion and belongs in the notes at the bottom, not in the list.
 
 ## Open
 
-_Empty. Findings 41 to 70 are closed, and the nine engine gaps with them._
+_Empty. Findings 41 to 72 are closed._
 
 ## The second audit — what it covered and what it found
 
@@ -68,6 +68,46 @@ tested, and every one was tested the way it was built rather than the way it
 will be used.
 
 ## Cleared
+
+### 72 · `wrong` — a promise given a name and then abandoned was not a floating promise — cleared
+
+Adopter issue #37, raised as an argument rather than a patch because the fix
+needs following a binding rather than matching a shape. `const p = save(order)`
+with nothing waiting for it was silent: the check only read expression
+statements. Their point about why it had been left: the identical shape is how
+you start two things and wait for both, so firing on the declaration would punish
+the pattern the rule exists to produce.
+
+So the rule follows the name now. A promise bound to a name that nothing else in
+the file mentions is a floating promise wearing a name; one that is awaited,
+returned, passed to `Promise.all` or given a `catch` is not. Three cases hold the
+three shapes.
+
+Their closing line is the reason this was worth doing: it is the most common
+spelling of the bug in code that has been through review once, because a reviewer
+asking "what is this promise for" is answered by giving it a name.
+
+### 71 · `blunt` — an empty callback written inline was called a half-built function — cleared
+
+Adopter issue #38, filed as an argument about what a rule should mean, with the
+counter-argument written out fairly. `TS-DEAD:3` bans "a function that exists but
+does nothing", and fired equally on `export function save(o) {}` and on
+`addEventListener("click", () => {})`.
+
+The first three shapes they list deserve it: a name that is importable, callable,
+and looks implemented is the harm the rule describes. An arrow written inline as
+an argument is not that — it has no name to go stale, nobody else can reach it,
+and `addEventListener("click", () => {})` says nothing happens on click, which is
+a decision. There is also no legal spelling for it, and a rule with no compliant
+path is broken by this project's own standard.
+
+So the ban text says what it means now — a function that exists *under a name* —
+the `instead` list names the inline case as not this rule, and the check skips a
+function written directly as a call argument or a JSX attribute value.
+
+Measured on `node_modules`, 13 files: 6 hits before, 5 after. The one that went
+is `Object.assign(() => {}, {…})`; the five that stay are all named methods with
+empty bodies. On looper's own 79 files: 0 before and 0 after.
 
 ### 70 · the last five engine gaps, and thirty-seven false positives nobody had counted — cleared
 
