@@ -9,6 +9,7 @@ import { join } from "node:path";
 import { commitMessageScript } from "../src/config.ts";
 import { intentOf } from "../src/law/commit-command.ts";
 import { Law, aboutToCommit, judgeStaged } from "../src/law/capability.ts";
+import { surveyProject } from "../src/law/project.ts";
 import { stagedText } from "../src/git.ts";
 import { readFileSync } from "node:fs";
 import { dispatchHook } from "../src/registry.ts";
@@ -253,6 +254,45 @@ test("the commit gate names the line the problem is actually on", () => {
     assert.ok(
       outcome.reason.includes(`src/totals.ts:${wanted}`),
       `the gate named a line other than ${wanted}, which is where the problem is: ${outcome.reason.split("\n").filter((l) => l.includes("totals.ts")).join(" ")}`,
+    );
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
+const PASTES_A_COMMAND = `import { execSync } from "node:child_process";
+
+export function convert(input: string): Buffer {
+  return execSync("convert " + input + " out.png");
+}
+`;
+
+function mixedRepo(): string {
+  const root = repo();
+  writeFileSync(join(root, "Cargo.toml"), '[package]\nname = "held"\nversion = "0.1.0"\nedition = "2021"\n');
+  writeFileSync(join(root, "package.json"), JSON.stringify({ name: "t", dependencies: {} }));
+  return root;
+}
+
+test("the commit gate judges a file by the same law looper law does", () => {
+  const root = mixedRepo();
+  try {
+    stage(root, "src/convert.ts", PASTES_A_COMMAND);
+
+    const surveyed = new Set(
+      surveyProject(root, "everything", ["src/convert.ts"]).violations.map((one) => one.rule.id),
+    );
+    const outcome = judgeStaged(root);
+    const gated = new Set(
+      outcome.kind === "block"
+        ? [...outcome.reason.matchAll(/\[([A-Z]+(?:-[A-Z]+)?:\d+)\]/g)].map((held) => held[1])
+        : [],
+    );
+
+    assert.deepEqual(
+      [...gated].filter((id) => !surveyed.has(id)),
+      [],
+      "the gate applied a rule the survey skips, because it judges without a role and a role-scoped rule then applies to every file",
     );
   } finally {
     rmSync(root, { recursive: true, force: true });

@@ -11,6 +11,11 @@ pub struct Shape {
     pub children: Vec<Shape>,
 }
 
+pub struct Located {
+    pub shape: Shape,
+    pub starts_at: Option<usize>,
+}
+
 pub struct Names {
     given: BTreeMap<String, String>,
 }
@@ -97,7 +102,7 @@ fn on_line(tokens: TokenStream, line: usize, out: &mut Vec<TokenTree>) {
     }
 }
 
-fn item_holding(items: &[syn::Item], line: usize) -> Option<String> {
+fn item_holding(items: &[syn::Item], line: usize) -> Option<(String, usize)> {
     for item in items {
         let held = match item {
             syn::Item::Fn(_) => "ItemFn",
@@ -122,32 +127,51 @@ fn item_holding(items: &[syn::Item], line: usize) -> Option<String> {
                     }
                 }
             }
-            return Some(held.to_string());
+            return Some((held.to_string(), span.start().line));
         }
     }
     None
 }
 
-pub fn shape_at(source: &str, line: usize, depth: usize) -> Result<Shape, LawError> {
+pub fn shape_at(source: &str, line: usize, depth: usize) -> Result<Located, LawError> {
     let tokens = TokenStream::from_str(source).map_err(|error| LawError::Parse {
         path: std::path::PathBuf::new(),
         message: error.to_string(),
     })?;
 
+    let held = match syn::parse_file(source) {
+        Ok(parsed) => item_holding(&parsed.items, line),
+        Err(_) => None,
+    };
+
     let mut found = Vec::new();
-    on_line(tokens, line, &mut found);
+    on_line(tokens.clone(), line, &mut found);
+
+    let mut starts_at = None;
     if found.is_empty() {
-        return Err(LawError::Usage {
-            message: format!("nothing looked like Rust on line {line}"),
-        });
+        let (_, began) = match &held {
+            Some(pair) => pair.clone(),
+            None => {
+                return Err(LawError::Usage {
+                    message: format!("nothing looked like Rust on line {line}"),
+                })
+            }
+        };
+        on_line(tokens, began, &mut found);
+        if found.is_empty() {
+            return Err(LawError::Usage {
+                message: format!("nothing looked like Rust on line {line}"),
+            });
+        }
+        starts_at = Some(began);
     }
 
-    let holder = match syn::parse_file(source) {
-        Ok(parsed) => item_holding(&parsed.items, line).unwrap_or_else(|| "File".to_string()),
-        Err(_) => "File".to_string(),
+    let holder = match held {
+        Some((kind, _)) => kind,
+        None => "File".to_string(),
     };
 
     let mut names = Names::new();
     let children = found.iter().map(|tree| shape_of(tree, &mut names, depth)).collect();
-    Ok(Shape { node: holder, detail: Vec::new(), children })
+    Ok(Located { shape: Shape { node: holder, detail: Vec::new(), children }, starts_at })
 }

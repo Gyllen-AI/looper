@@ -22,7 +22,121 @@ is a suspicion and belongs in the notes at the bottom, not in the list.
 
 ## Open
 
-_Empty. Findings 41 to 101 are closed._
+_Empty. Findings 41 to 104 are closed._
+
+### 104 · `missing` — a broken looper announced itself to the human and not to the agent — cleared
+
+2026-08-19, issue #74, and the agent that caused it was this one. A bad conflict
+resolution left `src/law/python/rules.ts` malformed. looper's hook imports it, so
+every `PreToolUse` invocation died before a line of looper ran:
+
+```
+PreToolUse:Bash hook error
+Failed with non-blocking status code: node:internal/modules/run_main:123
+```
+
+`non-blocking` is looper failing open, which is what the canon asks for: a broken
+looper must not wedge the session it watches. That half worked.
+
+**The other half did not. The agent never saw it.** The hook's failure goes to the
+human's terminal; the tool result the agent receives is unchanged. So it kept
+editing and kept committing, believing it was governed, for about a dozen commands
+until Richard asked why the errors were there. For a tool whose whole claim is
+*the reviewer who is not in the room*, the one reader who must know the reviewer
+has stopped reading is the agent, because it is the one still writing.
+
+**Why nothing downstream could report it.** A crashed program cannot announce
+itself. Every module in the import graph is gone before any code runs, so the
+announcement has to live somewhere that imports almost nothing — and there is
+exactly one such place, `bin/looper.js`, which imports `node:fs` and `node:module`
+and then loads the rest.
+
+**Two changes.** That load is now inside a `try`, and on failure the shim writes a
+real hook answer whose `additionalContext` says looper is not judging, what
+stopped it, and to treat every verdict as absent rather than clean —
+`additionalContext` being the channel the agent actually reads, the same one the
+constitution arrives through. It exits 0, because failing open is still right.
+
+And **every hook now goes through that one entry.** Three of the four invocation
+kinds already did; `dev` pointed straight at `src/main.ts`, which is this repo,
+which is why the blindness was found here rather than by an adopter.
+
+**Measured, by breaking it the same way again:**
+
+```
+$ echo '{"tool_name":"Bash",...}' | node bin/looper.js hook PreToolUse
+{"hookSpecificOutput":{"hookEventName":"PreToolUse","additionalContext":
+ "looper is not judging anything in this session: its own code could not be
+  loaded. Nothing is being checked — not the rules, not the edits, not the
+  commit — until that is fixed. ..."}}
+exit=0
+```
+
+Two tests: a checkout whose `src/main.ts` cannot parse still answers and exits 0,
+and `entryFor(DEV)` names the shim. Both fail before the change.
+
+### 103 · `noise` — a size cap had started deciding where facts live — cleared
+
+2026-08-18, issue #67, from reviewing the decisions capability in #65.
+`src/config.ts` was 497 lines against its own 500 cap, so that capability could
+not put its path beside every other project-visible path and kept it in its own
+module. It said so in the open and did not widen the cap, which was the right call
+— a cap widened to fit stops meaning anything. But the reason a fact lived
+somewhere had become "the other file was full", and that reason was invisible from
+either file.
+
+**The split, named in one sentence:** the prose looper writes into a project is
+not a setting. Eight stubs and headers moved to `src/stubs.ts`, and `config.ts`
+went from 497 lines to 402 with the cap untouched.
+
+**The sanctum stayed one file**, which is the constraint that made this worth care
+rather than a quick move: nothing that turns a missing value into a default went
+anywhere, so the canon's sentence about `src/config.ts` is still true.
+
+`DECISIONS_PATH`, `DECISIONS_TOOL` and `DECISIONS_PRIORITY` came back beside their
+siblings, and the re-export that briefly kept the old import path working went out
+with them — one home means one place to import from, or it is two homes wearing
+one name. That re-export was in the first version of this change and was taken out
+before it shipped.
+
+`npm test`: 472 pass, 0 fail. `looper law` on this repo: exit 0.
+### 102 · `wrong` — the commit gate judged by a different law than `looper law` — cleared
+
+2026-08-18, issue #56. Found while investigating finding 100 and deliberately not
+fixed with it, because it is a different defect and a fix without a failing test
+would only have agreed with itself.
+
+`judgeStaged` was the one judging path that never passed a role:
+
+```ts
+{ file: path, text: held.text }
+```
+
+The edit gate forty lines below passes `roleOf(shapeOf(root), relative)`, and so
+does the survey behind `looper law`. In `belongsHere`, `role === undefined` means
+**every** rule applies, including the ones scoped to one half of a project. Two
+rules declare `onlyFor: "backend"` — `NODE:1` and the injection rule — so on an
+interface file the commit gate applied them and `looper law` did not.
+
+The design says plainly that a rule about database queries never fires on a user
+interface that has no database. At commit time it did.
+
+**The fixture that was missing.** This went unfixed for a day because a faithful
+test needs a project where `roleOf` answers `interface`, and it was not obvious
+what makes one. `shapeOf` gives it: a `Cargo.toml` and a `package.json` whose
+dependencies declare no server framework reads as `mixed`, and a mixed project
+whose TypeScript declares no server is the interface.
+
+With that, the test states the invariant rather than the symptom — the gate and
+the survey reach the same rule ids for the same file — and it names what went
+wrong before the change:
+
+```
++   'NODE:1'
+```
+
+**The fix** passes the role, computing the shape once outside the loop rather than
+per file.
 
 ### 101 · `blunt` — arguing with a rule was refused over a word in a comment — cleared
 
@@ -149,7 +263,7 @@ the corresponding violation.
 helpers. Two tests, both failing before: the staged text equals the file on disk,
 and the gate names the line the problem is actually on.
 
-### 99 · `missing` — `looper report` refused the line it was most needed for — cleared for two of three languages
+### 99 · `missing` — `looper report` refused the line it was most needed for — cleared
 
 2026-08-18. Found while trying to reproduce adopter issue #44, which could not be
 reproduced without the adopter's staged blob and baseline — neither of which may
@@ -187,13 +301,36 @@ Nothing begins on the line the rule named. The shape below is the statement
 that contains it, which begins at line 2.
 ```
 
-**Two of three languages.** TypeScript and Python are done and each has a failing
-test from before the change; Python's reader carries `startsAt` back through the
-payload. Rust is not: `skeleton.rs` finds tokens *on* the line rather than a node
-beginning there, so its refusal has a different cause and its fix is different
-surgery in vendored code. Filed rather than rushed. This is knowingly the same
-asymmetry finding 93's successor closed in the other direction, and it is named
-here so it is not discovered as a surprise.
+**All three languages, the third finished later the same day.** TypeScript and
+Python went first, each with a test that failed before the change; Python's reader
+carries `startsAt` back through the payload.
+
+Rust took a different fix, which is why it was filed as issue #58 rather than
+rushed into the same change. `skeleton.rs` collects tokens that *start* on the
+line and refuses when there are none, so its cause was never "no node begins
+here". `shape_at` now asks `syn` which item contains the line, re-reads that
+item's own first line, and answers with `startsAt` set to it. The Rust binary
+carries the field out through its JSON, where `shapeFrom` already knew how to read
+it.
+
+Rust also has a different shape of line that begins nothing: a method chain
+continues with `.filter(...)`, which *does* start tokens, so it is a `found` and
+always was. The line that begins nothing in Rust is a blank one inside an item —
+which is what the test uses, and what the first version of that test got wrong.
+
+**Measured, on the command an adopter runs:**
+
+```
+$ looper report --rule RUST-TYPE:4 --file src/totals.rs --line 3 --tried "..."
+
+## Line 3 starts no statement
+Nothing begins on the line the rule named. The shape below is the statement
+that contains it, which begins at line 1.
+```
+
+The test fails without the change and passes with it, checked in both directions
+with the engine rebuilt each time: 18 pass 1 fail, then 19 pass 0 fail. A line
+beyond the end of the file is still refused, and that test is unchanged.
 
 ### 98 · `missing` — JavaScript entered a governed project and nothing saw it — cleared
 

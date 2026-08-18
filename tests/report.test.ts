@@ -448,3 +448,40 @@ test("arguing with a rule may use the rule's own name", () => {
     rmSync(root, { recursive: true, force: true });
   }
 });
+
+const RUST_OVER_LINES = `pub fn totals(rows: &[Row]) -> u64 {
+    let live = rows.iter().filter(|row| row.live);
+
+    live.map(|row| row.amount).sum()
+}
+`;
+
+test("a Rust line that starts nothing is reported against the item around it", () => {
+  const root = mkdtempSync(join(tmpdir(), "looper-report-rust-around-"));
+  try {
+    mkdirSync(join(root, "src"), { recursive: true });
+    writeFileSync(join(root, "Cargo.toml"), '[package]\nname = "held"\nversion = "0.1.0"\nedition = "2021"\n');
+    writeFileSync(join(root, "src/totals.rs"), RUST_OVER_LINES);
+
+    const written = buildReport({
+      root,
+      ruleId: "RUST-TYPE:4",
+      file: "src/totals.rs",
+      line: 3,
+      tried: "the rule named a line that begins nothing",
+    });
+
+    assert.equal(
+      written.kind,
+      "written",
+      `the Rust half refuses a continuation line, so one of three languages still cannot argue with a rule: ${JSON.stringify(written)}`,
+    );
+    if (written.kind !== "written") return;
+    assert.ok(
+      written.body.includes("starts no statement"),
+      "the report has to say the line began nothing, or the reader cannot tell what was judged",
+    );
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});

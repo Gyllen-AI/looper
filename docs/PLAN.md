@@ -1225,9 +1225,9 @@ Every rule the engine loads appears exactly once below, and
 | output is taken from whoever ran the program | `TS-LOG:1` | `RUST-LOG:1` `RUST-LOG:2` | `PY-LOG:1` |
 | a log line cannot be asked a question, because the value is inside the sentence | `TS-LOG:3` | `RUST-LOG:3` | `PY-LOG:3` |
 | the shape of the code hides what it does | `TS-DECOMPOSITION:1` `TS-LAYER:2` `TS-DEAD:4` | `RUST-DECOMPOSITION:1` `RUST-DECOMPOSITION:2` `RUST-DECOMPOSITION:3` `RUST-LAYER:1` `RUST-LAYER:2` `RUST-LAYER:3` `RUST-DEAD:4` | `PY-LAYER:1`, and **open** — a file and a function cap |
-| unfinished work reads as finished | `TS-DEAD:2` `TS-DEAD:3` | `RUST-DEAD:2` `RUST-DEAD:3` | **open** — a body that is only `pass`, `...` or `raise NotImplementedError` |
+| unfinished work reads as finished | `TS-DEAD:2` `TS-DEAD:3` | `RUST-DEAD:2` `RUST-DEAD:3` | **tried and not shippable**, measured 2026-08-18 — the argument is below |
 | the language's own guarantees are stepped around | none built | `RUST-ERROR:5` `RUST-ERROR:7` `RUST-TESTS:1` | none built |
-| something from outside is used as an instruction | `DATA:1` `DATA:2` `NODE:1` `NEXT:1` | none built | **open** — the same harm, `subprocess` with `shell=True` and a query built by pasting |
+| something from outside is used as an instruction | `DATA:1` `DATA:2` `NODE:1` `NEXT:1` | none built | `PY-SECURITY:1` `PY-SECURITY:2` |
 | a framework's own contract is broken in silence | `REACT:1` `REACT:2` `TAURI:1` | — | — |
 | the project gains a language nobody chose | `STACK:1`, which reads the project rather than a file, so it answers for all three | | |
 
@@ -1269,6 +1269,91 @@ for, so a Python docstring is a string rather than a comment and prose inside on
 still counts. That is the deliberate limit, and it is the same one the adopter's
 own suggestion of "identifiers and string literals" would have drawn.
 
+**Every judging path asks what the file is first. Corrected 2026-08-18, issue
+#56, finding 102.** The commit gate was the one path that judged without a role,
+so a rule scoped to the backend half of a project applied to an interface file
+there and nowhere else. Which rules run is part of asking what a file is before
+asking what is wrong with it, and a gate that answers it differently from the
+survey is two laws wearing one name. The shape is read once per commit rather than
+once per file.
+
+**A Python rule for the unfinished stub was built, measured, and thrown away.
+2026-08-18, from the table above.** Rust bans `todo!` and `unimplemented!`;
+TypeScript bans a named function that does nothing, and
+`throw new Error('not implemented')` with it. Python's spelling looked obvious: a
+body that is only `pass`, only `...`, only a docstring, or only
+`raise NotImplementedError`, with `@abstractmethod`, `@overload` and `Protocol`
+methods exempt, because those declare a shape on purpose.
+
+Twelve cases passed. Then 167 files of Python's own standard library gave **98
+hits, and reading them says the rule is blunt rather than strict.**
+
+- **47 are docstring-only bodies, and they are documented no-op hooks**:
+  `bdb.user_call` and `user_line`, `cmd.preloop` and `postloop`, `tzinfo.dst`, and
+  `cgi.nolog` whose own name says it does nothing. The docstring says *when the
+  method is called*, not what it does. Somebody wrote that prose deliberately.
+- **25 are `pass`**, and they are hooks too: `contextlib.__enter__`,
+  `enum.__init__`, `_markupbase.unknown_decl`.
+- **11 are `raise NotImplementedError`, which in Python means two different
+  things.** `argparse.Action.__call__` and `optparse.HelpFormatter.format_usage`
+  mean *a subclass implements this*. `ssl.SSLSocket.recvmsg` and
+  `pathlib.PurePath.__new__` mean *this operation is refused here*, which is a
+  finished decision and the opposite of unfinished.
+
+Narrowing to the shape with no override story at all — a module-level function,
+undecorated, whose whole body is `pass` or `...` — still gives eleven, and at
+least nine are deliberate: `shutil._nop` by name, three `onerror` callbacks, the
+`_copyxattr` platform fallback, and `types._f` and `_c`, which exist only so that
+`type(_f)` yields a function type.
+
+**Why it cannot be sharpened.** The difference between a deliberate no-op and an
+abandoned stub is intent, and Python carries no marker for it. That is what
+`@abstractmethod` is for, and code using it was already exempt. A rule that
+refuses `shutil._nop` is refusing a decision, and a blunt rule is not a strict
+one.
+
+The cell stays open with this measurement against it, so the next attempt begins
+from evidence instead of repeating this one. What would change the answer is a
+signal for intent that Python actually carries — not a cleverer reading of the
+same shapes.
+
+**There is one entry, and it cannot fail. Added 2026-08-19, issue #74, finding
+104.** looper fails open when a capability cannot reach a verdict, and that was
+already true. It did not hold when looper itself could not be **loaded**: the hook
+process died on its own import graph, the human saw a hook error in the terminal,
+and the agent saw nothing at all and kept writing.
+
+An announcement about a crash has to live somewhere the crash cannot reach, which
+means somewhere that imports almost nothing. `bin/looper.js` is that place — two
+Node built-ins, then everything else. It loads the rest inside a `try`, and on
+failure writes a real hook answer through `additionalContext`, the channel the
+agent reads, saying that nothing is being checked and that a verdict is absent
+rather than clean. It still exits 0.
+
+So every invocation kind now points at that one file. `dev` pointed at
+`src/main.ts` directly, which is how this repo ran and why the gap was found here
+rather than reported by somebody depending on it.
+
+**`config.ts` holds what looper runs by, and `stubs.ts` holds what it writes
+out. Split 2026-08-18, issue #67.** The file had reached 497 lines against its own
+500 cap, so the decisions capability could not put its path there and put it in
+its own module instead. A size limit had started deciding where facts live, and
+the reason was invisible from either file.
+
+The line is nameable in one sentence: **the prose looper writes into a project is
+not a setting.** `CONSTITUTION_STUB`, `MAP_STUB`, `DOCTRINE_README_STUB`,
+`ADOPTED_HEADER`, `RECALL_HEADER`, `SECRETS_ALLOW_STUB`, `BASELINE_HEADER` and
+`DECISIONS_HEADER` are documents a person reads; they moved. `config.ts` went to
+402 lines with the cap untouched at 500.
+
+**The sanctum is still one file.** Nothing that turns a missing value into a
+default moved — `stubs.ts` is template literals and nothing else — so the sentence
+about `src/config.ts` stays true rather than being quietly widened to two.
+
+`DECISIONS_PATH`, `DECISIONS_TOOL` and `DECISIONS_PRIORITY` came back to
+`config.ts` beside every other project-visible path, and the re-export that would
+have given them two import paths went out with them: one home means one place to
+import from, or it is two homes wearing one name.
 **A file is read as bytes; only a list is read as lines. Corrected 2026-08-18,
 from adopter issue #44, finding 100.** One helper in `src/git.ts` ran git and
 returned `output.split("\n").filter((line) => line.length > 0)`. Dropping empty
@@ -1295,6 +1380,15 @@ there. **Around**, when nothing begins there but a statement contains it: the
 report is written anyway, against that statement, and says which line it actually
 begins on, because the gap between the named line and the real one is the evidence.
 Not-found only when no statement contains the line at all.
+
+**All three readers answer it, finished 2026-08-18 from issue #58.** Rust needed a
+different fix and got its own change rather than being forced into the same one:
+`skeleton.rs` collects tokens that *start* on the line, so its refusal never had
+the same cause. It now asks `syn` which item contains the line, re-reads that
+item's first line, and carries `startsAt` out through the binary's JSON, which the
+TypeScript side already read. Rust's line that begins nothing is also a different
+shape — a method chain continues with `.filter(...)`, which does start tokens — so
+it is a blank line inside an item.
 
 **JavaScript is a language this project judges, and was not one. Corrected
 2026-08-18, from adopter issue #46, finding 98.** `JUDGED_EXTENSIONS` listed
@@ -3057,6 +3151,8 @@ built, as of 2026-08-18:
 | `PY-TRUTH:2` | `assert` outside a test file, whatever it is checking | built 2026-08-18 |
 | `PY-LAYER:1` | `from x import *`, which takes every name without saying which | built 2026-08-18 |
 | `PY-LOG:1` | `print`, and writing to `sys.stdout` or `sys.stderr` directly, in a file that does not say it starts the program | built 2026-08-18, from issue #63 |
+| `PY-SECURITY:1` | handing the operating system a command built by pasting values into it | built 2026-08-19, from the table of what the law defends |
+| `PY-SECURITY:2` | building a database query by pasting values into the text of it | built 2026-08-19, from the table of what the law defends |
 
 `PY-TRUTH:2` is the one worth explaining, because it is the rule most likely to
 be argued with. `assert` is not a check in Python; it is a check that disappears
@@ -3068,6 +3164,76 @@ They shipped one at a time, cases first from each ban text, and each run over re
 Python nobody here wrote before it counted as done. Naming all seven up front was
 not a promise to build all seven; it was so the gap stayed visible while it was
 open. It was open for a few hours, and the record of each is below.
+
+`PY-SECURITY:2` is its sibling, built the same day and the same way: the query
+half of the same row. It mirrors `DATA:1`, whose precision comes from two
+conditions together rather than one — the method is a querying one, `execute`,
+`executemany`, `executescript` or `text`, **and** the text carries at least two
+SQL words. A built string handed to something that merely happens to be called
+`execute` is not a query.
+
+**The corpus made this rule, twice over.** 574 files of Python's own standard
+library gave **zero** hits, which tests that it is quiet and tests nothing else —
+the standard library builds almost no SQL. So it was run over 3,217 files of
+third-party packages under `/usr/lib/python3/dist-packages`, none unreadable,
+which gave **eight**. Reading all eight found the rule was wrong about six:
+
+```python
+params = ", ".join(["?"] * len(message_ids))
+cursor.execute(f"SELECT id, data FROM message WHERE id IN ({params})", tuple(message_ids))
+```
+
+That is the **correct** way to write `IN (...)`, which no driver takes as a
+parameter: the f-string pastes only question marks and the values go through the
+driver untouched. Five more pasted `str(int(id))`, which cannot carry SQL either.
+
+So the rule gained the same boundary its sibling has, from the same principle:
+**text from outside is the harm, and an integer or a `?` is not text from
+outside.** A pasted part is followed back to what built it, and the rule stays
+silent when every varying part is a number again or a run of placeholders.
+
+With that, the same 3,217 files give **one hit and no false positives**:
+
+```python
+"DELETE FROM task WHERE id NOT IN ({})".format(
+    ",".join([str(task.id) for task in except_tasks]))
+```
+
+`str(task.id)` with no `int()` around it — nothing there proves the value is a
+number, and the repair is one word. That is a rule finding the one place worth
+looking at rather than firing on a pattern. Nothing in this repo fires.
+
+**The second corpus also found six more for `PY-SECURITY:1`**, all genuine: a
+pager and an editor pasted into shells in `click/_termui_impl.py`, and
+`os.system("mkdir %s" % path)` in an SFTP client where `path` is what somebody
+typed at its prompt.
+
+`PY-SECURITY:1` came next, on 2026-08-19, from the same table: TypeScript answers
+"something from outside is used as an instruction" with four rules and Python
+answered with none, in the language where `shell=True` is one keyword away and the
+safe form needs the command split into a list.
+
+It fires only where both halves are true: the operating system is handed a
+**shell** — `os.system`, `os.popen`, `subprocess.getoutput` and
+`getstatusoutput`, or `subprocess` called with `shell=True` — **and** the command
+was **built by pasting**, which is an f-string with a value in it, a `+`, a `%`,
+or `.format(...)`. A shell handed a line nobody outside wrote cannot be injected
+into, so `os.system("ls -la")` is silent, exactly as `NODE:1` treats its literal.
+
+**Ten cases, then 167 files of Python's own standard library: three hits, no false
+positives**, each read in full:
+
+- `pydoc.py:1724`, `os.system(cmd + ' "' + filename + '"')`, where `cmd` comes
+  from the `PAGER` environment variable. The classic.
+- `pydoc.py:1679`, `'more "%s"' % filename` pasted inside double quotes.
+- `_osx_support.py:292` pastes a compiler path but hand-escapes it with
+  `.replace("'", "'\"'\"'")` and carries a comment saying `subprocess` cannot be
+  used during bootstrap. The rule names it correctly and a project would answer
+  with a concession, which is what concessions are for — the escaping is the
+  repair this rule's own advice calls a repair.
+
+Three hits in 167 files is the shape of a rule that has found something rather
+than a rule that fires on a pattern. Nothing in this repo fires.
 
 `PY-LOG:1` came later, on 2026-08-18, from issue #63 rather than from the original
 seven: the table of what the law defends showed that Rust and TypeScript both

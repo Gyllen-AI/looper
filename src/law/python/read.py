@@ -28,6 +28,24 @@ LOG_LEVELS = frozenset(
 
 LOGGING_MODULES = frozenset({"logging", "structlog"})
 
+A_BUILT_COMMAND = "PY-SECURITY:1"
+
+A_BUILT_QUERY = "PY-SECURITY:2"
+
+QUERYING = frozenset({"execute", "executemany", "executescript", "text"})
+
+NUMBERS = frozenset({"int", "float"})
+
+SQL_WORDS = frozenset(
+    {"select", "insert", "update", "delete", "drop", "from", "where", "into", "values"}
+)
+
+ALWAYS_A_SHELL = frozenset({"system", "popen", "getoutput", "getstatusoutput"})
+
+SHELL_ON_REQUEST = frozenset({"run", "call", "check_call", "check_output", "Popen"})
+
+PASTING_METHODS = frozenset({"format", "join"})
+
 TERMINAL_WRITES = frozenset({"write", "writelines"})
 
 TERMINAL_HANDLES = frozenset({"stdout", "stderr"})
@@ -61,6 +79,135 @@ def is_a_terminal_handle(held):
     if not isinstance(held, ast.Attribute) or held.attr not in TERMINAL_HANDLES:
         return False
     return isinstance(held.value, ast.Name) and held.value.id == "sys"
+
+
+def is_pasted(held):
+    if isinstance(held, ast.JoinedStr):
+        return any(isinstance(one, ast.FormattedValue) for one in held.values)
+    if isinstance(held, ast.BinOp):
+        return isinstance(held.op, (ast.Add, ast.Mod))
+    if isinstance(held, ast.Call) and isinstance(held.func, ast.Attribute):
+        return held.func.attr in PASTING_METHODS
+    return False
+
+
+def written_parts(held):
+    if isinstance(held, ast.Constant):
+        return held.value if isinstance(held.value, str) else ""
+    if isinstance(held, ast.JoinedStr):
+        return " ".join(written_parts(one) for one in held.values)
+    if isinstance(held, ast.BinOp):
+        return written_parts(held.left) + " " + written_parts(held.right)
+    if isinstance(held, ast.Call) and isinstance(held.func, ast.Attribute):
+        return written_parts(held.func.value)
+    return ""
+
+
+def looks_like_sql(text):
+    words = {one.strip(",;()").lower() for one in text.split()}
+    return len(words & SQL_WORDS) >= 2
+
+
+def is_a_number_again(held):
+    if not (isinstance(held, ast.Call) and isinstance(held.func, ast.Name)):
+        return False
+    if held.func.id != "str" or not held.args:
+        return False
+    inner = held.args[0]
+    return isinstance(inner, ast.Call) and isinstance(inner.func, ast.Name) and inner.func.id in NUMBERS
+
+
+def is_only_marks(held):
+    if isinstance(held, ast.List):
+        return bool(held.elts) and all(
+            isinstance(one, ast.Constant) and one.value == "?" for one in held.elts
+        )
+    if isinstance(held, ast.BinOp) and isinstance(held.op, ast.Mult):
+        return is_only_marks(held.left) or is_only_marks(held.right)
+    return False
+
+
+def carries_nothing_sayable(held):
+    if held is None:
+        return False
+    if isinstance(held, ast.Constant):
+        return not isinstance(held.value, str)
+    if is_a_number_again(held):
+        return True
+    if isinstance(held, ast.Call) and isinstance(held.func, ast.Attribute) and held.func.attr == "join":
+        joined = held.args[0] if held.args else None
+        if is_only_marks(joined):
+            return True
+        if isinstance(joined, (ast.GeneratorExp, ast.ListComp)):
+            return is_a_number_again(joined.elt)
+        return False
+    return False
+
+
+def varying_parts(held):
+    if isinstance(held, ast.JoinedStr):
+        return [one.value for one in held.values if isinstance(one, ast.FormattedValue)]
+    if isinstance(held, ast.BinOp):
+        return [one for one in (held.left, held.right) if not isinstance(one, ast.Constant)]
+    if isinstance(held, ast.Call):
+        return list(held.args)
+    return []
+
+
+def names_that_carry_nothing(tree):
+    said = {}
+    for node in ast.walk(tree):
+        if not isinstance(node, ast.Assign) or len(node.targets) != 1:
+            continue
+        target = node.targets[0]
+        if not isinstance(target, ast.Name):
+            continue
+        safe = carries_nothing_sayable(node.value)
+        said[target.id] = said.get(target.id, True) and safe
+    return {name for name, safe in said.items() if safe}
+
+
+def builds_a_query(node, settled):
+    if not isinstance(node.func, ast.Attribute) or node.func.attr not in QUERYING:
+        return False
+    given = node.args[0] if node.args else None
+    if not is_pasted(given):
+        return False
+    if not looks_like_sql(written_parts(given)):
+        return False
+    parts = varying_parts(given)
+    if not parts:
+        return False
+    return not all(
+        (isinstance(one, ast.Name) and one.id in settled) or carries_nothing_sayable(one)
+        for one in parts
+    )
+
+
+def asks_for_a_shell(node):
+    for given in node.keywords:
+        if given.arg != "shell":
+            continue
+        return not (isinstance(given.value, ast.Constant) and given.value.value is False)
+    return False
+
+
+def hands_the_system_a_line(node):
+    if not isinstance(node.func, ast.Attribute):
+        return False
+    called = node.func.attr
+    if called in ALWAYS_A_SHELL:
+        return True
+    if called not in SHELL_ON_REQUEST:
+        return False
+    return asks_for_a_shell(node)
+
+
+def builds_a_command(node):
+    if not hands_the_system_a_line(node):
+        return False
+    given = node.args[0] if node.args else None
+    return is_pasted(given)
 
 
 def writes_to_the_terminal(node):
@@ -229,10 +376,15 @@ def message_carries_a_value(node):
 
 
 def violations_in(tree, in_a_test_file, is_where_it_starts):
+    settled = names_that_carry_nothing(tree)
     found = []
     a_logger_here = a_logger_is_imported(tree)
     for node in ast.walk(tree):
         if isinstance(node, ast.Call):
+            if builds_a_query(node, settled):
+                found.append({"rule": A_BUILT_QUERY, "line": node.lineno})
+            if builds_a_command(node):
+                found.append({"rule": A_BUILT_COMMAND, "line": node.lineno})
             if not is_where_it_starts and writes_to_the_terminal(node):
                 found.append({"rule": PRINTS_ITS_OWN_OUTPUT, "line": node.lineno})
             if a_logger_here and message_carries_a_value(node):

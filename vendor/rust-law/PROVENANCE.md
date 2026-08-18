@@ -143,6 +143,26 @@ which bracket opened it, and the root is the kind of item the line sits in
 (`ItemFn`, `ItemImpl`, and the rest). No identifier, no literal and no path
 survives. A line with no tokens is refused by name rather than guessed at.
 
+**A rule for a value baked into a log message — added here, 2026-08-19.**
+`Rule::ValueInMessage`, its help text, a pattern in `patterns.rs` and a visit in
+`visitor.rs`. It fires on a `tracing` or `log` macro whose message interpolates a
+value — `info!("saved {id}")` and `info!("saved {}", id)` — and stays silent on
+the field form `info!(order = %id, "saved")`, on a message carrying no value, and
+on an escaped `{{literal}}` brace.
+
+Measured before it was taken: 4,000 files and 1,124,346 lines from
+`~/.cargo/registry`, 205 hits, 25 read by hand and every one true — tower-http,
+quinn, reqwest, zlib-rs, tauri-runtime and zune-jpeg, each interpolating a value
+into the message. The LOG:3 row in `docs/PLAN.md` carries the rest.
+
+**A line that starts nothing is answered rather than refused — changed here,
+2026-08-18.** `shape_at` collected the tokens that begin on the asked-for line and
+refused when there were none, which is a blank line inside an item, or a line a
+rule named wrongly. It now asks `syn` which item contains the line, re-reads that
+item's own first line, and reports `startsAt` beside the shape so the report can
+say where the item really begins. A line inside no item at all is still refused by
+name. See finding 99 and issue #58.
+
 This exists because `looper report`, the way an adopter argues a rule is wrong,
 read every file through the TypeScript parser and answered "the file could not be
 read as TypeScript" for every `.rs` file. Twenty-nine Rust rules were judged at

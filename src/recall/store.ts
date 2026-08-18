@@ -1,9 +1,12 @@
+import { RECALL_HEADER } from "../stubs.ts";
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 
 import { withLock, writeAtomically } from "../atomic.ts";
 import { required } from "../present.ts";
-import { RECALL_HEADER, RECALL_PATH } from "../config.ts";
+import {
+  RECALL_PATH,
+} from "../config.ts";
 
 export type Note = {
   readonly learned: string;
