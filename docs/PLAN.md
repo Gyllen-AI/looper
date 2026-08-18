@@ -2761,7 +2761,7 @@ the server it runs under is Uvicorn.
 
 ### The rules, named before they are written
 
-Seven, taken from the failure shapes this document already listed. Two are built:
+Seven, taken from the failure shapes this document already listed. Three are built:
 
 | rule | bans | state |
 |---|---|---|
@@ -2770,7 +2770,7 @@ Seven, taken from the failure shapes this document already listed. Two are built
 | `PY-ERROR:3` | `raise Exception(...)` where a named class belongs | **not built yet** |
 | `PY-TYPE:1` | a `# type: ignore` comment | **not built yet** |
 | `PY-TRUTH:1` | a default argument that is a mutable container | built 2026-08-18 |
-| `PY-TRUTH:2` | `assert` used as a runtime check, which `-O` deletes | **not built yet** |
+| `PY-TRUTH:2` | `assert` outside a test file, whatever it is checking | built 2026-08-18 |
 | `PY-LAYER:1` | a star import, which launders one namespace into another | **not built yet** |
 
 `PY-TRUTH:2` is the one worth explaining, because it is the rule most likely to
@@ -2811,7 +2811,24 @@ clearer spelling than the one it uses. That is the line this project draws: the
 rule is judged on whether it is decidable and hands back a legal spelling, not on
 whether every hit is a live bug.
 
-What it deliberately does not do is fire on every call in a default position.
+`PY-TRUTH:2` is the one this document predicted would be argued with, and the
+argument turned out to be about scope rather than substance. Two readings were
+available: every `assert` outside a test file, or only those checking data that
+came from outside. The second is not decidable from syntax, and the first has a
+compliant path — `if amount <= 0: raise ValueError(...)` — so the first is what
+shipped, under the rule that a stricter reading with a legal spelling is strict
+rather than blunt. Test files are silent by path, on pytest's own discovery
+rules, because that is where `assert` is the idiom.
+
+Measured: 206 outside test files in 167 files of the standard library, and 4 in
+176 hand-written files of the adopting project. All 4 were read. Two are
+validations carrying a message, which is the harmful case exactly — they pass
+every test and are absent under `-O`. Two narrow a type for the checker, which
+`if x is None: raise` does honestly. The standard library's are mostly internal
+invariants, the language's own documented use of `assert`, and they vanish under
+`-O` no differently, which is why the rule does not try to tell the two apart.
+
+What `PY-TRUTH:1` deliberately does not do is fire on every call in a default position.
 `def f(t=datetime.now())` has the same underlying cause — the default is built
 once at definition — but a rule that fires on every constructor would be blunt
 where this one is decidable. That is a separate rule if it is ever wanted, and

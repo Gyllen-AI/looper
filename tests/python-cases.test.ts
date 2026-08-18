@@ -1,18 +1,19 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
 
 import { PYTHON_CASES } from "../audit/python-cases.ts";
 import { judgePython } from "../src/law/python/drive.ts";
 
 const LOOPER = join(import.meta.dirname, "..");
 
-function firedOn(code: string): readonly string[] {
+function firedOn(code: string, named: string | undefined): readonly string[] {
   const root = mkdtempSync(join(tmpdir(), "looper-py-"));
   try {
-    const path = join(root, "held.py");
+    const path = join(root, named === undefined ? "held.py" : named);
+    mkdirSync(dirname(path), { recursive: true });
     writeFileSync(path, code);
     const said = judgePython(LOOPER, [path]);
     if (said.kind !== "found") return [`the reader did not answer: ${said.detail}`];
@@ -25,7 +26,7 @@ function firedOn(code: string): readonly string[] {
 test("every Python case agrees with the rule it was written from", () => {
   const wrong: string[] = [];
   for (const held of PYTHON_CASES) {
-    const fired = firedOn(held.code).includes(held.rule);
+    const fired = firedOn(held.code, held.file).includes(held.rule);
     if (fired !== (held.expect === "fires")) {
       wrong.push(`${held.rule}  ${held.name}  (wanted ${held.expect}, got ${fired ? "fires" : "silent"})`);
     }

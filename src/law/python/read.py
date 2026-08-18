@@ -6,6 +6,8 @@ BARE_EXCEPT = "PY-ERROR:1"
 
 MUTABLE_DEFAULT = "PY-TRUTH:1"
 
+ASSERT_AS_A_CHECK = "PY-TRUTH:2"
+
 MUTABLE_BUILDERS = frozenset(
     {"list", "dict", "set", "bytearray", "defaultdict", "Counter", "deque", "OrderedDict"}
 )
@@ -20,6 +22,14 @@ def does_nothing(body):
                 continue
         return False
     return True
+
+
+def is_a_test_file(path):
+    parts = path.replace("\\", "/").split("/")
+    name = parts[-1]
+    if "tests" in parts[:-1] or "test" in parts[:-1]:
+        return True
+    return name.startswith("test_") or name.endswith("_test.py") or name == "conftest.py"
 
 
 def builder_name(call):
@@ -46,12 +56,16 @@ def defaults_of(node):
     return given
 
 
-def violations_in(tree):
+def violations_in(tree, in_a_test_file):
     found = []
     for node in ast.walk(tree):
         if isinstance(node, ast.ExceptHandler):
             if node.type is None or does_nothing(node.body):
                 found.append({"rule": BARE_EXCEPT, "line": node.lineno})
+            continue
+        if isinstance(node, ast.Assert):
+            if not in_a_test_file:
+                found.append({"rule": ASSERT_AS_A_CHECK, "line": node.lineno})
             continue
         if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.Lambda)):
             for given in defaults_of(node):
@@ -67,7 +81,8 @@ def judge(path):
         tree = ast.parse(source, filename=path)
     except SyntaxError as error:
         return {"unreadable": {"file": path, "detail": f"line {error.lineno}: {error.msg}"}}
-    return {"violations": [dict(hit, file=path) for hit in violations_in(tree)]}
+    hits = violations_in(tree, is_a_test_file(path))
+    return {"violations": [dict(hit, file=path) for hit in hits]}
 
 
 def main(argv):

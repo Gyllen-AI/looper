@@ -30,4 +30,19 @@ export const PYTHON_RULES: readonly Rule[] = [
     ],
     valve: { kind: "none" },
   },
+  {
+    id: "PY-TRUTH:2",
+    category: "TRUTH",
+    pass: "fast",
+    bans: "`assert` outside a test file, whatever it is checking",
+    why:
+      "`assert` is not a check. It is a check that disappears when the interpreter is asked to optimise, and `python -O` is how a great many things run in production. A validation written with it passes every test on your machine and is simply absent where it matters, so the first sign of it is the wrong data already saved. That is true of an internal invariant too, which is why this does not try to tell one kind of assert from another",
+    instead: [
+      "raise, and it survives: `if amount <= 0: raise ValueError(\"amount must be positive\")`",
+      "for something arriving from outside, validate it at the edge with a Pydantic model instead",
+      "to narrow a type for the checker, narrow it for real: `if proc.stdout is None: raise Broken()`",
+      "in a test file this rule is silent — `test_*.py`, `*_test.py`, `conftest.py`, or anything under a `tests` folder — because that is where `assert` is the idiom",
+    ],
+    valve: { kind: "none" },
+  },
 ];

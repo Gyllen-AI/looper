@@ -3,6 +3,7 @@ export type PythonCase = {
   readonly name: string;
   readonly code: string;
   readonly expect: "fires" | "silent";
+  readonly file?: string;
 };
 
 export const PYTHON_CASES: readonly PythonCase[] = [
@@ -56,4 +57,26 @@ export const PYTHON_CASES: readonly PythonCase[] = [
     code: `def add(item):\n    items = []\n    items.append(item)\n    return items\n` },
   { rule: "PY-TRUTH:1", name: "a name as a default is not a container this rule can see", expect: "silent",
     code: `EMPTY = ()\n\n\ndef add(names=EMPTY):\n    return names\n` },
+  { rule: "PY-TRUTH:2", name: "a check on data written as an assert", expect: "fires",
+    code: `def charge(amount):\n    assert amount > 0, "amount must be positive"\n    return amount\n` },
+  { rule: "PY-TRUTH:2", name: "an assert narrowing a type", expect: "fires",
+    code: `def read(proc):\n    assert proc.stdout is not None\n    return proc.stdout.read()\n` },
+  { rule: "PY-TRUTH:2", name: "an internal invariant is still deleted by -O", expect: "fires",
+    code: `def step(depth):\n    assert depth >= 0\n    return depth\n` },
+  { rule: "PY-TRUTH:2", name: "a file named for tests is where assert belongs", expect: "silent",
+    file: "test_charge.py",
+    code: `def test_charge():\n    assert 1 + 1 == 2\n` },
+  { rule: "PY-TRUTH:2", name: "a file ending in _test is the same", expect: "silent",
+    file: "charge_test.py",
+    code: `def test_charge():\n    assert 1 + 1 == 2\n` },
+  { rule: "PY-TRUTH:2", name: "anything under a tests folder is the same", expect: "silent",
+    file: "tests/checks.py",
+    code: `def check():\n    assert 1 + 1 == 2\n` },
+  { rule: "PY-TRUTH:2", name: "conftest is part of the test machinery", expect: "silent",
+    file: "conftest.py",
+    code: `def pytest_configure(config):\n    assert config is not None\n` },
+  { rule: "PY-TRUTH:2", name: "raising is the legal spelling and survives -O", expect: "silent",
+    code: `def charge(amount):\n    if amount <= 0:\n        raise ValueError("amount must be positive")\n    return amount\n` },
+  { rule: "PY-TRUTH:2", name: "the word assert inside a name is not a statement", expect: "silent",
+    code: `def assert_positive(amount):\n    if amount <= 0:\n        raise ValueError("no")\n    return amount\n` },
 ];

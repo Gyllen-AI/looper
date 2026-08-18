@@ -22,7 +22,40 @@ is a suspicion and belongs in the notes at the bottom, not in the list.
 
 ## Open
 
-_Empty. Findings 41 to 79 are closed._
+_Empty. Findings 41 to 80 are closed._
+
+### 80 · `assert` is a check that disappears when it matters — cleared
+
+2026-08-18, the third Python rule, and the one the plan predicted would be
+argued with. `python -O` deletes every `assert` statement. A validation written
+with one passes every test on the machine it was written on and is simply absent
+where it runs, so the first sign of it is the wrong data already saved.
+
+**The argument was about scope, not substance.** Two readings were available:
+every `assert` outside a test file, or only those checking data that arrived from
+outside. The second cannot be decided from syntax. The first can, and it hands
+back a legal spelling — `if amount <= 0: raise ValueError(...)` — so it is the
+strict reading rather than the blunt one, and it shipped. Test files are silent by
+path on pytest's own discovery rules: `test_*.py`, `*_test.py`, `conftest.py`, and
+anything under a `tests` folder, because that is where `assert` is the idiom and
+pytest rewrites it.
+
+**Nine cases first.** Fires on a validation carrying a message, on an assert
+narrowing a type, and on an internal invariant — because `-O` deletes all three
+alike. Silent in each of the four test-file spellings, on `raise`, and on a
+function merely *named* `assert_positive`, which is a name and not a statement.
+
+**Both corpora.** 206 outside test files in 167 files of the standard library, 4
+in 176 hand-written files of the adopting project. All 4 were read: two are
+validations carrying a message, which is the harmful case exactly, and two narrow
+a type for the checker, which `if x is None: raise` does honestly. The standard
+library's are mostly internal invariants — the language's own documented use —
+and they vanish under `-O` no differently, which is why the rule does not try to
+tell the two apart.
+
+All three Python rules together, on the two corpora: 348, 23 and 206 in the
+standard library; 51, 0 and 4 in the adopting project. Nothing unreadable in
+either.
 
 ### 79 · the mutable default argument, Python's oldest trap — cleared
 
