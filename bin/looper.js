@@ -40,4 +40,51 @@ nodeModule.registerHooks({
   },
 });
 
-await import("../src/main.ts");
+const HOOKS_THAT_SPEAK = new Map([
+  ["UserPromptSubmit", "UserPromptSubmit"],
+  ["PreToolUse", "PreToolUse"],
+  ["PostToolUse", "PostToolUse"],
+  ["Stop", "Stop"],
+]);
+
+function saidWhenLooperCannotLoad(detail) {
+  return [
+    "looper is not judging anything in this session: its own code could not be loaded.",
+    "Nothing is being checked — not the rules, not the edits, not the commit — until that is fixed.",
+    "Treat every verdict as absent rather than clean, and say so out loud to whoever you are working with.",
+    `What stopped it loading: ${detail}`,
+  ].join(" ");
+}
+
+try {
+  await import("../src/main.ts");
+} catch (cause) {
+  const detail = cause instanceof Error ? cause.message : String(cause);
+  const asked = process.argv[2];
+  const named = process.argv[3];
+  const event = asked === "hook" ? HOOKS_THAT_SPEAK.get(named) : undefined;
+  if (asked === "inject") {
+    console.log(
+      JSON.stringify({
+        hookSpecificOutput: {
+          hookEventName: "UserPromptSubmit",
+          additionalContext: saidWhenLooperCannotLoad(detail),
+        },
+      }),
+    );
+    process.exit(0);
+  }
+  if (event !== undefined) {
+    console.log(
+      JSON.stringify({
+        hookSpecificOutput: {
+          hookEventName: event,
+          additionalContext: saidWhenLooperCannotLoad(detail),
+        },
+      }),
+    );
+    process.exit(0);
+  }
+  console.error(saidWhenLooperCannotLoad(detail));
+  process.exit(1);
+}

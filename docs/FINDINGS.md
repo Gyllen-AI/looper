@@ -22,7 +22,58 @@ is a suspicion and belongs in the notes at the bottom, not in the list.
 
 ## Open
 
-_Empty. Findings 41 to 103 are closed._
+_Empty. Findings 41 to 104 are closed._
+
+### 104 · `missing` — a broken looper announced itself to the human and not to the agent — cleared
+
+2026-08-19, issue #74, and the agent that caused it was this one. A bad conflict
+resolution left `src/law/python/rules.ts` malformed. looper's hook imports it, so
+every `PreToolUse` invocation died before a line of looper ran:
+
+```
+PreToolUse:Bash hook error
+Failed with non-blocking status code: node:internal/modules/run_main:123
+```
+
+`non-blocking` is looper failing open, which is what the canon asks for: a broken
+looper must not wedge the session it watches. That half worked.
+
+**The other half did not. The agent never saw it.** The hook's failure goes to the
+human's terminal; the tool result the agent receives is unchanged. So it kept
+editing and kept committing, believing it was governed, for about a dozen commands
+until Richard asked why the errors were there. For a tool whose whole claim is
+*the reviewer who is not in the room*, the one reader who must know the reviewer
+has stopped reading is the agent, because it is the one still writing.
+
+**Why nothing downstream could report it.** A crashed program cannot announce
+itself. Every module in the import graph is gone before any code runs, so the
+announcement has to live somewhere that imports almost nothing — and there is
+exactly one such place, `bin/looper.js`, which imports `node:fs` and `node:module`
+and then loads the rest.
+
+**Two changes.** That load is now inside a `try`, and on failure the shim writes a
+real hook answer whose `additionalContext` says looper is not judging, what
+stopped it, and to treat every verdict as absent rather than clean —
+`additionalContext` being the channel the agent actually reads, the same one the
+constitution arrives through. It exits 0, because failing open is still right.
+
+And **every hook now goes through that one entry.** Three of the four invocation
+kinds already did; `dev` pointed straight at `src/main.ts`, which is this repo,
+which is why the blindness was found here rather than by an adopter.
+
+**Measured, by breaking it the same way again:**
+
+```
+$ echo '{"tool_name":"Bash",...}' | node bin/looper.js hook PreToolUse
+{"hookSpecificOutput":{"hookEventName":"PreToolUse","additionalContext":
+ "looper is not judging anything in this session: its own code could not be
+  loaded. Nothing is being checked — not the rules, not the edits, not the
+  commit — until that is fixed. ..."}}
+exit=0
+```
+
+Two tests: a checkout whose `src/main.ts` cannot parse still answers and exits 0,
+and `entryFor(DEV)` names the shim. Both fail before the change.
 
 ### 103 · `noise` — a size cap had started deciding where facts live — cleared
 
