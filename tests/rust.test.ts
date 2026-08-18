@@ -12,6 +12,16 @@ import { RUST_RULES, rustRuleFor } from "../src/law/rust/rules.ts";
 import { bansTheEngineDeclares } from "../src/law/rust/engine-words.ts";
 import { crossingsIn } from "../src/law/rust/boundary.ts";
 import { answeringFor } from "../src/law/project.ts";
+import { engineIsBuilt } from "../src/law/rust/drive.ts";
+
+const LOOPER_ROOT = join(import.meta.dirname, "..");
+
+test("the Rust half is built, because nothing below judges a line of Rust without it", () => {
+  assert.ok(
+    engineIsBuilt(LOOPER_ROOT),
+    "vendor/rust-law/target/release/looper-rust is not there, so every Rust verdict below is the absence of an engine rather than the absence of a violation. Run: cargo build --release --manifest-path vendor/rust-law/Cargo.toml",
+  );
+});
 
 const EVERYTHING: readonly string[] = [];
 

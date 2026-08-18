@@ -22,7 +22,7 @@ is a suspicion and belongs in the notes at the bottom, not in the list.
 
 ## Open
 
-_Empty. Every pass of both audits is closed, and findings 41 to 61 with them._
+_Empty. Every pass of both audits is closed, and findings 41 to 62 with them._
 
 ## The second audit — what it covered and what it found
 
@@ -68,6 +68,26 @@ tested, and every one was tested the way it was built rather than the way it
 will be used.
 
 ## Cleared
+
+### 62 · `missing` — the suite was green here and red everywhere else — cleared
+
+Found by looking at CI, 2026-08-18: every run of the `tests` workflow had failed
+since it was added, on all four legs, while `npm test` passed on this machine.
+Eight failures, of two kinds.
+
+Seven were the Rust tests. They need `vendor/rust-law/target/release/looper-rust`,
+which exists here and on no fresh checkout, and the engine builds `--offline` so
+a runner with no cargo cache cannot make one. The failure said *the fixture does
+not violate anything*, which is the absence of an engine wearing the costume of a
+clean verdict. CI builds the engine before the suite now, and a test at the top
+of the Rust file says plainly when it is missing rather than letting seven
+verdicts be silently meaningless.
+
+The eighth was mine: a budget test that allocated the real registry and expected
+something to be dropped. On this machine the working tree is always dirty so
+branches fire; on a fresh checkout nothing has changed, no branch fires, and
+there is nothing to drop. A test that depends on the tree being dirty is a test
+that passes for a reason it never states.
 
 ### 61 · `blunt` — the escape hatch refused every real file, including looper's own — cleared
 

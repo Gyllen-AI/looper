@@ -12,7 +12,31 @@ import {
 } from "../src/doctrine.ts";
 import { readMap } from "../src/map.ts";
 import { allocate } from "../src/allocator.ts";
-import { registry } from "../src/registry.ts";
+import type { Capability, HookEvent, Injection, Outcome } from "../src/capability.ts";
+
+const NO_EVENTS: readonly HookEvent[] = [];
+
+class Standing implements Capability {
+  readonly name: string;
+  readonly at: number;
+
+  constructor(name: string, at: number) {
+    this.name = name;
+    this.at = at;
+  }
+
+  inject(): readonly Injection[] {
+    return [{ source: this.name, priority: this.at, text: "x".repeat(200) }];
+  }
+
+  hooks(): readonly HookEvent[] {
+    return NO_EVENTS;
+  }
+
+  onHook(): Outcome {
+    return { kind: "pass" };
+  }
+}
 
 const ROOT = join(import.meta.dirname, "..");
 
@@ -56,7 +80,10 @@ test("any one kind of work is served in full, constitution and its branch togeth
 });
 
 test("a turn that touches everything drops the least urgent set, and says which", () => {
-  const run = allocate(registry(), { root: ROOT, budget: 400 });
+  const run = allocate(everyBranchName().map((name, at) => new Standing(name, at)), {
+    root: ROOT,
+    budget: 400,
+  });
 
   assert.ok(
     run.allocation.dropped.length > 0,
@@ -111,7 +138,10 @@ test("the always-on tier cannot grow quietly", () => {
 
 test("the line that reports a drop is paid for out of the budget, not added to it", () => {
   for (const budget of [400, 1200, 3000, 6000, 9000]) {
-    const run = allocate(registry(), { root: ROOT, budget });
+    const run = allocate(
+      everyBranchName().map((name, at) => new Standing(name, at)),
+      { root: ROOT, budget },
+    );
     const allocation = run.allocation;
     if (allocation.dropped.length === 0) continue;
 

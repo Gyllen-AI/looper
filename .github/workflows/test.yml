@@ -22,4 +22,6 @@ jobs:
         with:
           node-version: ${{ matrix.node }}
       - run: npm ci
+      - name: build the Rust half, which every Rust verdict needs
+        run: cargo build --release --manifest-path vendor/rust-law/Cargo.toml
       - run: npm test
