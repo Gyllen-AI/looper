@@ -168,6 +168,8 @@ test("a rule never runs on the pass it does not belong to", () => {
   assert.equal(onlyForPass([slowOnly, swallowCheck], "fast").length, 1);
 });
 
+
+
 test("a rule that declares no real pass is refused, not guessed at", () => {
   const nonsense: Check = {
     rule: { ...SWALLOWED, pass: "whenever" as "fast" },

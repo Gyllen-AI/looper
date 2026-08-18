@@ -1,7 +1,7 @@
 import type { Concessions } from "../concessions.ts";
 import type { Check, Finding, Subject } from "../engine.ts";
 import type { Rule } from "../rule.ts";
-import { lineOfNode, parseSource, walk, type Node } from "./parse.ts";
+import { isNode, lineOfNode, parseSource, walk, type Node } from "./parse.ts";
 import { bindingsIn, provenanceOf, rootOfMember, type Bindings } from "./scope.ts";
 import { fieldAt } from "../../fields.ts";
 
@@ -153,10 +153,10 @@ export const vanishedErrorCheck: Check = {
     walk(parsed.root, (node) => {
       if (node.type !== "CatchClause") return;
       const body = node["body"];
-      if (body === null || typeof body !== "object") return;
+      if (!isNode(body)) return;
       if (observesWithin(body, bindings, concessions.traceSymbols)) return;
       const caught = caughtName(node);
-      if (caught !== null && escapesFrom(body as Node, caught)) return;
+      if (caught !== null && escapesFrom(body, caught)) return;
       found.push({ line: lineOfNode(node) });
     });
 

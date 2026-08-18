@@ -2,7 +2,7 @@ import type { Concessions } from "../concessions.ts";
 import { isNamed } from "../concessions.ts";
 import type { Check, Finding, Subject } from "../engine.ts";
 import type { Rule } from "../rule.ts";
-import { lineOfNode, parseSource, walk, type Node } from "./parse.ts";
+import { lineOfNode, parseSource, walk, isNode, type Node } from "./parse.ts";
 import { fieldAt } from "../../fields.ts";
 
 export const BORN_DEFAULT: Rule = {
@@ -73,13 +73,12 @@ const DEFAULTING_ASSIGNMENT: readonly string[] = ["??=", "||="];
 function markTests(root: Node): ReadonlySet<Node> {
   const asked = new Set<Node>();
   const take = (value: unknown): void => {
-    if (value === null || typeof value !== "object") return;
-    const held = value as Node;
-    asked.add(held);
-    if (held.type !== "LogicalExpression" && held.type !== "UnaryExpression") return;
-    take(held["left"]);
-    take(held["right"]);
-    take(held["argument"]);
+    if (!isNode(value)) return;
+    asked.add(value);
+    if (value.type !== "LogicalExpression" && value.type !== "UnaryExpression") return;
+    take(value["left"]);
+    take(value["right"]);
+    take(value["argument"]);
   };
   walk(root, (node) => {
     if (TESTED.includes(node.type)) take(node["test"]);

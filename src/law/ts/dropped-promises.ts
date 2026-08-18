@@ -1,6 +1,6 @@
 import type { Check, Finding, Subject } from "../engine.ts";
 import type { Rule } from "../rule.ts";
-import { lineOfNode, parseSource, walk, type Node } from "./parse.ts";
+import { lineOfNode, parseSource, walk, isNode, type Node } from "./parse.ts";
 import { fieldAt } from "../../fields.ts";
 
 export const DROPPED_PROMISES: Rule = {
@@ -82,8 +82,8 @@ function discardedCalls(root: Node): ReadonlySet<Node> {
     if (node.type !== "ExpressionStatement") return;
     let held = node["expression"];
     if (fieldAt(held, "type") === "AwaitExpression") held = fieldAt(held, "argument");
-    if (held === null || typeof held !== "object") return;
-    if (fieldAt(held, "type") === "CallExpression") found.add(held as Node);
+    if (!isNode(held)) return;
+    if (held.type === "CallExpression") found.add(held);
   });
   return found;
 }

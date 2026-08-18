@@ -7,10 +7,11 @@ export const DEFEATED_CHECKING: Rule = {
   id: "TS-TYPE:3",
   category: "TYPE",
   pass: "fast",
-  bans: "`as any`, `as unknown as T`, `<T>value`, and the `!` that says a value is definitely there",
+  bans: "`as`, in every spelling — `as any`, `as unknown as T`, a plain `as SomeType`, `<T>value`, and the `!` that says a value is definitely there",
   why:
     "each of these tells the compiler to stop checking and trust you. The check was the only thing standing between a wrong assumption and a crash in front of someone using the thing, and it costs nothing to keep",
   instead: [
+    "`as const` is not this: it asks for narrowing rather than claiming a type, and stays legal",
     "const user = UserSchema.parse(input)",
     "if (row === undefined) throw new NotFound(id)",
     "function isUser(value: unknown): value is User { return ... }",
@@ -21,10 +22,6 @@ export const DEFEATED_CHECKING: Rule = {
 
 const CONST_ASSERTION = "const";
 
-function isAnyKeyword(value: unknown): boolean {
-  return fieldAt(value, "type") === "TSAnyKeyword";
-}
-
 function isConstAssertion(annotation: unknown): boolean {
   const type = fieldAt(annotation, "type");
   if (type !== "TSTypeReference") return false;
@@ -32,25 +29,16 @@ function isConstAssertion(annotation: unknown): boolean {
   return fieldAt(name, "name") === CONST_ASSERTION;
 }
 
-function isUnknownAssertion(expression: unknown): boolean {
-  const type = fieldAt(expression, "type");
-  if (type !== "TSAsExpression") return false;
-  const annotation = fieldAt(expression, "typeAnnotation");
-  if (annotation === null || typeof annotation !== "object") return false;
-  return (
-    fieldAt(annotation, "type") === "TSUnknownKeyword"
-  );
+function castsAgain(node: Node): boolean {
+  return fieldAt(node["expression"], "type") === "TSAsExpression";
 }
 
 function offends(node: Node): boolean {
   if (node.type === "TSNonNullExpression") return true;
   if (node.type === "TSTypeAssertion") return true;
   if (node.type !== "TSAsExpression") return false;
-
-  const annotation = node["typeAnnotation"];
-  if (isConstAssertion(annotation)) return false;
-  if (isAnyKeyword(annotation)) return true;
-  return isUnknownAssertion(node["expression"]);
+  if (castsAgain(node)) return false;
+  return !isConstAssertion(node["typeAnnotation"]);
 }
 
 export const defeatedCheckingCheck: Check = {

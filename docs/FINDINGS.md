@@ -22,7 +22,91 @@ is a suspicion and belongs in the notes at the bottom, not in the list.
 
 ## Open
 
-_Empty. Findings 41 to 76 are closed._
+_Empty. Findings 41 to 77 are closed._
+
+### 77 · `wrong` — the doctrine banned four things and the rule caught three — cleared
+
+Found on 2026-08-18 while reviewing PR #41, which arrived with two plain casts.
+The law doctrine says `as`, `as unknown as`, `!` and `any` each turn a check into
+an assumption. `TS-TYPE:3` banned `as any`, `as unknown as T`, `<T>value` and
+`!` — everything except the plain `as SomeType`, which is the commonest of them.
+A rule that says less than its own doctrine is the failure that let ten rules
+ship saying less than they did.
+
+Seven cases first, from the ban text. Fires: a plain cast to a named type, and to
+a builtin. Silent: `as const`, which asks for narrowing rather than claiming a
+type; an import renamed with `as`; an export renamed with `as`; `satisfies`; and
+a type guard, which is the legal spelling. One more case came out of the change
+itself — `x as unknown as User` is two cast nodes on one line, and reporting one
+decision twice is noise, so the outer cast is skipped and it counts once.
+
+**Twelve in this repo, all with a legal spelling already sitting next to them.**
+Eleven were `value as Node` after a `typeof value === "object"` check, and
+`parse.ts` has exported `isNode`, a real type guard, all along. One was
+`JSON.parse(readFileSync(...)) as readonly Probe[]` in `audit/probe.ts`, which is
+the exact harm the rule names — unvalidated text claimed as a type — and now goes
+through `probesIn`, which checks every field and says which probe is malformed.
+
+**One is pardoned, in the open.** `tests/law.test.ts` builds a rule whose `pass`
+is a word no rule declares, to prove the engine refuses it rather than guessing.
+The type system says that value cannot exist, which is the point of the test, so
+there is no honest spelling. It is named under `[exempt]` in `law.toml` with the
+reason, which is one visible line in a diff and arguable forever.
+
+**Run over code nobody here wrote:** 437 files of an adopting project, its own
+source and its libraries. The old rule found 209, the new one 456 — 247 more,
+across 85 files. Fourteen were read line by line and every one is the shape the
+rule bans: `JSON.parse(saved) as WinState` from localStorage, three
+`localStorage.getItem(...) as AdPlatform | null`, an `r.cpa as number` behind a
+filter that does not narrow, a literal array claimed as `MetaAttribution[]` where
+`satisfies` is the honest spelling, and eight loose config values claimed as
+`string[]`. No false positive was found.
+
+The cost is volume, not wrongness, and the baseline is what carries it: on
+adoption the existing count is recorded rather than refused, so only new `as` is
+blocked.
+
+### 76 · `wrong` — a password with a full stop in it, and a credential word with more name after it — cleared
+
+Contributed as PR #40 from a project that had adopted looper, found by pointing
+the scanner at its own `.env` line by line. Two holes, both real, both verified
+here against that file.
+
+A named credential's unquoted value was matched as `[^\s"';,()\[\]{}.]{12,}` —
+no full stop allowed — so `SUPABASE_DB_PASSWORD=` followed by fifteen characters
+with a dot in them matched only up to the dot, fell under the twelve-character
+floor, and read as nothing at all. The dot was excluded to keep
+the `config.apiToken` read quiet, which is a credential being read out of an
+object rather than being one. Dots are allowed in a value now and that exemption
+is explicit instead: an unquoted value that is nothing but a dotted path of
+identifiers is code. Quoted values are exempt from the exemption, because
+`"s3cret.value.here"` in quotes is a literal.
+
+Separately, `SECRET_KEY=` never matched, because the word boundary after the
+credential word cannot land on an underscore. A credential word may be followed
+by more name, and the suffix must start with a separator, which keeps
+`tokenizer` and `authorName` out.
+
+**What the review added.** The contribution arrived without the third thing this
+project asks for: a run over code nobody here wrote. Run here, on 232
+hand-written files of the project it came from, it added three findings. One was
+the real password it was written to catch. Two were `_token =
+data.session?.access_token ?? null` — a token read out of an object through
+optional chaining, which the new exemption did not recognise because it only knew
+a plain dot. `A_DOTTED_PATH` accepts `?.` now, and two cases hold it.
+
+After that fix: 232 hand-written files, one new finding, and it is the true one.
+238 files of this repo, no change. On a wider sweep of 4,000 files that includes
+`node_modules` and Next.js build output, it adds 28 findings, all false —
+a constant whose name ends in a credential word followed by another word,
+holding a quoted string of ordinary words joined by dots. Not fixed, and left
+here rather than hidden: the gate reads staged diffs, that code is never staged,
+and the shape appeared zero times in the 232 files of real source. The
+forty-character ceiling on the path exemption is kept for the same reason it
+cost one of those 28 — fewer exemptions is the stricter reading.
+
+The three comments the contribution carried were removed. Its own checkout was
+the one whose hooks were not loading, so looper's comment rule never judged it.
 
 ### 75 · `missing` — a strict tsconfig that nothing runs — cleared
 

@@ -1,6 +1,6 @@
 import type { Check, Finding, Subject } from "../engine.ts";
 import type { Rule } from "../rule.ts";
-import { lineOfNode, parseSource, walk, type Node } from "../ts/parse.ts";
+import { lineOfNode, parseSource, walk, isNode, type Node } from "../ts/parse.ts";
 import { fieldAt } from "../../fields.ts";
 
 export const CONDITIONAL_HOOK: Rule = {
@@ -87,11 +87,10 @@ function afterAnEarlyReturn(node: Node): readonly Finding[] {
   const found: Finding[] = [];
   let passed = false;
   for (const [at, statement] of statements.entries()) {
-    if (statement === null || typeof statement !== "object") continue;
-    const asNode = statement as Node;
-    if (passed) found.push(...hooksUnder(asNode));
+    if (!isNode(statement)) continue;
+    if (passed) found.push(...hooksUnder(statement));
     const last = at === statements.length - 1;
-    if (!last && returnsWithin(asNode)) passed = true;
+    if (!last && returnsWithin(statement)) passed = true;
   }
   return found;
 }

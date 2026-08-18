@@ -72,8 +72,20 @@ test("as const is the opposite of defeating the checker and is untouched", () =>
   assert.equal(count(defeatedCheckingCheck, "const modes = ['a', 'b'] as const;"), 0);
 });
 
-test("a narrowing assertion to a real type is out of this rule's scope", () => {
-  assert.equal(count(defeatedCheckingCheck, "const e = value as User;"), 0);
+test("a plain cast to a real type is the same claim as any other", () => {
+  assert.equal(
+    count(defeatedCheckingCheck, "const e = value as User;"),
+    1,
+    "the doctrine names bare `as` as one of the four ways to tell the compiler to trust you, and it is the commonest of them",
+  );
+});
+
+test("one act of casting is one finding, however many words it takes", () => {
+  assert.equal(
+    count(defeatedCheckingCheck, "const b = input as unknown as User;"),
+    1,
+    "as unknown as User is two cast nodes on one line; reporting it twice is noise about a single decision",
+  );
 });
 
 test("every suppression marker is caught, wherever the comment sits", () => {

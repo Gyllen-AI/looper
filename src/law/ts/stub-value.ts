@@ -1,6 +1,6 @@
 import type { Check, Finding, Subject } from "../engine.ts";
 import type { Rule } from "../rule.ts";
-import { lineOfNode, parseSource, walk, type Node } from "./parse.ts";
+import { lineOfNode, parseSource, walk, isNode, type Node } from "./parse.ts";
 import { fieldAt } from "../../fields.ts";
 import { anyTraced, tracedFrom, valuesBoundIn, type Bindings } from "./bindings.ts";
 
@@ -125,7 +125,8 @@ function catchHandlerFindings(node: Node, block: unknown, outer: Bindings): read
 
   const already = answersAlreadyGiven(block);
   const found: Finding[] = [];
-  walk(body as Node, (held) => {
+  if (!isNode(body)) return [];
+  walk(body, (held) => {
     if (held.type !== "ReturnStatement") return;
     const argument = held["argument"];
     const shape = shapeOf(argument);
@@ -166,8 +167,8 @@ function catchArgumentFindings(node: Node, bindings: Bindings): readonly Finding
         found.push({ line: lineOfNode(node) });
         continue;
       }
-      if (body !== null && typeof body === "object") {
-        found.push(...fabricatedReturnsIn(body as Node, bindings));
+      if (isNode(body)) {
+        found.push(...fabricatedReturnsIn(body, bindings));
       }
     }
   }
@@ -186,8 +187,8 @@ export const stubValueCheck: Check = {
     walk(parsed.root, (node) => {
       if (node.type === "TryStatement") {
         const handler = node["handler"];
-        if (handler === null || typeof handler !== "object") return;
-        found.push(...catchHandlerFindings(handler as Node, node["block"], bindings));
+        if (!isNode(handler)) return;
+        found.push(...catchHandlerFindings(handler, node["block"], bindings));
         return;
       }
       if (isCatchCall(node)) found.push(...catchArgumentFindings(node, bindings));

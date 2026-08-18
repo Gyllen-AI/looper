@@ -1,4 +1,4 @@
-import { walk, type Node } from "./parse.ts";
+import { walk, isNode, type Node } from "./parse.ts";
 import { fieldAt } from "../../fields.ts";
 
 export type Reach = {
@@ -28,9 +28,9 @@ function bareChain(value: unknown): readonly string[] | null {
     return name === null ? null : [name];
   }
   if (type !== "MemberExpression" && type !== "OptionalMemberExpression") return null;
-  const asNode = value as Node;
-  const base = bareChain(asNode["object"]);
-  const step = stepOf(asNode);
+  if (!isNode(value)) return null;
+  const base = bareChain(value["object"]);
+  const step = stepOf(value);
   if (base === null || step === null) return null;
   return [...base, step];
 }

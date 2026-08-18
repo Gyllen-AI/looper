@@ -1,6 +1,6 @@
 import type { Check, Finding, Subject } from "../engine.ts";
 import type { Rule } from "../rule.ts";
-import { lineOfNode, parseSource, walk, type Node } from "./parse.ts";
+import { lineOfNode, parseSource, walk, isNode, type Node } from "./parse.ts";
 import { fieldAt } from "../../fields.ts";
 
 export const UNFINISHED: Rule = {
@@ -81,7 +81,7 @@ function writtenInlineAsAnArgument(root: Node): ReadonlySet<Node> {
     if (value === null || typeof value !== "object") return;
     const held = fieldAt(value, "type");
     if (held === "ArrowFunctionExpression" || held === "FunctionExpression") {
-      inline.add(value as Node);
+      if (isNode(value)) inline.add(value);
     }
   };
 

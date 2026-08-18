@@ -1,6 +1,6 @@
 import type { Check, Finding, Subject } from "../engine.ts";
 import type { Rule } from "../rule.ts";
-import { lineOfNode, parseSource, walk, type Node } from "../ts/parse.ts";
+import { lineOfNode, parseSource, walk, isNode, type Node } from "../ts/parse.ts";
 import { fieldAt } from "../../fields.ts";
 
 export const UNCHECKED_INPUT: Rule = {
@@ -92,9 +92,8 @@ function withoutAwait(value: unknown): unknown {
 function thrownAway(node: Node): Node | null {
   if (node.type !== "ExpressionStatement") return null;
   const held = withoutAwait(node["expression"]);
-  if (held === null || typeof held !== "object") return null;
-  const asNode = held as Node;
-  return isArrivalCall(asNode) ? asNode : null;
+  if (!isNode(held)) return null;
+  return isArrivalCall(held) ? held : null;
 }
 
 function accountedFor(root: Node, checked: ReadonlySet<string>): ReadonlySet<Node> {

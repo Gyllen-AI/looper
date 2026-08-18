@@ -1,5 +1,7 @@
 import { readFileSync } from "node:fs";
 
+import { fieldAt } from "../src/fields.ts";
+
 import { CHECKS } from "../src/law/checks.ts";
 import { judge } from "../src/law/engine.ts";
 import { CONCEDING_NOTHING } from "../src/law/concessions.ts";
@@ -13,6 +15,24 @@ export type Probe = {
   readonly file?: string;
   readonly role?: Role;
 };
+
+export function probesIn(text: string): readonly Probe[] {
+  const held: unknown = JSON.parse(text);
+  if (!Array.isArray(held)) throw new Error("the probe file must hold a list");
+  return held.map((one, at) => {
+    const rule = fieldAt(one, "rule");
+    const name = fieldAt(one, "name");
+    const code = fieldAt(one, "code");
+    const expect = fieldAt(one, "expect");
+    if (typeof rule !== "string" || typeof name !== "string" || typeof code !== "string") {
+      throw new Error(`probe ${at} needs rule, name and code, all text`);
+    }
+    if (expect !== "fires" && expect !== "silent") {
+      throw new Error(`probe ${at} must expect either fires or silent`);
+    }
+    return { rule, name, code, expect };
+  });
+}
 
 export type Outcome = {
   readonly probe: Probe;
@@ -53,6 +73,5 @@ function report(outcomes: readonly Outcome[]): void {
 }
 
 if (process.argv[2] !== undefined) {
-  const probes = JSON.parse(readFileSync(process.argv[2], "utf8")) as readonly Probe[];
-  report(run(probes));
+  report(run(probesIn(readFileSync(process.argv[2], "utf8"))));
 }
