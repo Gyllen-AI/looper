@@ -11,7 +11,7 @@ import { relative } from "node:path";
 import { isHookEvent, type Payload } from "./capability.ts";
 import { DEV, INJECTION_BUDGET, namedProject, projectRoot, searchPath, whereTheUserLives, type Invocation } from "./config.ts";
 import { NO_SESSION_EVER, lastRun, noteRun, sayWhenHooksRan, worthSayingAtCommit } from "./seen.ts";
-import { AFTER_INIT, costLines, describeStep, mapComplaints } from "./announce.ts";
+import { AFTER_INIT, USAGE, costLines, describeStep, mapComplaints } from "./announce.ts";
 import { reachedFrom, runInit, type Report, type Step } from "./init.ts";
 import { totalIn, readBaseline } from "./law/baseline.ts";
 import { formatReport } from "./law/report.ts";
@@ -473,19 +473,7 @@ function report(args: readonly string[]): number {
 }
 
 function usage(): void {
-  console.error(
-    [
-      "looper",
-      "  looper init [--dev]     wire looper into this project",
-      "  looper inject           the per-prompt injection hook",
-      "  looper hook <event>     dispatch an agent hook",
-      "  looper status           what looper injects, and what it costs per turn",
-      "  looper serve            the MCP server, on stdin and stdout",
-      "  looper law [path...]    judge every file, or only what is under these paths",
-      "  looper adopt            propose a rule this project should follow",
-      "  looper report           say a looper rule is wrong, without sending anything",
-    ].join("\n"),
-  );
+  console.error(USAGE.join("\n"));
 }
 
 function run(argv: readonly string[]): number {

@@ -3,7 +3,7 @@ import { existsSync, readFileSync } from "node:fs";
 import { basename, join } from "node:path";
 
 import { JSON_INDENT } from "./config.ts";
-import { reasonFrom } from "./fields.ts";
+import { fieldAt, reasonFrom } from "./fields.ts";
 import { writeAtomically } from "./atomic.ts";
 
 export type Run = {
@@ -53,10 +53,13 @@ function textOf(value: unknown): string {
 
 function runFrom(value: unknown): Run | null {
   if (value === null || typeof value !== "object") return null;
-  const held = value as Partial<Run>;
-  const at = textOf(held.at);
+  const at = textOf(fieldAt(value, "at"));
   if (at.length === 0) return null;
-  return { event: textOf(held.event), startedIn: textOf(held.startedIn), at };
+  return {
+    event: textOf(fieldAt(value, "event")),
+    startedIn: textOf(fieldAt(value, "startedIn")),
+    at,
+  };
 }
 
 export function lastRun(root: string, home: string): Seen {
@@ -65,8 +68,11 @@ export function lastRun(root: string, home: string): Seen {
   try {
     const held: unknown = JSON.parse(readFileSync(path, "utf8"));
     if (held === null || typeof held !== "object") return unreadable(`${path} holds no record`);
-    const kept = held as { last?: unknown; session?: unknown };
-    return { last: runFrom(kept.last), session: runFrom(kept.session), trouble: "" };
+    return {
+      last: runFrom(fieldAt(held, "last")),
+      session: runFrom(fieldAt(held, "session")),
+      trouble: "",
+    };
   } catch (cause) {
     return unreadable(reasonFrom(cause));
   }

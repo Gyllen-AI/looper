@@ -10,6 +10,18 @@ import type { Step } from "./init.ts";
 
 const DOCTRINE_PREFIX = "doctrine:";
 
+export const USAGE: readonly string[] = [
+  "looper",
+  "  looper init [--dev]     wire looper into this project",
+  "  looper inject           the per-prompt injection hook",
+  "  looper hook <event>     dispatch an agent hook",
+  "  looper status           what looper injects, and what it costs per turn",
+  "  looper serve            the MCP server, on stdin and stdout",
+  "  looper law [path...]    judge every file, or only what is under these paths",
+  "  looper adopt            propose a rule this project should follow",
+  "  looper report           say a looper rule is wrong, without sending anything",
+];
+
 export const AFTER_INIT: readonly string[] = [
   "  If an agent session is already open in this project, restart it. The hooks",
   "  above were written just now, and a session that started before that does not",
