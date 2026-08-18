@@ -34,14 +34,56 @@ function asksForAShell(options: unknown): boolean {
   });
 }
 
+const PASTING_METHODS: readonly string[] = ["concat", "join"];
+
+const SHELLS: readonly string[] = [
+  "sh",
+  "bash",
+  "zsh",
+  "dash",
+  "ksh",
+  "fish",
+  "cmd",
+  "cmd.exe",
+  "powershell",
+  "powershell.exe",
+  "pwsh",
+];
+
 function pastedInto(argument: unknown): boolean {
   const type = fieldAt(argument, "type");
   if (type === "TemplateLiteral") {
     const expressions = fieldAt(argument, "expressions");
     return Array.isArray(expressions) && expressions.length > 0;
   }
+  if (type === "CallExpression") {
+    const callee = fieldAt(argument, "callee");
+    if (fieldAt(callee, "type") !== "MemberExpression") return false;
+    const named = fieldAt(fieldAt(callee, "property"), "name");
+    if (typeof named !== "string" || !PASTING_METHODS.includes(named)) return false;
+    const args = fieldAt(argument, "arguments");
+    return Array.isArray(args);
+  }
   if (type !== "BinaryExpression") return false;
   return fieldAt(argument, "operator") === "+";
+}
+
+function isAShell(program: unknown): boolean {
+  const named = fieldAt(program, "value");
+  if (typeof named !== "string") return false;
+  const last = named.split(/[\\/]/).pop();
+  return last !== undefined && SHELLS.includes(last);
+}
+
+function everyArgumentIn(args: readonly unknown[]): readonly unknown[] {
+  const flat: unknown[] = [];
+  for (const held of args) {
+    flat.push(held);
+    if (fieldAt(held, "type") !== "ArrayExpression") continue;
+    const elements = fieldAt(held, "elements");
+    if (Array.isArray(elements)) flat.push(...elements);
+  }
+  return flat;
 }
 
 export const builtCommandCheck: Check = {
@@ -58,8 +100,12 @@ export const builtCommandCheck: Check = {
       if (!shelling && !isCallTo(node, SPAWNING)) return;
       const args = node["arguments"];
       if (!Array.isArray(args)) return;
-      if (!shelling && !args.some(asksForAShell)) return;
-      if (anyTraced(args[0], bindings, pastedInto)) found.push({ line: lineOfNode(node) });
+      const spawningAShell = !shelling && isAShell(args[0]);
+      if (!shelling && !spawningAShell && !args.some(asksForAShell)) return;
+      const carrying = spawningAShell ? everyArgumentIn(args) : [args[0]];
+      if (carrying.some((held) => anyTraced(held, bindings, pastedInto))) {
+        found.push({ line: lineOfNode(node) });
+      }
     });
     return found;
   },
