@@ -33,7 +33,7 @@ export function languageOf(file: string): string {
   return held === undefined ? "" : held;
 }
 
-function isTheInterface(file: string): boolean {
+export function isTheInterface(file: string): boolean {
   return THE_INTERFACE_SPEAKS.includes(extname(file));
 }
 
@@ -80,24 +80,50 @@ export function stackOf(root: string): Stack {
 
 export type Written =
   | { readonly kind: "absent" }
-  | { readonly kind: "listed"; readonly languages: ReadonlySet<string> };
+  | {
+      readonly kind: "listed";
+      readonly languages: ReadonlySet<string>;
+      readonly frontend: ReadonlySet<string>;
+      readonly backend: ReadonlySet<string>;
+    };
 
 const A_ROW = /^\|\s*([A-Za-z#+.][A-Za-z0-9#+. ]*?)\s*\|/;
 
+const A_HALF = /^##\s+(Frontend|Backend)\s*$/i;
+
 const NOT_A_LANGUAGE: readonly string[] = ["language", "---"];
+
+const NEITHER_HALF_NAMED = "";
 
 export function languagesListedIn(root: string): Written {
   const path = join(root, STACK_PATH);
   if (!existsSync(path)) return { kind: "absent" };
 
   const listed = new Set<string>();
+  const frontend = new Set<string>();
+  const backend = new Set<string>();
+  let half = NEITHER_HALF_NAMED;
+
   for (const line of readFileSync(path, "utf8").split("\n")) {
+    const heading = A_HALF.exec(line);
+    if (heading !== null) {
+      const named = heading[1];
+      half = named === undefined ? NEITHER_HALF_NAMED : named.toLowerCase();
+      continue;
+    }
     const held = A_ROW.exec(line);
     if (held === null) continue;
     const name = held[1];
     if (name === undefined) continue;
     if (NOT_A_LANGUAGE.includes(name.toLowerCase())) continue;
+
     listed.add(name);
+    if (half === "frontend") frontend.add(name);
+    else if (half === "backend") backend.add(name);
+    else {
+      frontend.add(name);
+      backend.add(name);
+    }
   }
-  return { kind: "listed", languages: listed };
+  return { kind: "listed", languages: listed, frontend, backend };
 }

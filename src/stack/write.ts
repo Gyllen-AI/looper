@@ -1,3 +1,4 @@
+import { join, relative } from "node:path";
 import { STACK_PATH } from "../config.ts";
 import type { Half, Stack } from "./read.ts";
 
@@ -12,7 +13,13 @@ function rows(half: Half): readonly string[] {
   ];
 }
 
-export function stackDocument(stack: Stack, when: string): string {
+function prescriptionAt(root: string): string {
+  const held = join(import.meta.dirname, "..", "..", "STACK.md");
+  const inside = relative(root, held);
+  return inside.startsWith("..") ? held : inside;
+}
+
+export function stackDocument(stack: Stack, when: string, root: string): string {
   return [
     "# What this project is built from",
     "",
@@ -22,6 +29,12 @@ export function stackDocument(stack: Stack, when: string): string {
     "",
     "`STACK:1` refuses a source file in a language this document does not list. The",
     "way through is to add the row, in the same commit, where a reviewer sees it.",
+    "",
+    `Before adding one, read \`${prescriptionAt(root)}\`, which is looper's own`,
+    "recommendation for a new service — the web framework, the database layer, the",
+    "front end, one tool per job. It judges nothing here. It exists so that adding a",
+    "row is a choice between named options rather than whatever was reached for",
+    "first.",
     "",
     "Counted from the files looper judges. Anything outside the law is not here — a",
     "vendored dependency, a folder named in `law.toml`, or a directory that governs",

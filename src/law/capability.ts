@@ -271,7 +271,7 @@ export function judgeStaged(root: string): Outcome {
 export function writeStackIfAbsent(root: string): string {
   const path = join(root, STACK_PATH);
   if (existsSync(path)) return "";
-  writeAtomically(path, stackDocument(stackOf(root), new Date().toISOString().slice(0, 10)));
+  writeAtomically(path, stackDocument(stackOf(root), new Date().toISOString().slice(0, 10), root));
   return `looper: wrote ${STACK_PATH}, the record of what this project is built from, measured from what is on disk. Read it — adding a language later is a decision, and that file is where it becomes visible.`;
 }
 
