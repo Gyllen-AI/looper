@@ -590,6 +590,31 @@ and costs nothing new, because the parse has happened either way. A file with a
 lock in it should raise `runtime/concurrency`; no path expression will ever say
 that.
 
+**The drop marker is that index already, for the part being dropped.** A
+contribution may carry a `summary`, one line saying what it holds, and the
+allocator prints it beside the size of anything it could not fit:
+
+```
+[looper: 8 contribution(s) dropped for budget. Each is listed with what it holds,
+so this is an index and not a silence:
+  doctrine:data/indexing (1118 chars): Making a query fast before it is slow.
+  doctrine:work/deploy (3997 chars): Getting a change onto the machine that runs it.
+```
+
+The line costs nothing to write: every canon branch already opens with a sentence
+saying what it is for, so the index entry was written the day the branch was. The
+router skips the heading `assembleBranch` prepends, which names the branch a
+second time and says nothing.
+
+This is what pays for making branches droppable. `#125` was right that a rule
+which never arrived reads exactly like a rule that was followed, and a size in
+bytes does not fix that, because a reader cannot tell from `1118 chars` whether
+they needed it. A rule offered by name **and by subject**, with a tool that
+fetches it, is a choice the reader makes. That difference is why the reversal is
+written in `.looper/decisions.md` rather than simply taken, and the entry names
+what has to be true for it to expire: pushing an index and pulling bodies, so
+that nothing is dropped at all.
+
 **Push an index, pull the body.** The constitution already instructs the reader
 to pull the branches their task touches, so pushing whole branches is the
 fallback that spends the budget. Inverted, the per-turn cost stops growing with
@@ -3361,12 +3386,28 @@ wrong unprompted:
 - **What crosses a boundary is defined once**, and is parsed at the edge.
 - **What a person looks at renders what it is told and decides nothing.**
 
-**What did not land, and the reason is a hard ceiling rather than a judgement.**
-A Claude Code hook may return at most 10,000 characters. The injection budget of
-9,800 is not a preference — it is 200 under a limit nothing here controls, and a
-test refuses any budget at or above it, because truncation the agent performs is
-truncation looper cannot mark. **So the canon cannot grow. It can only be
-chosen.**
+**What did not land, and the reason was believed to be a hard ceiling.**
+This section long claimed that a Claude Code hook may return at most 10,000
+characters, and that 9,800 was 200 under a limit nothing here controls. Nothing
+ever checked it. **Measured on 2026-08-20 against Claude Code 2.1.236, by
+installing a temporary hook that emits sentinels at known character offsets and
+reading which ones arrive, that is not what happens.** A UserPromptSubmit hook
+emitting exactly 10,001 characters arrived whole, every sentinel intact,
+including the one at offset 9,980. So 10,000 is not a truncation point.
+
+What does happen was never written down and is worse than truncation. At 16,001
+characters the output is not trimmed: it is diverted to a file and replaced by a
+2,000-character preview (`k2r` in the binary), so only the sentinel at offset 0
+survived. **Crossing the real ceiling costs the whole injection, constitution
+included, rather than its last lines.** The cliff lies between 10,001 and 16,001
+and has not been bisected.
+
+Two things follow, pointing opposite ways. The budget has headroom nobody
+claimed, so a rule deleted to stay under 9,800 may have been deleted for nothing.
+And the ceiling matters more than believed, not less, because overflow is
+near-total loss. The number stays at 9,800 until the cliff is measured and the
+test still refuses a budget at or above `HOOK_OUTPUT_CEILING`, but the reason is
+now a measurement with a date and a version on it.
 
 Adding 1,050 characters meant finding 1,050 to remove, and the trade is the
 record of what stopped earning its place:

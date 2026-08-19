@@ -2,7 +2,7 @@ import { INJECTION_SEPARATOR } from "./config.ts";
 import type { Capability, InjectContext, Injection } from "./capability.ts";
 import { reasonFrom } from "./fields.ts";
 
-export type Weighed = { readonly source: string; readonly chars: number };
+export type Weighed = { readonly source: string; readonly chars: number; readonly summary?: string };
 
 export type Allocation = {
   readonly text: string;
@@ -45,8 +45,13 @@ function byPriority(left: Injection, right: Injection): number {
 }
 
 function droppedMarker(dropped: readonly Weighed[]): string {
-  const named = dropped.map((one) => `${one.source} (${one.chars} chars)`).join(", ");
-  return `[looper: ${dropped.length} contribution(s) dropped for budget — ${named}. A name cannot be weighed, so the size is here: run looper law to see what the outstanding-work count would have said, and the doctrine tool for a rule set by name.]`;
+  const named = dropped
+    .map((one) => {
+      const said = one.summary === undefined ? "" : `: ${one.summary}`;
+      return `\n  ${one.source} (${one.chars} chars)${said}`;
+    })
+    .join("");
+  return `[looper: ${dropped.length} contribution(s) dropped for budget. Each is listed with what it holds, so this is an index and not a silence: pull the one your work touches by name with the doctrine tool, and run looper law for the outstanding-work count.${named}\n]`;
 }
 
 function overBudgetMarker(chars: number, budget: number): string {
@@ -75,7 +80,7 @@ export function allocate(
     const separator = parts.length === 0 ? 0 : INJECTION_SEPARATOR.length;
     parts.push(injection.text);
     contributors.push(injection.source);
-    weighed.push({ source: injection.source, chars: width });
+    weighed.push({ source: injection.source, chars: width, summary: injection.summary });
     used += separator + width;
   };
 
@@ -89,7 +94,11 @@ export function allocate(
       take(injection);
       continue;
     }
-    dropped.push({ source: injection.source, chars: injection.text.length });
+    dropped.push({
+      source: injection.source,
+      chars: injection.text.length,
+      summary: injection.summary,
+    });
   }
 
   const requiredAlone = used > context.budget;
