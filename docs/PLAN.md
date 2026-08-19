@@ -4880,3 +4880,57 @@ you trust that one.
 
 A test holds it, written from the issue and run against the silent version first.
 
+### A file path read as a key, and a wider fix measured and not taken
+
+`#116`: `looper init` wrote `.looper/baseline.toml`, its last line told the adopter
+to commit it, and the secrets gate refused it. Reproduced end to end before
+merging — one TypeScript file under an abbreviation-heavy namespace directory is
+enough:
+
+```
+REFUSED  .looper/baseline.toml:8  a 42-character random-looking string
+```
+
+Merged as it stands: the baseline is skipped, the detector untouched, and every
+path in that file is the path of a file already tracked in the same commit, so
+scanning it protects nothing the commit does not already contain.
+
+**The shape that trips it is narrower than it first looked.** A candidate needs 24
+or more characters *and* every lowercase run of seven or fewer — `LONGEST_WORD` is
+7 — *and* entropy over 4.2. Measured against realistic project paths on
+2026-08-19, none of these is refused:
+
+| path segment | length | longest lowercase run | |
+|---|---|---|---|
+| `OrderSyncJobRunner` | 18 | 5 | under the length floor |
+| `PaymentGatewayAdapter` | 21 | 6 | under the length floor |
+| `InvoiceReconciliationHost` | 25 | 13 | excused by the word test |
+| `EventBusSubscriberHostV2` | 24 | 9 | excused by the word test |
+
+It takes naming like four-or-more short abbreviations run together. Real — the
+adopter hit it — but not the common case.
+
+**A wider fix was built, measured and then dropped.** The same false positive can
+hit the commit command, where there is no route out: three of my own shell
+commands were refused while building the fixture for this review, because a
+temporary path carrying a session id was 38, 40 and 47 characters. The fix was to
+ask whether a candidate names something on disk — decidable rather than a guess,
+and it worked on every case including the adversarial one.
+
+It is not shipped, for three reasons. Six realistic adopter paths do not trip the
+detector at all, so it buys little. It puts filesystem reads into the secrets path
+on every commit. And the case that kept biting was *writing about* the bug — a
+bare CamelCase run with no directory around it names nothing on disk, so the fix
+would not have excused it anyway, and the gate is right to refuse it.
+
+Recorded rather than built, so that if this recurs the shape and the measured
+answer are already here. `#116`'s author declined to attempt a randomness
+heuristic inside a false-positive fix; declining to attempt a filesystem one is
+the same judgement.
+
+**Splitting the candidate on `/` is worse and stays rejected.** Verified with a
+realistic key rather than AWS's documented example, which the detector correctly
+treats as a placeholder: a real key with slashes splits into parts of 12, 10 and
+18 — all under the 24-character floor, none flagged — while a path still has a
+28-character part that is. It lets the key through *and* keeps the false positive.
+
