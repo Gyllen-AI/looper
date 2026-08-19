@@ -28,6 +28,8 @@ export const INJECTION_BUDGET = 9800;
 
 export const HOOK_OUTPUT_CEILING = 10000;
 
+export const HOOK_PREVIEW_CHARS = 2000;
+
 export const INJECTION_SEPARATOR = "\n\n";
 
 export const DOCTRINE_SEPARATOR = "\n\n";

@@ -2,6 +2,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 
 import { allocate } from "../src/allocator.ts";
+import { HOOK_OUTPUT_CEILING } from "../src/config.ts";
 import type {
   Capability,
   HookEvent,
@@ -131,4 +132,24 @@ test("what each rule set cost is reported, because the author cannot cut what th
     ["first:100", "second:250"],
     "the widths are what the doctrine author needs to decide what to cut, and estimating them by hand with wc is the job looper is supposed to be doing",
   );
+});
+
+test("required text past the hook ceiling is cut by us, and the cut is stated", () => {
+  const huge = "A".repeat(HOOK_OUTPUT_CEILING * 2);
+  const run = allocate([new Speaker("router", 0, huge, true)], CONTEXT);
+
+  assert.ok(
+    run.allocation.text.length <= HOOK_OUTPUT_CEILING,
+    `emitted ${run.allocation.text.length} characters against a ceiling of ${HOOK_OUTPUT_CEILING}: past it the agent keeps a 2000-character preview and a file path, so the constitution itself would not arrive`,
+  );
+  assert.match(run.allocation.text, /characters were cut here/);
+  assert.equal(run.allocation.overflowed, true);
+  assert.ok(run.allocation.text.startsWith("A".repeat(1000)));
+});
+
+test("text within the hook ceiling is never cut, only marked", () => {
+  const run = allocate([new Speaker("router", 0, "A".repeat(500), true)], CONTEXT);
+
+  assert.ok(run.allocation.text.startsWith("A".repeat(500)));
+  assert.doesNotMatch(run.allocation.text, /characters were cut here/);
 });
