@@ -7,6 +7,7 @@ import {
   PYTHON_READER,
   PYTHON_SKELETON,
   PYTHON_TIMEOUT_MS,
+  A_READER_MAY_ANSWER_WITH,
 } from "../../config.ts";
 import { fieldAt, reasonFrom } from "../../fields.ts";
 
@@ -76,6 +77,7 @@ export function judgePython(looperRoot: string, files: readonly string[]): Judge
     output = execFileSync(PYTHON_COMMAND, [readerAt(looperRoot), ...files], {
       encoding: "utf8",
       timeout: PYTHON_TIMEOUT_MS,
+      maxBuffer: A_READER_MAY_ANSWER_WITH,
       stdio: ["ignore", "pipe", "ignore"],
     });
   } catch (cause) {
@@ -116,6 +118,7 @@ export function shapeFromPython(
     output = execFileSync(PYTHON_COMMAND, [reader, path, String(line), String(depth)], {
       encoding: "utf8",
       timeout: PYTHON_TIMEOUT_MS,
+      maxBuffer: A_READER_MAY_ANSWER_WITH,
       stdio: ["ignore", "pipe", "ignore"],
     });
   } catch (cause) {
