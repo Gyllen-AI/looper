@@ -75,7 +75,20 @@ export function law(asked: readonly string[], out: Out): number {
   if (older > 0) {
     out.say(alreadyHere(older, yours));
   }
+  if (survey.unjudged > 0) {
+    out.say(couldNotBeRead(survey.unjudged, survey.files));
+  }
   return yours === 0 ? 0 : 2;
+}
+
+function couldNotBeRead(unjudged: number, judged: number): string {
+  const one = unjudged === 1;
+  return [
+    `A further ${unjudged} file(s) could not be read at all and ${one ? "was" : "were"} not judged,`,
+    `named above. The count above is over the ${judged} that could be. A file nobody could`,
+    `read produces exactly what a clean file produces, so read this number before you`,
+    `trust that one.`,
+  ].join(" ");
 }
 
 function alreadyHere(older: number, yours: number): string {

@@ -4416,10 +4416,10 @@ over zod `3c9ca1d`, excalidraw `e160ff7`, tanstack-query `b8e3559`, VS Code
 | | zod | excalidraw | tanstack | vscode | ours |
 |---|---|---|---|---|---|
 | lines of TypeScript | 79,636 | 190,487 | 157,039 | 2,613,789 | 10,765 |
-| problems per 1,000 lines | 128.7 | 67.2 | 45.2 | 47.4 | 20.1 |
-| without `TS-DEAD:2` | 43.4 | 24.4 | 17.8 | 16.2 | 19.9 |
+| problems per 1,000 lines | 128.7 | 67.2 | 45.2 | 75.9 | 20.1 |
+| without `TS-DEAD:2` | 43.4 | 24.4 | 17.8 | 23.6 | 19.9 |
 
-**`TS-DEAD:2` is 61–66% of every problem found in all four**, and 1% of ours only
+**`TS-DEAD:2` is 61–69% of every problem found in all four**, and 1% of ours only
 because a day was spent moving 1,554 comments into documents beside the code. It
 is the whole distance between this project and every professional TypeScript
 codebase measured. Every other rule can be adopted incrementally; this one cannot
@@ -4437,7 +4437,7 @@ picked. `TS-ERROR:3`, `TS-TYPE:5`, `DATA:2` and `TS-LAYER:2` are low everywhere.
 (ours 0, zod 2.5) and `TS-DEAD:4` (ours 0, zod 3.2).
 
 **Where we are the worst in the sample: `TS-TRUTH:1`.** Ours 14.4 per 1,000 lines
-against tanstack 3.2 and VS Code 3.7 across 2.6 million lines. That is not a rule
+against tanstack 3.2 and VS Code 7.9 across 2.6 million lines. That is not a rule
 problem and it is not being softened: it is achievable at enormous scale and we
 are behind, on 135 lines of ours of which 43 are default parameters. Recorded as
 ours to fix.
@@ -4829,4 +4829,54 @@ The audit that came with it: ten `execFileSync` calls in `src/`, eight pipe stdo
 and all eight are capped. The two that are not are `cargo build` and `dotnet
 build`, both `stdio: ["ignore", "ignore", "pipe"]` — stderr only, nothing to
 overflow.
+
+### The VS Code column was measured over 71% of it, and nothing said so
+
+Adopter issue #111, invited when #100 was closed. Same clone `0dac2a8d`, same
+command, same 2,613,789 lines. The only difference is that after #102 looper reads
+**8,317 of the 8,319 files** instead of 5,894.
+
+**No verdict in #100 flips.** Every "who is cleaner" comparison holds in the same
+direction. Two numbers are corrected in place above, and one gets stronger.
+
+| | published | corrected |
+|---|---|---|
+| every rule | 47.4 | **75.9** |
+| without `TS-DEAD:2` | 16.2 | **23.6** |
+| `TS-TRUTH:1` | 3.66 | **7.89** |
+| `TS-DEAD:2` share | 66% | **69%** |
+
+**`TS-TRUTH:1` is the one that mattered.** The sentence recorded here said "ours
+14.4 against VS Code's 3.7". The real gap is 14.4 against 7.9 — still the rule we
+are worst on in the sample, still ours to fix, but **half the distance claimed**.
+The honest version is that 7.9 is held across 2.6 million lines of code that leans
+on dependency injection everywhere, which is a harder place to hold it than a
+ten-thousand-line console.
+
+**`TS-DECOMPOSITION:1` did not move at all: 0.54 before, 0.54 after.** 2,423 more
+files and 74,548 more findings, and the file-length rate is identical to two
+decimal places. That is a cap measuring the same property at every size, now said
+across a third more of the codebase than when it was first claimed.
+
+### And the reason the first table could be wrong
+
+The reporter's closing point is the more valuable half: *"the first table was
+measured over 71% of the codebase and nothing in the output said so."*
+
+`looper law` did name every unreadable file — but only warned them one by one, and
+the **summary said nothing**. Worse, the count of what could not be read was
+printed only in the branch where *nothing was found*. In the ordinary case, a
+report with findings, it was silent. So a person measuring a large codebase got a
+confident number over whatever fraction happened to parse.
+
+The summary now carries it whenever it is not zero:
+
+```
+A further 2,425 file(s) could not be read at all and were not judged, named
+above. The count above is over the 5,894 that could be. A file nobody could
+read produces exactly what a clean file produces, so read this number before
+you trust that one.
+```
+
+A test holds it, written from the issue and run against the silent version first.
 

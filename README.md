@@ -137,10 +137,10 @@ one. All five judged 2026-08-19.
 | | zod | excalidraw | tanstack-query | vscode | looper |
 |---|---:|---:|---:|---:|---:|
 | lines of TypeScript | 79,636 | 190,487 | 157,039 | 2,613,789 | 10,765 |
-| problems per 1,000 lines | 128.7 | 67.2 | 45.2 | 47.4 | **20.1** |
-| without the comment rule | 43.4 | 24.4 | 17.8 | 16.2 | **19.9** |
+| problems per 1,000 lines | 128.7 | 67.2 | 45.2 | 75.9 | **20.1** |
+| without the comment rule | 43.4 | 24.4 | 17.8 | 23.6 | **19.9** |
 
-Read the third row against the second. **One rule — no comments — is 61 to 66% of
+Read the third row against the second. **One rule — no comments — is 61 to 69% of
 everything looper finds in all four.** That is a position this project takes on
 purpose, and the number is what it costs: every other rule can be adopted
 incrementally, and that one cannot be adopted at all without a mass strip first.
