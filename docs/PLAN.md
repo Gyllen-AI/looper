@@ -1215,25 +1215,30 @@ lets an agent do that the others do not.
 Every rule the engine loads appears exactly once below, and
 `tests/plan-is-true.test.ts` refuses the suite if one is added without a row.
 
-| what goes wrong | TypeScript | Rust | Python |
-|---|---|---|---|
-| a failure vanishes, and nobody hears it | `TS-ERROR:1` `TS-ERROR:4` `TS-ERROR:6` `TS-ERROR:7` `TS-ERROR:8` | `RUST-ERROR:1` `RUST-ERROR:2` `RUST-ERROR:4` `RUST-ERROR:6` `RUST-ERROR:8` `RUST-ERROR:9` | `PY-ERROR:1` `PY-TRUTH:2` |
-| a failure is answered with a made-up value | `TS-ERROR:3` `TS-TYPE:5` | `RUST-ERROR:3` `RUST-TYPE:5` | `PY-ERROR:2` |
-| the failure survives but names nothing | `TS-TYPE:2` | `RUST-TYPE:1` `RUST-TYPE:2` `RUST-TYPE:3` | `PY-ERROR:3` |
-| the checker is told to trust you | `TS-TYPE:3` `TS-TYPE:4` `TS-DEAD:1` | `RUST-TYPE:4` `RUST-DEAD:1` | `PY-TYPE:1` |
-| "what happens when nobody said" is answered in more than one place | `TS-TRUTH:1` `TS-TRUTH:2` | `RUST-TRUTH:1` `RUST-TRUTH:2` | `PY-TRUTH:1` |
-| output is taken from whoever ran the program | `TS-LOG:1` | `RUST-LOG:1` `RUST-LOG:2` | `PY-LOG:1` |
-| a log line cannot be asked a question, because the value is inside the sentence | `TS-LOG:3` | `RUST-LOG:3` | `PY-LOG:3` |
-| the shape of the code hides what it does | `TS-DECOMPOSITION:1` `TS-LAYER:2` `TS-DEAD:4` | `RUST-DECOMPOSITION:1` `RUST-DECOMPOSITION:2` `RUST-DECOMPOSITION:3` `RUST-LAYER:1` `RUST-LAYER:2` `RUST-LAYER:3` `RUST-DEAD:4` | `PY-LAYER:1`, and **open on purpose** — 500 does not port, measured below |
-| unfinished work reads as finished | `TS-DEAD:2` `TS-DEAD:3` | `RUST-DEAD:2` `RUST-DEAD:3` | **tried and not shippable**, measured 2026-08-18 — the argument is below |
-| the language's own guarantees are stepped around | none built | `RUST-ERROR:5` `RUST-ERROR:7` `RUST-TESTS:1` | none built |
-| something from outside is used as an instruction | `DATA:1` `DATA:2` `NODE:1` `NEXT:1` | none built | `PY-SECURITY:1` `PY-SECURITY:2` |
-| a framework's own contract is broken in silence | `REACT:1` `REACT:2` `TAURI:1` | — | — |
-| the project gains a language nobody chose | `STACK:1`, which reads the project rather than a file, so it answers for all three | | |
+| what goes wrong | TypeScript | Rust | Python | C# |
+|---|---|---|---|---|
+| a failure vanishes, and nobody hears it | `TS-ERROR:1` `TS-ERROR:4` `TS-ERROR:6` `TS-ERROR:7` `TS-ERROR:8` | `RUST-ERROR:1` `RUST-ERROR:2` `RUST-ERROR:4` `RUST-ERROR:6` `RUST-ERROR:8` `RUST-ERROR:9` | `PY-ERROR:1` `PY-TRUTH:2` | `CS-ERROR:1` `CS-ERROR:4` |
+| a failure is answered with a made-up value | `TS-ERROR:3` `TS-TYPE:5` | `RUST-ERROR:3` `RUST-TYPE:5` | `PY-ERROR:2` | `CS-ERROR:3` |
+| the failure survives but names nothing | `TS-TYPE:2` | `RUST-TYPE:1` `RUST-TYPE:2` `RUST-TYPE:3` | `PY-ERROR:3` | `CS-ERROR:2` |
+| the checker is told to trust you | `TS-TYPE:3` `TS-TYPE:4` `TS-DEAD:1` | `RUST-TYPE:4` `RUST-DEAD:1` | `PY-TYPE:1` | **refused on measurement**, below |
+| "what happens when nobody said" is answered in more than one place | `TS-TRUTH:1` `TS-TRUTH:2` | `RUST-TRUTH:1` `RUST-TRUTH:2` | `PY-TRUTH:1` | none built |
+| output is taken from whoever ran the program | `TS-LOG:1` | `RUST-LOG:1` `RUST-LOG:2` | `PY-LOG:1` | `CS-LOG:1` |
+| a log line cannot be asked a question, because the value is inside the sentence | `TS-LOG:3` | `RUST-LOG:3` | `PY-LOG:3` | none built |
+| the shape of the code hides what it does | `TS-DECOMPOSITION:1` `TS-LAYER:2` `TS-DEAD:4` | `RUST-DECOMPOSITION:1` `RUST-DECOMPOSITION:2` `RUST-DECOMPOSITION:3` `RUST-LAYER:1` `RUST-LAYER:2` `RUST-LAYER:3` `RUST-DEAD:4` | `PY-LAYER:1`, and **open on purpose** — 500 does not port, measured below | none built |
+| unfinished work reads as finished | `TS-DEAD:2` `TS-DEAD:3` | `RUST-DEAD:2` `RUST-DEAD:3` | **tried and not shippable**, measured 2026-08-18 — the argument is below | `CS-TRUTH:1` |
+| the language's own guarantees are stepped around | none built | `RUST-ERROR:5` `RUST-ERROR:7` `RUST-TESTS:1` | none built | none built |
+| something from outside is used as an instruction | `DATA:1` `DATA:2` `NODE:1` `NEXT:1` | none built | `PY-SECURITY:1` `PY-SECURITY:2` | `CS-SECURITY:1` |
+| a framework's own contract is broken in silence | `REACT:1` `REACT:2` `TAURI:1` | — | — | — |
+| the project gains a language nobody chose | `STACK:1`, which reads the project rather than a file, so it answers for all four | | | |
 
 **A cell that says `open` is a gap, not a decision.** A cell that says a harm does
 not exist in that language has to carry the argument, not the assertion, and none
 of them does yet — which is why the four blanks above say `open` instead.
+
+Counted from the table on 2026-08-19, when C# joined: it answers four of the
+twelve rows with four rules. That is the smallest column here on purpose — the
+reader landed with the rules that had counted evidence behind them in a real
+codebase, and the rest wait for the same.
 
 **The weight is in the wrong place and this table is what makes that visible.**
 The section below already argues that Python is the language where the law is
@@ -3896,6 +3901,323 @@ file is deleted. What went is a pointer on the front page to a subdirectory's
 paperwork — the first screen of a public repository is for what the tool is, and
 0BSD asks for nothing there.
 
+
+## C#, the fourth language, and the Razor half nobody was reading
+
+The condition chunk 7 set for any new language reader was that **an adopter ships
+it**. Rust met it, then Python. C# meets it now: an adopter runs an ASP.NET Core
+service with a Blazor interface, both in one repository, and the interface is
+683 C# files and 96 Razor files.
+
+### What the adopter's own CURRENTSTACK.md said
+
+looper was installed there on 2026-08-19 and wrote this without being asked:
+
+| half | languages |
+|---|---|
+| Backend | JavaScript, 27 files. Python, 19 files |
+| Frontend | *Nothing found* |
+
+A Blazor application, and looper reported no interface at all and no C#
+anywhere. `.cs` was already in `A_LANGUAGE_BY_EXTENSION` and had been since
+before any of this, but `walkProject` filters to `JUDGED_EXTENSIONS` first, so
+the entry was unreachable — the name existed and nothing could ever reach it.
+That is the whole argument for the change in one measurement: the stack gate and
+the law are not two doors, and a language listed in one but absent from the other
+is listed nowhere.
+
+### Roslyn costs three packages, and they are vendored
+
+The Rust engine is a compiled binary built from crates vendored beside it. This
+is the same arrangement: `Microsoft.CodeAnalysis.CSharp` and its two
+dependencies sit under `vendor/csharp-law/vendor` as `.nupkg` files, and
+`NuGet.config` clears every remote source so the build cannot reach past them.
+Checked by restoring into an empty package folder with no source available:
+it succeeds, so the vendored copies are complete rather than merely present.
+
+Roslyn also ships inside the .NET SDK, which would have cost nothing at all. It
+was not used: referencing an SDK's internal assemblies is unsupported and breaks
+between patch versions, and a reader that stops working when somebody updates
+their toolchain is worse than one that costs 25MB.
+
+### Razor is read as C#, and only the half that is code
+
+A `.razor` file is markup with `@code { }` blocks in it. The blocks are judged;
+the markup is not. Rather than compute an offset, every line outside a block is
+replaced by an empty line and the `@code {` line becomes `class __Razor {`, so
+the line count never changes and a reported line is the line somebody opens.
+`tests/csharp-cases.test.ts` pins that with a Razor file whose only fault is on
+line 7.
+
+The markup is a real gap and is recorded as one: a `catch { }` written inside an
+`@onclick` expression is not read. `audit/csharp-cases.ts` carries that as a
+case expecting silence, so the limit is written down rather than discovered.
+
+### Four rules, each with a count behind it
+
+Measured on 2026-08-19 across the adopter's API, web and shared projects — 683
+C# files and 96 Razor files:
+
+| rule | bans | found | disposition |
+|---|---|---|---|
+| `CS-ERROR:1` | a `catch` whose body is empty and which names nothing | 429 | built 2026-08-19 |
+| `CS-ERROR:3` | a `catch` that names nothing and answers with an invented value | 98 | built 2026-08-19 |
+| `CS-ERROR:4` | a `catch` that names nothing and never looks at what it caught | 108 | built 2026-08-19 |
+| `CS-LOG:1` | `Console` outside the file that starts the program | 551 | built 2026-08-19 |
+| `CS-SECURITY:1` | a query built by pasting values into its text | 72 | built 2026-08-19 |
+| `CS-ERROR:2` | `throw new Exception(...)` — the failure type that says nothing about itself | 67 | built 2026-08-19 |
+| `CS-TRUTH:1` | `async void` on a method that is not an event handler | 25 | built 2026-08-19 |
+
+**190 of the 429 swallowed catches are inside `.razor` files**, which is the
+number that decided Razor was worth reading rather than skipping.
+
+A regex over the same files finds 110 swallowed catches where Roslyn finds 257
+in `.cs` alone. The difference is entirely `catch` blocks holding a comment and
+`catch` blocks written across more than one line. That gap is why this is a
+parser and not a pattern.
+
+### Run over code nobody here wrote, which changed a rule
+
+Two third-party codebases, cloned 2026-08-19: **Newtonsoft.Json** at `09bb545`
+and **MudBlazor** at `56f4cc0`. Together 4,102 files and 493,083 lines, neither
+written by anyone involved here. MudBlazor was chosen for the second reason as
+well: 2,002 `.razor` files, so the Razor half was judged on somebody else's
+components rather than only on the adopter's.
+
+**`CS-ERROR:1` was wrong and the foreign code is what showed it.** As first
+written it fired on any empty `catch`, and it found 51 across the two
+repositories. Classified by hand, 32 of those named exactly which failure they
+were ignoring — `catch (JSDisconnectedException) { }`,
+`catch (Exception error) when (IsExpectedCancellationException(error)) { }`.
+Only 19 named nothing.
+
+That is the same act `PY-ERROR:1` already calls legal in the other direction:
+its own `instead` list offers `with suppress(FileNotFoundError)` **because it
+names what is ignored**. A rule cannot accept that reasoning in Python and refuse
+it in C#. The rule now fires only on a bare `catch`, on `catch (Exception)` and
+on `catch (SystemException)`, and stays silent when one failure is named or a
+`when` filter names it.
+
+What the narrowing did to each codebase says something on its own:
+
+| | before | after |
+|---|---|---|
+| Newtonsoft.Json | 9 | 5 |
+| MudBlazor | 42 | 14 |
+| the adopter | 454 | 429 |
+
+The libraries lost two thirds of their hits and the adopter lost six percent.
+Careful third-party code names what it ignores; this codebase mostly does not.
+Had the rule shipped as first written it would have fired on 32 deliberate uses
+in reviewed code, and the first thing any of those maintainers would have done
+is switch it off.
+
+**A line number was also wrong, in a way only long files show.** `CS-TYPE:1`
+(refused four days later on measurement — the chunk below has it, and this
+paragraph is kept because a reversed decision keeps both halves)
+reported the line where a `!`'s expression *began* rather than the line holding
+the `!`. In MudBlazor's tests a reflection chain spans three lines with a `!` on
+two of them, and both were reported against the first. Thirteen hits pointed at
+a line with no `!` on it. It now reports the operator's own token, and
+`tests/csharp-cases.test.ts` pins that with a three-line chain expecting 5 and 6.
+
+**After both fixes, every hit was checked against the line it names.** All 1,888
+across the two foreign repositories and the adopter land on a line that actually
+holds the thing the rule bans, and 4,881 files produced nothing unreadable.
+`CS-ERROR:1`, `CS-ERROR:2` and `CS-TRUTH:1` were judged one hit at a time — 19,
+55 and 12. `CS-TYPE:1` has 1,071 and was checked by machine against the line
+text rather than one at a time, which is the one place below the standard this
+document asks for, said out loud rather than left to be assumed.
+
+### What is not built
+
+`--shape`, which the Rust engine answers and the `report` flow uses. It returns
+an error naming itself, rather than an empty shape that would read as an answer.
+It waits until the rules here are accepted and the shapes `report` asks for are
+known.
+
+Seven further rules were drafted and are not here: the made-up value returned
+from a `catch`, the unawaited `Task`, interpolated SQL, the unobserved failure,
+the stray `Console.WriteLine`, `#pragma warning disable`, and a layer crossing.
+They were left out because a first reader is already a large change, and each of
+those wants its own counted evidence rather than a place in somebody else's
+paragraph.
+
+## The other seven, of which three do not exist
+
+The first C# chunk listed seven rules held back for want of counted evidence.
+Going after all seven produced four rules and three refusals, and the refusals
+are the more useful half.
+
+Two codebases were added to the corpus for this, because a JSON library and a UI
+library have no database layer and could say nothing about a SQL rule:
+**Dapper** at `c0b2097` and **dotnet/eShop** at `ae71a06`, cloned 2026-08-19.
+Five codebases in all.
+
+### Built
+
+| rule | Newtonsoft | MudBlazor | Dapper | eShop | the adopter |
+|---|---|---|---|---|---|
+| `CS-ERROR:3` the invented answer | 0 | 1 | 2 | 2 | 98 |
+| `CS-ERROR:4` never looks at what it caught | 7 | 6 | 4 | 1 | 108 |
+| `CS-LOG:1` `Console` outside the entry point | 275 | 26 | 22 | 2 | 551 |
+| `CS-SECURITY:1` a query built by pasting values in | 0 | 0 | 12 | 0 | 72 |
+
+### Refused, and why the refusal is worth more than the rule
+
+**The unawaited `Task` cannot be judged without types.** Written to fire on a
+call whose name ends in `Async` and is used as a statement, it found 73 in
+MudBlazor and 56 in the adopter — and **48 of each were `InvokeAsync`**, the
+Blazor callback every component uses and deliberately does not await. The reader
+parses one file at a time and has no compilation, so it cannot tell a
+`Task`-returning call from any other method whose name happens to end that way.
+A rule that goes by the name catches the convention, not the defect.
+
+**`#pragma warning disable` is not the rule its sibling is.** `PY-TYPE:1` bans
+`# type: ignore` — silencing the *type checker*. Across Newtonsoft and MudBlazor
+there are 169 pragmas and **not one silences a nullable warning**: 109 are
+`CS0618`, an API marked obsolete, and the rest are trimming, XML documentation
+and analyzer style. Narrowed to the nullable warnings it would be honest and
+would have zero instances anywhere measured. Either way it ships on nothing.
+
+**The layer crossing has nothing to measure.** `RUST-LAYER:1` does nothing when
+`law.toml` declares no layers. The adopter has no `law.toml` at all and neither
+foreign repository declares layers, so there is no codebase in which the rule
+could be observed either firing or staying quiet.
+
+### The same finding, four times
+
+`CS-ERROR:1` was narrowed because 32 of 51 empty catches named the failure they
+ignored. Going after `CS-ERROR:3` and `CS-ERROR:4` produced it again: 15 of 20
+invented answers, and most of the unobserved catches, were
+`catch (SpecificException) { return false; }` — the `Try` shape, where `false`
+is the answer and the type is the explanation. Both rules took the same gate,
+and `MudBlazor` fell from 14 to 1 and from 30 to 6.
+
+Newtonsoft's `ConvertUtils.cs` added the fourth: `catch { value = null; return
+false; }` inside `TryParse`, which is the pattern the .NET framework itself
+uses. A method named `TryX` returning `bool` is now exempt from both rules.
+
+**In C# the whole ERROR family needs one exemption, not three.** Naming the
+failure is what separates a decision from a silence, and it is worth stating once
+here rather than rediscovering it on the next rule.
+
+### Two more line numbers were wrong
+
+`CS-TRUTH:1` reported the line of a method's attribute rather than the method:
+Dapper's `MiscTests.cs` has `[Fact]` above `public async void`, and the report
+named the `[Fact]`. It now reports the method's own name token.
+
+`CS-SECURITY:1` read `$"Select {item.Name}"` — an accessibility label in
+MudBlazor's tests — as SQL, because `select` alone was treated as enough. It now
+needs `select` and `from` together.
+
+Both were caught by reading every hit against the line it names. Across all five
+codebases — 5,768 files and 3,438 hits, measured 2026-08-19 — every one lands on
+a line holding what the rule bans, and nothing was unreadable.
+
+
+## Choosing a corpus, and the rule it refused
+
+`CS-ERROR:1` was narrowed by running it over somebody else's code. That worked,
+so the corpus was asked a harder question: **is it actually good code?** Two of
+the four were a serialiser and a UI library, and `Newtonsoft.Json` — the one
+leaned on hardest — has no `.github/CODEOWNERS` at all. It is one person's
+library. Nothing there was chosen; it was reached for.
+
+### Three things that can be checked, instead of a reputation
+
+- **Enforced review.** `.github/CODEOWNERS` is 4,877 bytes in `dotnet/runtime`
+  and 5,632 in `bitwarden/server`. It is absent in `Newtonsoft.Json`. This is a
+  file, not an opinion.
+- **What it costs to be wrong.** `bitwarden/server` is a password manager and
+  `dotnet/runtime` ships to every .NET machine. Neither takes a careless merge.
+- **The same kind of code.** This was the gap. A serialiser, a UI library and a
+  micro-ORM are not ASP.NET Core applications, and the adopter is one.
+  `bitwarden/server` and `jellyfin` are, and they agree with the runtime — so the
+  result is not an artefact of comparing an application against libraries.
+
+Four codebases were added on 2026-08-19: `dotnet/runtime` at `77c175b` (four
+libraries under `src/libraries`), `dotnet/aspnetcore` at `42e0847` (`src/Http`,
+`src/Mvc`, `src/Security`), `bitwarden/server` at `5f3c0b6` and `jellyfin` at
+`1722105`. **Eight foreign codebases, 3,602,115 lines.**
+
+### Hits per thousand lines, measured 2026-08-19
+
+| | kloc | ERROR:1 | ERROR:3 | ERROR:4 | LOG:1 | ERROR:2 | SEC:1 | TRUTH:1 | TYPE:1 |
+|---|---|---|---|---|---|---|---|---|---|
+| dotnet/runtime | 148 | 0.01 | 0.01 | 0.00 | 0.00 | 0.01 | 0.00 | 0.00 | 5.12 |
+| dotnet/aspnetcore | 676 | 0.01 | 0.01 | 0.01 | 0.00 | 0.06 | 0.00 | 0.00 | 2.04 |
+| bitwarden/server | 1884 | 0.01 | 0.01 | 0.00 | 0.04 | 0.05 | 0.00 | 0.04 | 1.13 |
+| jellyfin | 339 | 0.03 | 0.06 | 0.01 | 0.01 | 0.00 | 0.01 | 0.05 | 1.96 |
+| Dapper | 26 | 1.50 | 0.07 | 0.15 | 0.82 | 0.07 | 0.45 | 0.04 | 9.32 |
+| MudBlazor | 303 | 0.05 | 0.00 | 0.02 | 0.09 | 0.06 | 0.00 | 0.04 | 2.58 |
+| Newtonsoft.Json | 193 | 0.03 | 0.00 | 0.04 | 1.42 | 0.19 | 0.00 | 0.00 | 1.49 |
+| eShop | 28 | 0.04 | 0.07 | 0.04 | 0.07 | 0.28 | 0.00 | 0.25 | 1.87 |
+| **the adopter** | 325 | **1.32** | **0.30** | **0.33** | **1.69** | 0.21 | 0.22 | 0.08 | **0.65** |
+
+**A rule worth having is quiet where the review is hardest and loud where the
+work is needed.** Six are: `CS-ERROR:1` is fifty to a hundred and thirty times
+rarer in the reviewed code, `CS-ERROR:4` thirty-three times, `CS-LOG:1` forty.
+`CS-SECURITY:1` is silent everywhere except `Dapper`, which is a SQL library, and
+that is the rule working rather than failing. `CS-TRUTH:1` is quiet everywhere,
+including here — it is the weakest of the six and is kept because `async void`
+is not arguable, not because the numbers made a case.
+
+`CS-ERROR:2` is the flat one: 0.00 to 0.28 across the corpus against 0.21 here.
+`throw new Exception` is a habit everywhere rather than a fault of this codebase.
+It stays, because a universal habit is still the thing the rule describes, but it
+will not shrink anyone's list much.
+
+### CS-TYPE:1 is refused, and it was already shipped
+
+**Every one of the eight uses `!` more than the adopter.** `dotnet/runtime` —
+written by the people who put `!` in the language — uses it **eight times more**,
+and `Dapper` fourteen times more. The adopter is the lowest of all nine at 0.65.
+
+That is the opposite of the signature every other rule here has. A rule cannot
+claim to find a defect that the most carefully reviewed C# in existence commits
+most often; what it has found is an idiom. It is removed from the law, from the
+cases, from the engine and from `src/canon/csharp.md`.
+
+**It had already shipped in the first C# commit**, before there was a corpus to
+check it against. Four codebases would not have caught it either — the four-way
+table showed 1.49 to 9.32 against 0.65 and the inversion was already visible
+there, and it was read as "loud everywhere" rather than as "backwards". Adding
+codebases is not what found it. Asking whether the corpus was any good is.
+
+### Narrowing it was tried first, and there is nowhere to narrow to
+
+Removing a rule is worse than fixing one, so before it went, every sub-shape of
+`!` was counted on 2026-08-19 across `.cs` files only, so nothing turned on Razor
+markup being parsed as C#.
+
+| | `!` | `= null!` | `call()!` | `a.b!` | `x!` | in tests | chained |
+|---|---|---|---|---|---|---|---|
+| dotnet/runtime | 763 | 4% | 12% | 29% | 48% | 1% | 2% |
+| dotnet/aspnetcore | 1381 | 7% | 13% | 24% | 33% | 37% | 2% |
+| bitwarden/server | 2125 | 15% | 10% | 38% | 15% | 75% | 5% |
+| jellyfin | 665 | 15% | 16% | 39% | 25% | 32% | 7% |
+| Newtonsoft.Json | 288 | 0% | 23% | 39% | 34% | 0% | 11% |
+| the adopter | 174 | 3% | 12% | 56% | 24% | 7% | 6% |
+
+Five narrowings, five refusals. **Only outside tests**: Newtonsoft is 0% tests and
+the runtime 1%, so both still fire. **Only chained `a!.b!`**: Newtonsoft 11% and
+jellyfin 7% against the adopter's 6% — the adopter is below both. **Only
+`= null!`**: bitwarden 15% against 3%, so the adopter does it least. **Only on a
+member access**: the adopter's 56% is the highest, but Newtonsoft and jellyfin
+are at 39%, a gap of 1.4 against the fifty to a hundred and thirty the six kept
+rules show, which is noise. **Only on a bare identifier**: the runtime is at 48%
+against 24%.
+
+There is no shape of `!` the adopter uses more than carefully reviewed C# does.
+A narrower rule needs somewhere it earns its place and the measurement says there
+is nowhere, which is why this is a removal rather than a rewrite.
+
+`<Nullable>enable</Nullable>` stays in STACK.md. The setting is worth having and
+the gate on its escape hatch is not, which is a distinction the rest of this
+document should probably be asked about more often.
+||||||| 4bc7aa8
 ### `looper law` and the gates answered the same question two different ways
 
 Adopter issue #94. `looper law` called a problem written one minute ago

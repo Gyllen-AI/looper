@@ -1,7 +1,14 @@
 import { existsSync, readFileSync, readdirSync, realpathSync, statSync } from "node:fs";
 import { dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
 
-import { JUDGED_EXTENSIONS, LAW_PATH, OUTSIDE_THE_LAW, PYTHON_EXTENSION, RUST_EXTENSION } from "../config.ts";
+import {
+  CSHARP_EXTENSIONS,
+  JUDGED_EXTENSIONS,
+  LAW_PATH,
+  OUTSIDE_THE_LAW,
+  PYTHON_EXTENSION,
+  RUST_EXTENSION,
+} from "../config.ts";
 import { ignoredHere, trackedFiles, type Ignoring } from "../git.ts";
 import { readConcessions } from "./concessions.ts";
 import { required } from "../present.ts";
@@ -17,6 +24,8 @@ import { rustRuleFor } from "./rust/rules.ts";
 import { PYTHON_RULES } from "./python/rules.ts";
 import { undeclaredLanguagesIn } from "./stack.ts";
 import { judgePython } from "./python/drive.ts";
+import { judgeCsharp } from "./csharp/drive.ts";
+import { CSHARP_RULES } from "./csharp/rules.ts";
 
 export type Survey = {
   readonly violations: readonly Violation[];
@@ -417,6 +426,39 @@ export function judgePythonIn(root: string, files: readonly string[]): PythonSai
   return { violations, unreadable, unjudged: said.unreadable.length };
 }
 
+export function isCsharp(path: string): boolean {
+  return CSHARP_EXTENSIONS.some((suffix) => path.endsWith(suffix));
+}
+
+export function judgeCsharpIn(root: string, files: readonly string[]): PythonSaid {
+  if (files.length === 0) return { violations: [], unreadable: [], unjudged: 0 };
+
+  const said = judgeCsharp(looperRoot(), root, files);
+  if (said.kind !== "found") {
+    const many =
+      files.length === 1
+        ? relative(root, required(files[0], "the one C# file"))
+        : `${files.length} C# files`;
+    return {
+      violations: [],
+      unreadable: [`${many} (${said.detail})`],
+      unjudged: files.length,
+    };
+  }
+
+  const violations: Violation[] = [];
+  const unreadable = said.unreadable.map((one) => `${one.file} (${one.detail})`);
+  for (const hit of said.hits) {
+    const known = CSHARP_RULES.find((rule) => rule.id === hit.rule);
+    if (known === undefined) {
+      unreadable.push(`the C# half reported ${hit.rule}, which looper has no words for`);
+      continue;
+    }
+    violations.push({ rule: known, file: hit.file, line: hit.line });
+  }
+  return { violations, unreadable, unjudged: said.unreadable.length };
+}
+
 export function surveyProject(root: string, reach: Reach, only: readonly string[]): Survey {
   const concessions = readConcessions(root);
   const checks = [...CHECKS, ...checksAdoptedIn(root)];
@@ -442,8 +484,14 @@ export function surveyProject(root: string, reach: Reach, only: readonly string[
   violations.push(...pythonSaid.violations);
   unreadable.push(...pythonSaid.unreadable);
 
+  const csharpFiles = files.filter(isCsharp);
+  const csharpSaid = judgeCsharpIn(root, csharpFiles);
+  violations.push(...csharpSaid.violations);
+  unreadable.push(...csharpSaid.unreadable);
+
   for (const path of files) {
     if (path.endsWith(RUST_EXTENSION) || path.endsWith(PYTHON_EXTENSION)) continue;
+    if (isCsharp(path)) continue;
     const named = relative(root, path);
     let text = "";
     try {

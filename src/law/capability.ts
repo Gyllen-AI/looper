@@ -2,7 +2,7 @@ import { NOT_A_WAY_THROUGH, PYTHON_EXTENSION, RUST_EXTENSION, STACK_PATH } from 
 import { writeAtomically } from "../atomic.ts";
 import { stackOf } from "../stack/read.ts";
 import { stackDocument } from "../stack/write.ts";
-import { judgePythonIn, judgeRustIn } from "./project.ts";
+import { isCsharp, judgeCsharpIn, judgePythonIn, judgeRustIn } from "./project.ts";
 import { rustRuleFor } from "./rust/rules.ts";
 import { roleOf, shapeOf } from "./shape.ts";
 import { existsSync, readFileSync } from "node:fs";
@@ -108,9 +108,15 @@ function judgedByThePythonLaw(root: string, target: Judging): readonly Violation
   return said.violations.filter((held) => held.file === target.relative);
 }
 
-function lawFor(relative: string): "rust" | "python" | "typescript" {
+function judgedByTheCsharpLaw(root: string, target: Judging): readonly Violation[] {
+  const said = judgeCsharpIn(root, [target.path]);
+  return said.violations.filter((held) => held.file === target.relative);
+}
+
+function lawFor(relative: string): "rust" | "python" | "csharp" | "typescript" {
   if (relative.endsWith(RUST_EXTENSION)) return "rust";
   if (relative.endsWith(PYTHON_EXTENSION)) return "python";
+  if (isCsharp(relative)) return "csharp";
   return "typescript";
 }
 
@@ -205,10 +211,17 @@ export function judgeStaged(root: string): Outcome {
     if (stagedPython.has(violation.file)) keep(violation, violation.file);
   }
 
+  const inCsharp = judged.filter(isCsharp);
+  const stagedCsharp = new Set(inCsharp);
+  const csharpSaid = judgeCsharpIn(root, inCsharp.map((path) => resolve(root, path)));
+  for (const violation of csharpSaid.violations) {
+    if (stagedCsharp.has(violation.file)) keep(violation, violation.file);
+  }
+
   const inRust = judged.filter((path) => path.endsWith(RUST_EXTENSION));
   const stagedRust = new Set(inRust);
   const rustSaid = judgeRustIn(root, inRust.map((path) => resolve(root, path)));
-  const blinding: string[] = [...rustSaid.unreadable, ...pythonSaid.unreadable];
+  const blinding: string[] = [...rustSaid.unreadable, ...pythonSaid.unreadable, ...csharpSaid.unreadable];
   for (const violation of rustSaid.violations) {
     if (stagedRust.has(violation.file)) {
       keep(violation, violation.file);
@@ -326,6 +339,8 @@ export class Law implements Capability {
       ? judgedByTheRustLaw(context.root, target)
       : law === "python"
       ? judgedByThePythonLaw(context.root, target)
+      : law === "csharp"
+      ? judgedByTheCsharpLaw(context.root, target)
       : judge(
           [...CHECKS, ...checksAdoptedIn(context.root)],
           "fast",

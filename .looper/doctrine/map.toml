@@ -6,7 +6,7 @@
 law = ["src/**/*.ts", "tests/**/*.ts"]
 process = ["docs/PLAN.md"]
 doctrine = [".looper/doctrine/**", "src/canon/**"]
-contribution = ["src/law/**", "src/canon/**", "audit/**", "vendor/rust-law/src/**"]
+contribution = ["src/law/**", "src/canon/**", "audit/**", "vendor/rust-law/src/**", "vendor/csharp-law/src/**"]
 
 # Which branch goes stale when what changes. [governs] above is for injection and
 # wants to be broad — pull the law branch whenever any code is touched. Staleness
@@ -19,6 +19,6 @@ doctrine = ["src/canon/**", "src/router.ts", "src/map.ts", "src/allocator.ts"]
 # A key ending in .md is watched as itself rather than as a rule set, so a
 # reference document rots as loudly as doctrine does. STACK.md said looper read
 # one language for a day after it read two, and nothing noticed.
-"STACK.md" = ["package.json", "vendor/rust-law/Cargo.toml", "src/law/rust/**"]
+"STACK.md" = ["package.json", "vendor/rust-law/Cargo.toml", "src/law/rust/**", "vendor/csharp-law/looper-csharp.csproj", "src/law/csharp/**"]
 "README.md" = ["src/main.ts", "src/init.ts", "src/registry.ts"]
 "CONTRIBUTING.md" = ["audit/**", "src/law/rule.ts"]
