@@ -54,11 +54,17 @@ export class Router implements Capability {
     for (const name of this.signalled(context.root)) {
       const branch = assembleBranch(context.root, name);
       if (branch.kind === "nowhere") continue;
+      // Not required. A branch that does not fit is named in the dropped marker
+      // with its size and the tool that fetches it, which is a rule the reader
+      // can still reach. Marking these required made the budget decorative for
+      // the only thing it exists to govern: nine branches went out at 19,354
+      // chars against a ceiling of 9,800, and the only contributions ever
+      // dropped were looper's own status lines.
       injections.push({
         source: `doctrine:${name}`,
         priority: BRANCH_PRIORITY,
         text: branch.text,
-        required: true,
+        required: false,
       });
     }
 
