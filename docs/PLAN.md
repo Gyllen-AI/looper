@@ -3736,3 +3736,43 @@ and nothing else — the whole shape, useless to argue with. Both readers kept t
 so the innermost statement always won. The TypeScript one was even called
 `smallest` while doing it. Both now keep the first, which is the outermost, and a
 test in each language proves it by failing without the fix.
+
+### REACT:2 asked for a name React itself does not want
+
+Adopter issue #87, from a Next.js console with 31 `REACT:2` sites. Four effects,
+all with `[]`, differing only in what the body reads: only the one reading a
+module-level `const` fired. Reproduced here exactly — their probe now fires on one
+line, the effect reading a prop with `[]`, which is the real thing.
+
+`boundInThisFile` gathered every declared name in the file, module scope included.
+A `const` made once at module scope cannot change between renders, so it cannot
+make an effect stale, which is the entire harm the rule's `why` names. Listing it
+changes nothing at runtime. React's own `exhaustive-deps` does not ask for it.
+
+This one mattered more than an ordinary false positive, and the reporter said so:
+it is the rule whose wrong fix hangs the page. The rule's own `instead` admits it
+— *"if listing it causes a loop, the fix is what the effect does, not a shorter
+list"*. Pointing a reader at that change for a value that never varies is worse
+than saying nothing.
+
+**Only `const` is excused, which is stricter than React's own tool.**
+`exhaustive-deps` excludes everything declared outside the component. A module
+`let` can be reassigned, and React does compare listed values at render, so a
+module `let` stays judged. A name declared at module scope *and* inside any
+function in the same file also stays judged, because looper cannot tell which one
+an effect is reading.
+
+Measured on 4,015 files of the JavaScript bundled with an editor, 2026-08-19.
+Before: **19 hits**. After: **15**. The four that went quiet are all one shape —
+`defaultCoordinates`, `defaultMeasuringConfiguration` and `defaultData`, module
+`const`s in `@dnd-kit`, two of them `Object.freeze`d. All four judged by hand;
+all four false positives. Of the 15 that remain, **7 carry the library's own
+`eslint-disable ... exhaustive-deps` on the same line**: React's tool flagged them
+too and the library chose to suppress them.
+
+**Two of this rule's own tests asserted the false positive** and were corrected.
+Both used `const userId = 1` at module scope as the thing left out. A test written
+to agree with the code can only agree with the code, which is the reason cases are
+written from the ban text first. The corrected tests leave out a prop instead, and
+a new test pins the module `const` as silent with the issue number in its message.
+

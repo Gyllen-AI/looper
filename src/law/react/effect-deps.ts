@@ -128,6 +128,41 @@ function boundInThisFile(root: Node): ReadonlySet<string> {
   return found;
 }
 
+function declaredAtModuleScope(root: Node): ReadonlySet<string> {
+  const found = new Set<string>();
+  const body = root["body"];
+  if (!Array.isArray(body)) return found;
+  for (const statement of body) {
+    const exported = fieldAt(statement, "type") === "ExportNamedDeclaration";
+    const held = exported ? fieldAt(statement, "declaration") : statement;
+    if (fieldAt(held, "type") !== "VariableDeclaration") continue;
+    if (fieldAt(held, "kind") !== "const") continue;
+    const declarations = fieldAt(held, "declarations");
+    if (!Array.isArray(declarations)) continue;
+    for (const one of declarations) gather(fieldAt(one, "id"), found);
+  }
+  return found;
+}
+
+function boundInsideAFunction(root: Node): ReadonlySet<string> {
+  const found = new Set<string>();
+  walk(root, (node) => {
+    if (!HOLDS_A_FUNCTION.includes(node.type)) return;
+    for (const name of declaredWithin(node)) found.add(name);
+  });
+  return found;
+}
+
+function madeOnceForTheWholeFile(root: Node): ReadonlySet<string> {
+  const inside = boundInsideAFunction(root);
+  const found = new Set<string>();
+  for (const name of declaredAtModuleScope(root)) {
+    if (inside.has(name)) continue;
+    found.add(name);
+  }
+  return found;
+}
+
 export const lyingDependenciesCheck: Check = {
   rule: LYING_DEPENDENCIES,
 
@@ -137,6 +172,7 @@ export const lyingDependenciesCheck: Check = {
 
     const bound = boundInThisFile(parsed.root);
     const stable = stableNames(parsed.root);
+    const madeOnce = madeOnceForTheWholeFile(parsed.root);
     const found: Finding[] = [];
 
     walk(parsed.root, (node) => {
@@ -150,7 +186,7 @@ export const lyingDependenciesCheck: Check = {
 
       for (const used of namesIn(args[0])) {
         if (listed.has(used) || inner.has(used) || parameters.has(used)) continue;
-        if (stable.has(used)) continue;
+        if (stable.has(used) || madeOnce.has(used)) continue;
         if (!bound.has(used)) continue;
         found.push({ line: lineOfNode(node) });
         return;
