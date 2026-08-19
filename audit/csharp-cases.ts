@@ -46,17 +46,6 @@ export const CSHARP_CASES: readonly CsharpCase[] = [
   { rule: "CS-ERROR:2", name: "a failure named for this codebase", expect: "silent",
     code: `using System;\nclass DatasetMissing : Exception { }\nclass C {\n    void F() { throw new DatasetMissing(); }\n}\n` },
 
-  { rule: "CS-TYPE:1", name: "the null check silenced on a value", expect: "fires",
-    code: `class C {\n    string? Name() => null;\n    int F() => Name()!.Length;\n}\n` },
-  { rule: "CS-TYPE:1", name: "the null check silenced on the way into a variable", expect: "fires",
-    code: `class C {\n    string? Name() => null;\n    void F() { string held = Name()!; }\n}\n` },
-  { rule: "CS-TYPE:1", name: "asking first instead of silencing", expect: "silent",
-    code: `class C {\n    string? Name() => null;\n    int F() => Name()?.Length ?? 0;\n}\n` },
-  { rule: "CS-TYPE:1", name: "not, the everyday one, is a different operator", expect: "silent",
-    code: `class C {\n    bool F(bool ready) => !ready;\n}\n` },
-  { rule: "CS-TYPE:1", name: "two things being different is not a suppression", expect: "silent",
-    code: `class C {\n    bool F(int a, int b) => a != b;\n}\n` },
-
   { rule: "CS-TRUTH:1", name: "work started that nobody can wait for", expect: "fires",
     code: `using System.Threading.Tasks;\nclass C {\n    async void F() { await Task.Delay(1); }\n}\n` },
   { rule: "CS-TRUTH:1", name: "the same, with an argument", expect: "fires",

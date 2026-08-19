@@ -95,12 +95,12 @@ driven over the same protocol as the Rust engine. The only requirement is that
 ## The C# backend it also governs
 
 An adopter ships a .NET service with a Blazor interface, which is the condition
-`docs/PLAN.md` sets for reading a language at all. Eight rules are built and
+`docs/PLAN.md` sets for reading a language at all. Seven rules are built and
 enforced on every edit and every commit: the swallowed `catch`, the `catch` that
 answers with an invented value, the `catch` that never looks at what it caught,
-the failure type that names nothing, the `!` that overrules the null check,
-`async void` outside an event handler, `Console` outside the entry point, and a
-query built by pasting values into its text.
+the failure type that names nothing, `async void` outside an event handler,
+`Console` outside the entry point, and a query built by pasting values into its
+text.
 
 | job | tool |
 |---|---|
@@ -146,9 +146,11 @@ it.
   mean nothing unless something checks them, so the setting is the check.
 - **Serilog** is the C# side of the requirement Pino carries, for the same
   reason: a named symbol whose origin can be checked.
-- **`<Nullable>enable</Nullable>`** is what makes `CS-TYPE:1` mean anything. The
-  rule bans overruling the compiler's null finding with `!`, and there is no
-  finding to overrule unless the setting is on.
+- **`<Nullable>enable</Nullable>`** is in the list and is deliberately **not** a
+  rule. Banning the `!` that overrules it was tried and refused: measured across
+  eight codebases on 2026-08-19, every one used `!` more than the adopter, and
+  the .NET runtime used it eight times more. The setting is worth having; a gate
+  on the escape hatch is not.
 
 The prescription is for new services. An existing service in a language looper
 cannot read is governed by everything except the law: the rule sets, the secrets

@@ -9,10 +9,6 @@ in a Razor file, the half of the code the tooling barely looks at.
 - An error is a type of your own, one per failure. `throw new Exception("...")`
   names nothing, so every caller above catches the same thing and none of them
   can tell a missing file from a refused password.
-- `!` does not check anything. It overrules the compiler's own finding on a line
-  somebody else will change next year, and when the promise turns out false the
-  program stops here rather than where the empty value came from. Ask with `?.`
-  and say what happens when it is nothing.
 - `async void` cannot be awaited and its failures reach nobody. Work that has not
   finished looks finished, and the exception goes wherever the runtime puts an
   unowned one, which in a web application is usually the end of the process.

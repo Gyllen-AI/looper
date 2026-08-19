@@ -94,21 +94,6 @@ export const CSHARP_RULES: readonly Rule[] = [
     valve: { kind: "none" },
   },
   {
-    id: "CS-TYPE:1",
-    category: "TYPE",
-    pass: "fast",
-    bans: "the `!` that tells the compiler a value is not null",
-    why:
-      "the compiler worked out that this can be nothing, and `!` overrules it without checking. It is a promise made by whoever typed it, on a line somebody else will change next year. When the promise turns out to be false the program stops with a message naming this line, which is rarely where the empty value came from",
-    instead: [
-      "ask, and say what happens when it is nothing: `name?.Length ?? 0`",
-      "check once at the top and let the rest of the method rely on it: `if (name is null) return;`",
-      "if it genuinely cannot be null, make the type say so, so nobody has to trust a `!`",
-      "in a test, `Assert.NotNull(held)` says the same thing and fails with a sentence rather than a crash",
-    ],
-    valve: { kind: "none" },
-  },
-  {
     id: "CS-TRUTH:1",
     category: "TRUTH",
     pass: "fast",

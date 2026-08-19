@@ -27,11 +27,6 @@ public static class Law
                     yield return At("CS-ERROR:2", file, made);
                     break;
 
-                case PostfixUnaryExpressionSyntax held
-                    when held.IsKind(SyntaxKind.SuppressNullableWarningExpression):
-                    yield return At("CS-TYPE:1", file, held.OperatorToken);
-                    break;
-
                 case MethodDeclarationSyntax held when IsAsyncVoid(held):
                     yield return At("CS-TRUTH:1", file, held.Identifier);
                     break;

@@ -1220,7 +1220,7 @@ Every rule the engine loads appears exactly once below, and
 | a failure vanishes, and nobody hears it | `TS-ERROR:1` `TS-ERROR:4` `TS-ERROR:6` `TS-ERROR:7` `TS-ERROR:8` | `RUST-ERROR:1` `RUST-ERROR:2` `RUST-ERROR:4` `RUST-ERROR:6` `RUST-ERROR:8` `RUST-ERROR:9` | `PY-ERROR:1` `PY-TRUTH:2` | `CS-ERROR:1` `CS-ERROR:4` |
 | a failure is answered with a made-up value | `TS-ERROR:3` `TS-TYPE:5` | `RUST-ERROR:3` `RUST-TYPE:5` | `PY-ERROR:2` | `CS-ERROR:3` |
 | the failure survives but names nothing | `TS-TYPE:2` | `RUST-TYPE:1` `RUST-TYPE:2` `RUST-TYPE:3` | `PY-ERROR:3` | `CS-ERROR:2` |
-| the checker is told to trust you | `TS-TYPE:3` `TS-TYPE:4` `TS-DEAD:1` | `RUST-TYPE:4` `RUST-DEAD:1` | `PY-TYPE:1` | `CS-TYPE:1` |
+| the checker is told to trust you | `TS-TYPE:3` `TS-TYPE:4` `TS-DEAD:1` | `RUST-TYPE:4` `RUST-DEAD:1` | `PY-TYPE:1` | **refused on measurement**, below |
 | "what happens when nobody said" is answered in more than one place | `TS-TRUTH:1` `TS-TRUTH:2` | `RUST-TRUTH:1` `RUST-TRUTH:2` | `PY-TRUTH:1` | none built |
 | output is taken from whoever ran the program | `TS-LOG:1` | `RUST-LOG:1` `RUST-LOG:2` | `PY-LOG:1` | `CS-LOG:1` |
 | a log line cannot be asked a question, because the value is inside the sentence | `TS-LOG:3` | `RUST-LOG:3` | `PY-LOG:3` | none built |
@@ -3966,7 +3966,6 @@ Measured on 2026-08-19 across the adopter's `Base.API`, `BaseWeb` and
 | `CS-LOG:1` | `Console` outside the file that starts the program | 551 | built 2026-08-19 |
 | `CS-SECURITY:1` | a query built by pasting values into its text | 72 | built 2026-08-19 |
 | `CS-ERROR:2` | `throw new Exception(...)` — the failure type that says nothing about itself | 67 | built 2026-08-19 |
-| `CS-TYPE:1` | the `!` that tells the compiler a value is not null | 210 | built 2026-08-19 |
 | `CS-TRUTH:1` | `async void` on a method that is not an event handler | 25 | built 2026-08-19 |
 
 **190 of the 429 swallowed catches are inside `.razor` files**, which is the
@@ -4014,6 +4013,8 @@ in reviewed code, and the first thing any of those maintainers would have done
 is switch it off.
 
 **A line number was also wrong, in a way only long files show.** `CS-TYPE:1`
+(refused four days later on measurement — the chunk below has it, and this
+paragraph is kept because a reversed decision keeps both halves)
 reported the line where a `!`'s expression *began* rather than the line holding
 the `!`. In MudBlazor's tests a reflection chain spans three lines with a `!` on
 two of them, and both were reported against the first. Thirteen hits pointed at
@@ -4114,3 +4115,77 @@ needs `select` and `from` together.
 Both were caught by reading every hit against the line it names. Across all five
 codebases — 5,768 files and 3,438 hits, measured 2026-08-19 — every one lands on
 a line holding what the rule bans, and nothing was unreadable.
+
+
+## Choosing a corpus, and the rule it refused
+
+`CS-ERROR:1` was narrowed by running it over somebody else's code. That worked,
+so the corpus was asked a harder question: **is it actually good code?** Two of
+the four were a serialiser and a UI library, and `Newtonsoft.Json` — the one
+leaned on hardest — has no `.github/CODEOWNERS` at all. It is one person's
+library. Nothing there was chosen; it was reached for.
+
+### Three things that can be checked, instead of a reputation
+
+- **Enforced review.** `.github/CODEOWNERS` is 4,877 bytes in `dotnet/runtime`
+  and 5,632 in `bitwarden/server`. It is absent in `Newtonsoft.Json`. This is a
+  file, not an opinion.
+- **What it costs to be wrong.** `bitwarden/server` is a password manager and
+  `dotnet/runtime` ships to every .NET machine. Neither takes a careless merge.
+- **The same kind of code.** This was the gap. A serialiser, a UI library and a
+  micro-ORM are not ASP.NET Core applications, and the adopter is one.
+  `bitwarden/server` and `jellyfin` are, and they agree with the runtime — so the
+  result is not an artefact of comparing an application against libraries.
+
+Four codebases were added on 2026-08-19: `dotnet/runtime` at `77c175b` (four
+libraries under `src/libraries`), `dotnet/aspnetcore` at `42e0847` (`src/Http`,
+`src/Mvc`, `src/Security`), `bitwarden/server` at `5f3c0b6` and `jellyfin` at
+`1722105`. **Eight foreign codebases, 3,602,115 lines.**
+
+### Hits per thousand lines, measured 2026-08-19
+
+| | kloc | ERROR:1 | ERROR:3 | ERROR:4 | LOG:1 | ERROR:2 | SEC:1 | TRUTH:1 | TYPE:1 |
+|---|---|---|---|---|---|---|---|---|---|
+| dotnet/runtime | 148 | 0.01 | 0.01 | 0.00 | 0.00 | 0.01 | 0.00 | 0.00 | 5.12 |
+| dotnet/aspnetcore | 676 | 0.01 | 0.01 | 0.01 | 0.00 | 0.06 | 0.00 | 0.00 | 2.04 |
+| bitwarden/server | 1884 | 0.01 | 0.01 | 0.00 | 0.04 | 0.05 | 0.00 | 0.04 | 1.13 |
+| jellyfin | 339 | 0.03 | 0.06 | 0.01 | 0.01 | 0.00 | 0.01 | 0.05 | 1.96 |
+| Dapper | 26 | 1.50 | 0.07 | 0.15 | 0.82 | 0.07 | 0.45 | 0.04 | 9.32 |
+| MudBlazor | 303 | 0.05 | 0.00 | 0.02 | 0.09 | 0.06 | 0.00 | 0.04 | 2.58 |
+| Newtonsoft.Json | 193 | 0.03 | 0.00 | 0.04 | 1.42 | 0.19 | 0.00 | 0.00 | 1.49 |
+| eShop | 28 | 0.04 | 0.07 | 0.04 | 0.07 | 0.28 | 0.00 | 0.25 | 1.87 |
+| **the adopter** | 325 | **1.32** | **0.30** | **0.33** | **1.69** | 0.21 | 0.22 | 0.08 | **0.65** |
+
+**A rule worth having is quiet where the review is hardest and loud where the
+work is needed.** Six are: `CS-ERROR:1` is fifty to a hundred and thirty times
+rarer in the reviewed code, `CS-ERROR:4` thirty-three times, `CS-LOG:1` forty.
+`CS-SECURITY:1` is silent everywhere except `Dapper`, which is a SQL library, and
+that is the rule working rather than failing. `CS-TRUTH:1` is quiet everywhere,
+including here — it is the weakest of the six and is kept because `async void`
+is not arguable, not because the numbers made a case.
+
+`CS-ERROR:2` is the flat one: 0.00 to 0.28 across the corpus against 0.21 here.
+`throw new Exception` is a habit everywhere rather than a fault of this codebase.
+It stays, because a universal habit is still the thing the rule describes, but it
+will not shrink anyone's list much.
+
+### CS-TYPE:1 is refused, and it was already shipped
+
+**Every one of the eight uses `!` more than the adopter.** `dotnet/runtime` —
+written by the people who put `!` in the language — uses it **eight times more**,
+and `Dapper` fourteen times more. The adopter is the lowest of all nine at 0.65.
+
+That is the opposite of the signature every other rule here has. A rule cannot
+claim to find a defect that the most carefully reviewed C# in existence commits
+most often; what it has found is an idiom. It is removed from the law, from the
+cases, from the engine and from `src/canon/csharp.md`.
+
+**It had already shipped in the first C# commit**, before there was a corpus to
+check it against. Four codebases would not have caught it either — the four-way
+table showed 1.49 to 9.32 against 0.65 and the inversion was already visible
+there, and it was read as "loud everywhere" rather than as "backwards". Adding
+codebases is not what found it. Asking whether the corpus was any good is.
+
+`<Nullable>enable</Nullable>` stays in STACK.md. The setting is worth having and
+the gate on its escape hatch is not, which is a distinction the rest of this
+document should probably be asked about more often.
