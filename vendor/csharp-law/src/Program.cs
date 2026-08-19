@@ -44,7 +44,7 @@ public static class Program
             catch (UnauthorizedAccessException error) { unreadable.Add(Unreadable(root, file, error.Message)); continue; }
 
             var tree = CSharpSyntaxTree.ParseText(Sources.CSharpIn(file, text));
-            violations.AddRange(Law.Judge(Relative(root, file), tree.GetRoot()));
+            violations.AddRange(Law.Judge(Relative(root, file), tree.GetRoot(), StartsTheProgram(file, text)));
         }
 
         Say(new
@@ -58,6 +58,13 @@ public static class Program
         });
         return 0;
     }
+
+    private static bool StartsTheProgram(string file, string text) =>
+        Path.GetFileName(file) is "Program.cs" or "Startup.cs"
+        || text.StartsWith("#!", StringComparison.Ordinal)
+        || text.Contains("static void Main(", StringComparison.Ordinal)
+        || text.Contains("static async Task Main(", StringComparison.Ordinal)
+        || text.Contains("static int Main(", StringComparison.Ordinal);
 
     private static object Unreadable(string root, string file, string detail) =>
         new { file = Relative(root, file), detail };

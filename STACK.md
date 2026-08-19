@@ -95,10 +95,12 @@ driven over the same protocol as the Rust engine. The only requirement is that
 ## The C# backend it also governs
 
 An adopter ships a .NET service with a Blazor interface, which is the condition
-`docs/PLAN.md` sets for reading a language at all. Four rules are built and
-enforced on every edit and every commit: the swallowed `catch`, the failure type
-that names nothing, the `!` that overrules the null check, and `async void`
-outside an event handler.
+`docs/PLAN.md` sets for reading a language at all. Eight rules are built and
+enforced on every edit and every commit: the swallowed `catch`, the `catch` that
+answers with an invented value, the `catch` that never looks at what it caught,
+the failure type that names nothing, the `!` that overrules the null check,
+`async void` outside an event handler, `Console` outside the entry point, and a
+query built by pasting values into its text.
 
 | job | tool |
 |---|---|

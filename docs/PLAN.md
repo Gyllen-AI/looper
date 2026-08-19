@@ -1217,17 +1217,17 @@ Every rule the engine loads appears exactly once below, and
 
 | what goes wrong | TypeScript | Rust | Python | C# |
 |---|---|---|---|---|
-| a failure vanishes, and nobody hears it | `TS-ERROR:1` `TS-ERROR:4` `TS-ERROR:6` `TS-ERROR:7` `TS-ERROR:8` | `RUST-ERROR:1` `RUST-ERROR:2` `RUST-ERROR:4` `RUST-ERROR:6` `RUST-ERROR:8` `RUST-ERROR:9` | `PY-ERROR:1` `PY-TRUTH:2` | `CS-ERROR:1` |
-| a failure is answered with a made-up value | `TS-ERROR:3` `TS-TYPE:5` | `RUST-ERROR:3` `RUST-TYPE:5` | `PY-ERROR:2` | none built |
+| a failure vanishes, and nobody hears it | `TS-ERROR:1` `TS-ERROR:4` `TS-ERROR:6` `TS-ERROR:7` `TS-ERROR:8` | `RUST-ERROR:1` `RUST-ERROR:2` `RUST-ERROR:4` `RUST-ERROR:6` `RUST-ERROR:8` `RUST-ERROR:9` | `PY-ERROR:1` `PY-TRUTH:2` | `CS-ERROR:1` `CS-ERROR:4` |
+| a failure is answered with a made-up value | `TS-ERROR:3` `TS-TYPE:5` | `RUST-ERROR:3` `RUST-TYPE:5` | `PY-ERROR:2` | `CS-ERROR:3` |
 | the failure survives but names nothing | `TS-TYPE:2` | `RUST-TYPE:1` `RUST-TYPE:2` `RUST-TYPE:3` | `PY-ERROR:3` | `CS-ERROR:2` |
 | the checker is told to trust you | `TS-TYPE:3` `TS-TYPE:4` `TS-DEAD:1` | `RUST-TYPE:4` `RUST-DEAD:1` | `PY-TYPE:1` | `CS-TYPE:1` |
 | "what happens when nobody said" is answered in more than one place | `TS-TRUTH:1` `TS-TRUTH:2` | `RUST-TRUTH:1` `RUST-TRUTH:2` | `PY-TRUTH:1` | none built |
-| output is taken from whoever ran the program | `TS-LOG:1` | `RUST-LOG:1` `RUST-LOG:2` | `PY-LOG:1` | none built |
+| output is taken from whoever ran the program | `TS-LOG:1` | `RUST-LOG:1` `RUST-LOG:2` | `PY-LOG:1` | `CS-LOG:1` |
 | a log line cannot be asked a question, because the value is inside the sentence | `TS-LOG:3` | `RUST-LOG:3` | `PY-LOG:3` | none built |
 | the shape of the code hides what it does | `TS-DECOMPOSITION:1` `TS-LAYER:2` `TS-DEAD:4` | `RUST-DECOMPOSITION:1` `RUST-DECOMPOSITION:2` `RUST-DECOMPOSITION:3` `RUST-LAYER:1` `RUST-LAYER:2` `RUST-LAYER:3` `RUST-DEAD:4` | `PY-LAYER:1`, and **open on purpose** — 500 does not port, measured below | none built |
 | unfinished work reads as finished | `TS-DEAD:2` `TS-DEAD:3` | `RUST-DEAD:2` `RUST-DEAD:3` | **tried and not shippable**, measured 2026-08-18 — the argument is below | `CS-TRUTH:1` |
 | the language's own guarantees are stepped around | none built | `RUST-ERROR:5` `RUST-ERROR:7` `RUST-TESTS:1` | none built | none built |
-| something from outside is used as an instruction | `DATA:1` `DATA:2` `NODE:1` `NEXT:1` | none built | `PY-SECURITY:1` `PY-SECURITY:2` | none built |
+| something from outside is used as an instruction | `DATA:1` `DATA:2` `NODE:1` `NEXT:1` | none built | `PY-SECURITY:1` `PY-SECURITY:2` | `CS-SECURITY:1` |
 | a framework's own contract is broken in silence | `REACT:1` `REACT:2` `TAURI:1` | — | — | — |
 | the project gains a language nobody chose | `STACK:1`, which reads the project rather than a file, so it answers for all four | | | |
 
@@ -3961,6 +3961,10 @@ Measured on 2026-08-19 across the adopter's `Base.API`, `BaseWeb` and
 | rule | bans | found | disposition |
 |---|---|---|---|
 | `CS-ERROR:1` | a `catch` whose body is empty and which names nothing | 429 | built 2026-08-19 |
+| `CS-ERROR:3` | a `catch` that names nothing and answers with an invented value | 98 | built 2026-08-19 |
+| `CS-ERROR:4` | a `catch` that names nothing and never looks at what it caught | 108 | built 2026-08-19 |
+| `CS-LOG:1` | `Console` outside the file that starts the program | 551 | built 2026-08-19 |
+| `CS-SECURITY:1` | a query built by pasting values into its text | 72 | built 2026-08-19 |
 | `CS-ERROR:2` | `throw new Exception(...)` — the failure type that says nothing about itself | 67 | built 2026-08-19 |
 | `CS-TYPE:1` | the `!` that tells the compiler a value is not null | 210 | built 2026-08-19 |
 | `CS-TRUTH:1` | `async void` on a method that is not an event handler | 25 | built 2026-08-19 |
@@ -4037,3 +4041,76 @@ the stray `Console.WriteLine`, `#pragma warning disable`, and a layer crossing.
 They were left out because a first reader is already a large change, and each of
 those wants its own counted evidence rather than a place in somebody else's
 paragraph.
+
+## The other seven, of which three do not exist
+
+The first C# chunk listed seven rules held back for want of counted evidence.
+Going after all seven produced four rules and three refusals, and the refusals
+are the more useful half.
+
+Two codebases were added to the corpus for this, because a JSON library and a UI
+library have no database layer and could say nothing about a SQL rule:
+**Dapper** at `c0b2097` and **dotnet/eShop** at `ae71a06`, cloned 2026-08-19.
+Five codebases in all.
+
+### Built
+
+| rule | Newtonsoft | MudBlazor | Dapper | eShop | the adopter |
+|---|---|---|---|---|---|
+| `CS-ERROR:3` the invented answer | 0 | 1 | 2 | 2 | 98 |
+| `CS-ERROR:4` never looks at what it caught | 7 | 6 | 4 | 1 | 108 |
+| `CS-LOG:1` `Console` outside the entry point | 275 | 26 | 22 | 2 | 551 |
+| `CS-SECURITY:1` a query built by pasting values in | 0 | 0 | 12 | 0 | 72 |
+
+### Refused, and why the refusal is worth more than the rule
+
+**The unawaited `Task` cannot be judged without types.** Written to fire on a
+call whose name ends in `Async` and is used as a statement, it found 73 in
+MudBlazor and 56 in the adopter — and **48 of each were `InvokeAsync`**, the
+Blazor callback every component uses and deliberately does not await. The reader
+parses one file at a time and has no compilation, so it cannot tell a
+`Task`-returning call from any other method whose name happens to end that way.
+A rule that goes by the name catches the convention, not the defect.
+
+**`#pragma warning disable` is not the rule its sibling is.** `PY-TYPE:1` bans
+`# type: ignore` — silencing the *type checker*. Across Newtonsoft and MudBlazor
+there are 169 pragmas and **not one silences a nullable warning**: 109 are
+`CS0618`, an API marked obsolete, and the rest are trimming, XML documentation
+and analyzer style. Narrowed to the nullable warnings it would be honest and
+would have zero instances anywhere measured. Either way it ships on nothing.
+
+**The layer crossing has nothing to measure.** `RUST-LAYER:1` does nothing when
+`law.toml` declares no layers. The adopter has no `law.toml` at all and neither
+foreign repository declares layers, so there is no codebase in which the rule
+could be observed either firing or staying quiet.
+
+### The same finding, four times
+
+`CS-ERROR:1` was narrowed because 32 of 51 empty catches named the failure they
+ignored. Going after `CS-ERROR:3` and `CS-ERROR:4` produced it again: 15 of 20
+invented answers, and most of the unobserved catches, were
+`catch (SpecificException) { return false; }` — the `Try` shape, where `false`
+is the answer and the type is the explanation. Both rules took the same gate,
+and `MudBlazor` fell from 14 to 1 and from 30 to 6.
+
+Newtonsoft's `ConvertUtils.cs` added the fourth: `catch { value = null; return
+false; }` inside `TryParse`, which is the pattern the .NET framework itself
+uses. A method named `TryX` returning `bool` is now exempt from both rules.
+
+**In C# the whole ERROR family needs one exemption, not three.** Naming the
+failure is what separates a decision from a silence, and it is worth stating once
+here rather than rediscovering it on the next rule.
+
+### Two more line numbers were wrong
+
+`CS-TRUTH:1` reported the line of a method's attribute rather than the method:
+Dapper's `MiscTests.cs` has `[Fact]` above `public async void`, and the report
+named the `[Fact]`. It now reports the method's own name token.
+
+`CS-SECURITY:1` read `$"Select {item.Name}"` — an accessibility label in
+MudBlazor's tests — as SQL, because `select` alone was treated as enough. It now
+needs `select` and `from` together.
+
+Both were caught by reading every hit against the line it names. Across all five
+codebases — 5,768 files and 3,438 hits, measured 2026-08-19 — every one lands on
+a line holding what the rule bans, and nothing was unreadable.
