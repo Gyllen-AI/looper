@@ -4658,3 +4658,27 @@ fonts render them at two cells, some at one — so a frame's right edge cannot b
 made to line up for every reader, and a frame that is off by one drags the letters
 down with it. The letters alone have no edge to misalign. No frame.
 
+### The push check gave up on the branch it matters most for
+
+`#105` shipped the strangers list at push time. It found the revision to compare
+against by asking for `@{upstream}`, then `origin/HEAD`. Within the hour it
+announced its own gap on a real push here:
+
+```
+looper: the words about to leave this machine were not checked, because
+Command failed: git rev-parse --abbrev-ref origin/HEAD.
+```
+
+**`origin/HEAD` is only set by a fresh `git clone`.** Any repository that
+predates one, or that lost the ref, does not have it — this one does not. And a
+branch that has never been pushed has no `@{upstream}` either. So the two together
+gave up on exactly the case the check exists for: **new work being pushed for the
+first time.**
+
+`origin/main` and `origin/master` are now the third and fourth things asked, and
+a test covers a branch with no upstream at all. It failed before the change.
+
+The check announced this itself rather than passing quietly, which is the only
+reason it was found within an hour of shipping — fail open, never fail silent,
+earning its place.
+
