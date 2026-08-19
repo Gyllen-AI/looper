@@ -1,0 +1,70 @@
+import type { Out } from "../out.ts";
+import { totalIn, readBaseline, againstBaseline } from "../law/baseline.ts";
+import { formatReport } from "../law/report.ts";
+import { surveyProject } from "../law/project.ts";
+import { misspelledIn } from "../law/misspelled.ts";
+import { readConcessions } from "../law/concessions.ts";
+import { knownRuleIds } from "../law/checks.ts";
+import { here } from "../session.ts";
+
+export function law(asked: readonly string[], out: Out): number {
+  for (const said of misspelledIn(readConcessions(here()), knownRuleIds())) {
+    out.warn(said);
+  }
+  const survey = surveyProject(here(), "everything", asked);
+  if (survey.couldNotSkipIgnored.length > 0) {
+    out.warn(
+      `looper: git could not say which files are ignored (${survey.couldNotSkipIgnored}), so generated files your .gitignore names were judged too. The count below is over more files than the baseline was built from.`,
+    );
+  }
+  for (const named of survey.unreadable) {
+    out.warn(`looper: could not read ${named}; it was not judged`);
+  }
+  for (const held of survey.selfGoverned) {
+    out.warn(
+      `looper: ${held.where} governs itself (${held.why}), so its ${held.files} file(s) were not judged here`,
+    );
+  }
+  if (survey.files === 0) {
+    out.say(
+      [
+        "looper: there is nothing here the law can read.",
+        "The law covers TypeScript and Rust. This is not a clean bill of health for",
+        "the rest — the secrets gate, the rule sets and the staleness check all still",
+        "apply to every file, and they are where looper earns its place in a project",
+        "like this one.",
+      ].join("\n"),
+    );
+    return 0;
+  }
+  if (survey.violations.length === 0) {
+    if (survey.unreadable.length > 0) {
+      out.say(
+        `looper: ${survey.files} files, and nothing to fix in the ones it could read. ${survey.unjudged} could not be read, named above — those were not judged at all, which is not the same as being clean.`,
+      );
+      return 0;
+    }
+    out.say(`looper: ${survey.files} files, nothing to fix.`);
+    return 0;
+  }
+  const carried = againstBaseline(readBaseline(here()), survey.violations);
+  const older = carried.older.length;
+  const yours = carried.yours.length;
+  out.say(formatReport(survey.violations, yours === 0 ? "all-older" : "some-new"));
+  if (older > 0) {
+    out.say(alreadyHere(older, yours));
+  }
+  return yours === 0 ? 0 : 2;
+}
+
+function alreadyHere(older: number, yours: number): string {
+  const was = older === 1 ? "was" : "were";
+  const all = yours === 0 ? "All " : "";
+  return [
+    `${all}${older} of these ${was} already here before looper arrived, and ${older === 1 ? "is" : "are"} recorded in .looper/baseline.toml.`,
+    `${older === 1 ? "It does" : "They do"} not block a commit until you touch the line ${older === 1 ? "it is" : "they are"} on.`,
+    yours === 0
+      ? "Fix them when you are next in that file."
+      : `The other ${yours} ${yours === 1 ? "is new and is" : "are new and are"} blocking.`,
+  ].join(" ");
+}
