@@ -3955,8 +3955,8 @@ case expecting silence, so the limit is written down rather than discovered.
 
 ### Four rules, each with a count behind it
 
-Measured on 2026-08-19 across the adopter's `Base.API`, `BaseWeb` and
-`Base.Shared` — 683 C# files and 96 Razor files:
+Measured on 2026-08-19 across the adopter's API, web and shared projects — 683
+C# files and 96 Razor files:
 
 | rule | bans | found | disposition |
 |---|---|---|---|
