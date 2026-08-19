@@ -2,6 +2,18 @@
 
 [![tests](https://github.com/gyllen-ai/looper/actions/workflows/test.yml/badge.svg)](https://github.com/gyllen-ai/looper/actions/workflows/test.yml)
 
+```
+██╗      ██████╗  ██████╗ ██████╗ ███████╗██████╗
+██║     ██╔═══██╗██╔═══██╗██╔══██╗██╔════╝██╔══██╗
+██║     ██║   ██║██║   ██║██████╔╝█████╗  ██████╔╝
+██║     ██║   ██║██║   ██║██╔═══╝ ██╔══╝  ██╔══██╗
+███████╗╚██████╔╝╚██████╔╝██║     ███████╗██║  ██║
+╚══════╝ ╚═════╝  ╚═════╝ ╚═╝     ╚══════╝╚═╝  ╚═╝
+
+rules before the work · gates after it · no socket, ever
+77 rules · 4 languages · 482 cases · 519 tests
+```
+
 An agent writing code for you is fast, agreeable, and unsupervised. looper is
 the reviewer who is not in the room: rules that arrive before the work, and
 gates that read what was written before it lands.
@@ -18,6 +30,84 @@ npx looper init
 That is the whole setup. `init` adds its hooks beside any you already have,
 never over them, and running it twice leaves the project byte-identical.
 
+## What it actually does
+
+Your agent writes this. It compiles, the tests pass, and it is wrong:
+
+```diff
+  export async function total(id: string) {
+    try {
+      const rows = await db.rows(id);
+      return rows.reduce((n, r) => n + r.amount, 0);
+-   } catch {
+-     return 0;
+-   }
+  }
+```
+
+`0` is a number. One line later nothing can tell it from a real total — the
+database was down and the invoice says zero.
+
+looper does not wait for the commit. The moment that file is written, the agent
+is holding this:
+
+```
+  [TS-ERROR:3]  src/orders.ts:6
+    not allowed: answering a failure with a made-up value: `catch { return null }`,
+    `return []`, `return {}`, `return 0`, or `.catch(() => [])`
+    why: one line later nothing can tell the made-up value from a real one, so a
+    database that was down becomes an empty list of users, and a parse that failed
+    becomes a zero in a report. The person who sees it has no way to know anything
+    went wrong
+    the shape that works instead — the names in it are examples, not code to copy:
+      throw new NotFound(id)
+      catch (cause) { throw new CouldNotRead(path, cause) }
+      catch (cause) { logger.warn({ cause }, 'cache unreadable'); return count(source) }
+```
+
+What is not allowed, what it costs, and a spelling that works. The agent repairs
+it in the same turn, while the reasoning that produced it is still in the room.
+
+## Four gates
+
+```
+①  before each turn      the rules for what you are touching are put in
+                         front of the agent — held, not merely available
+
+②  after each edit       the file is judged. a violation comes back as a
+                         repair: what is not allowed, why, and a spelling
+                         that works
+
+③  before each commit    everything staged is judged again, plus a scan for
+                         anything shaped like a password or a key
+
+④  before each push      every word that appears nowhere else in the
+                         repository is named, so nothing leaves unseen
+```
+
+Nothing in that list can reach the network. `npm test` holds it: no file in the
+resolved tree may open a socket, the eighteen Rust crates and three C# packages
+are vendored into this repository, and a build with an empty package cache was
+run to prove it needs nothing fetched.
+
+## What it reads
+
+| language | rules | how |
+|---|---:|---|
+| **TypeScript & JavaScript** | 28 | Babel, including React, Next and JSX |
+| **Rust** | 30 | `syn`, built from vendored source with the `cargo` you have |
+| **Python** | 11 | Python's own parser — `python3`, nothing to install |
+| **C# & Razor** | 8 | Roslyn, `@code` blocks judged, markup left alone |
+
+**482 cases** hold those rules to their own ban text — what must fire, what must
+stay silent — and every rule was run over code nobody here wrote before it
+shipped.
+
+A project with two halves is not confused by them. looper works out from what is
+on disk which half is the backend and which is the interface, and a rule about
+database queries never fires on a screen that has no database. A TypeScript-only
+project never sees any of the rest.
+
 ## Before you write anything
 
 An agent reads this file, then starts work. These are the three that change what
@@ -25,9 +115,9 @@ gets written, and the order is the point.
 
 1. **Read [STACK.md](STACK.md) — what looper recommends building with.** The web
    framework, the database layer, the front end, one tool per job, for
-   TypeScript, Rust and Python alike. It judges nothing and refuses nothing. It
-   is there so the first file in a language this project does not already use is
-   a choice between named options rather than whatever came to hand.
+   TypeScript, Rust, Python and C# alike. It judges nothing and refuses nothing.
+   It is there so the first file in a language this project does not already use
+   is a choice between named options rather than whatever came to hand.
 2. **Read `CURRENTSTACK.md`, which `init` writes into your project.** That one is
    what your project already *is*, measured from disk rather than chosen. It is
    also the gate: `STACK:1` refuses a source file in a language it does not list.
@@ -39,42 +129,30 @@ gets written, and the order is the point.
 Skipping the first two is how a project ends up with a second runtime nobody
 chose. Skipping the third is how a screen gets built that nobody ever looked at.
 
-## What happens then
+## Measured against code nobody here wrote
 
-**Before each turn**, the rules that matter to what you are touching are put in
-front of the agent — not a document it might read, a document it is holding.
+`looper law` over four codebases widely held up as well written, and over this
+one. All five judged 2026-08-19.
 
-**After each edit**, the file is judged. A violation comes back as a repair
-instruction: what is not allowed, why it costs you something, and a spelling
-that works.
+| | zod | excalidraw | tanstack-query | vscode | looper |
+|---|---:|---:|---:|---:|---:|
+| lines of TypeScript | 79,636 | 190,487 | 157,039 | 2,613,789 | 10,765 |
+| problems per 1,000 lines | 128.7 | 67.2 | 45.2 | 47.4 | **20.1** |
+| without the comment rule | 43.4 | 24.4 | 17.8 | 16.2 | **19.9** |
 
-**Before each commit**, everything staged is judged again, plus a scan for
-anything shaped like a password or a key — in the files and in the message.
+Read the third row against the second. **One rule — no comments — is 61 to 66% of
+everything looper finds in all four.** That is a position this project takes on
+purpose, and the number is what it costs: every other rule can be adopted
+incrementally, and that one cannot be adopted at all without a mass strip first.
+Worth knowing before you start rather than after.
 
-**When a rule set describes code you changed**, and you did not change the rule
-set, the commit is refused. A document that quietly describes something that
-moved is worse than no document.
+The file-length cap lands between 0.28 and 0.54 per 1,000 lines in all five,
+including a 2.6-million-line editor — a cap that means the same thing at every
+size. And on `as` and `!`, on `any`, on suppressions and on `export *`, a project
+that has followed these rules for a week scores better than all four.
 
-## What it reads
-
-**TypeScript and JavaScript**, including React and Next. **Rust**, if the
-project has a `Cargo.toml` — looper builds its Rust half with the `cargo` you
-already have, and rebuilds it whenever its own source is newer than the binary,
-so an upgrade cannot leave you judged by the law it replaced. A TypeScript-only project never sees any of that.
-
-A project with both is not confused by it. looper works out from what is on
-disk which half is the backend and which is the interface, and a rule about
-database queries never fires on a user interface that has no database.
-
-**Python, seven rules.** A `.py` file is read with Python's own parser — no
-extra install, only `python3` on the machine — and judged by `PY-ERROR:1`, the
-swallowed error, `PY-ERROR:2`, the made-up answer that hides it, `PY-TRUTH:1`,
-the mutable default argument, `PY-TRUTH:2`, `assert` used where `python -O` will
-delete it, `PY-TYPE:1`, the silenced type checker, `PY-LAYER:1`, the star import,
-and `PY-ERROR:3`, the failure raised without a name.
-[STACK.md](STACK.md) prescribes the rest of the Python stack — and every other
-stack looper governs, not only this one — and every rule
-`docs/PLAN.md` names for Python is now built.
+Where looper is worst in that sample is written down too. `docs/PLAN.md` has the
+whole table.
 
 ## When a rule is wrong
 
@@ -105,11 +183,11 @@ decision that was reversed keeping both halves, and every number measured with
 the date beside it. Four tests read it and refuse the suite if it drifts from
 what the code does.
 
-`docs/FINDINGS.md` is the audit. Seventy-two things that were wrong with this
-tool, how each was found, and what closing it cost. All of them are closed, and
-the ones still open are named at the top of that file when there are any. A tool
-that publishes its own audit — including what it still gets wrong — is making a
-claim that is expensive to fake.
+`docs/FINDINGS.md` is the audit. **A hundred and five things that were wrong with
+this tool**, how each was found, and what closing it cost. All of them are
+closed, and the ones still open are named at the top of that file when there are
+any. A tool that publishes its own audit — including what it still gets wrong —
+is making a claim that is expensive to fake.
 
 ## Licence
 

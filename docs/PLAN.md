@@ -4663,3 +4663,29 @@ all, not whether the reader works. If the SDK is present and the engine will not
 build, the six run and fail as before. The Rust cases have the same shape and
 have never shown it, because `cargo` is on the machine of anyone working here and
 `dotnet` is not.
+
+### The README said seven Python rules and never mentioned C#
+
+Rewritten 2026-08-19. Three of its claims had gone stale: *"Python, seven rules"*
+when there are eleven, no mention of C# or Razor at all after `#93` merged, and
+*"Seventy-two things that were wrong with this tool"* against a hundred and five
+findings, all closed.
+
+Everything in it is now checked against the code that answers it: **77 rules**
+(TypeScript and JavaScript 28, Rust 30, Python 11, C# 8), **482 cases**, **519
+tests**, **18 vendored crates and 3 vendored packages**.
+
+Three things were added. A **before-and-after** — the agent's `catch { return 0 }`
+and the repair looper hands back — because the shortest honest description of this
+tool is one example of it working, and a `diff` block is the one place GitHub
+renders red and green. The **four gates** as a list, which now includes the push
+gate `#97` added. And the **calibration table** from `#100`, including the row
+that says the comment rule is two thirds of every finding: an adopter should meet
+that number on the front page rather than on day three.
+
+The masthead went through three rejected drafts before the shape was right, and
+the reason is worth recording. The first two put a box-drawing frame around the
+letters. Box-drawing and block characters are *ambiguous width* in Unicode — some
+fonts render them at two cells, some at one — so a frame's right edge cannot be
+made to line up for every reader, and a frame that is off by one drags the letters
+down with it. The letters alone have no edge to misalign. No frame.
