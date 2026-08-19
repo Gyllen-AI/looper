@@ -16,6 +16,7 @@ import { judge } from "./engine.ts";
 import { CHECKS } from "./checks.ts";
 import { checksAdoptedIn } from "./adopted.ts";
 import type { Violation } from "./rule.ts";
+import { UNREADABLE_FILE } from "./ts/unreadable.ts";
 import { reasonFrom } from "../fields.ts";
 import { commandsUnder } from "./rust/drive.ts";
 import { crossingsIn } from "./rust/boundary.ts";
@@ -36,6 +37,7 @@ export type Survey = {
   readonly files: number;
   readonly unreadable: readonly string[];
   readonly unjudged: number;
+  readonly judged: number;
   readonly selfGoverned: readonly SelfGoverned[];
   readonly couldNotSkipIgnored: string;
 };
@@ -347,11 +349,16 @@ export function surveyProject(root: string, reach: Reach, only: readonly string[
     );
   }
 
+  const couldNotParse = violations.filter((held) => held.rule === UNREADABLE_FILE).length;
+  const openedButUnjudged = couldNotParse + pythonSaid.unjudged + csharpSaid.unjudged;
+
   return {
     violations,
     files: files.length,
     unreadable,
-    unjudged: unreadable.length - pythonSaid.unreadable.length + pythonSaid.unjudged,
+    unjudged: unreadable.length - pythonSaid.unreadable.length + pythonSaid.unjudged
+      + couldNotParse,
+    judged: files.length - openedButUnjudged,
     selfGoverned: walked.selfGoverned,
     couldNotSkipIgnored: walked.couldNotSkipIgnored,
   };
