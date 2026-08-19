@@ -4791,7 +4791,7 @@ excluded: a vendored directory is by definition full of words nobody here wrote.
 
 Verified against the incident itself. A repository whose only prose is *"The
 engine reads the staged text and refuses a key"*, then a commit adding *"Rolled
-out across Base.API, BaseWeb and Base.Shared this week"*:
+out across Contoso.Api, ContosoWeb and Contoso.Widgets this week"*:
 
 ```
 looper: 7 word(s) in what you are about to push appear
@@ -4799,7 +4799,7 @@ nowhere else in this repository as origin/main has it.
 
   Base     docs/plan.md:2
   API      docs/plan.md:2
-  BaseWeb  docs/plan.md:2
+  ContosoWeb  docs/plan.md:2
   Shared   docs/plan.md:2
 ```
 
@@ -5107,4 +5107,155 @@ you trust that one.
 ```
 
 A test holds it, written from the issue and run against the silent version first.
+
+### A file path read as a key, and a wider fix measured and not taken
+
+`#116`: `looper init` wrote `.looper/baseline.toml`, its last line told the adopter
+to commit it, and the secrets gate refused it. Reproduced end to end before
+merging — one TypeScript file under an abbreviation-heavy namespace directory is
+enough:
+
+```
+REFUSED  .looper/baseline.toml:8  a 42-character random-looking string
+```
+
+Merged as it stands: the baseline is skipped, the detector untouched, and every
+path in that file is the path of a file already tracked in the same commit, so
+scanning it protects nothing the commit does not already contain.
+
+**The shape that trips it is narrower than it first looked.** A candidate needs 24
+or more characters *and* every lowercase run of seven or fewer — `LONGEST_WORD` is
+7 — *and* entropy over 4.2. Measured against realistic project paths on
+2026-08-19, none of these is refused:
+
+| path segment | length | longest lowercase run | |
+|---|---|---|---|
+| `OrderSyncJobRunner` | 18 | 5 | under the length floor |
+| `PaymentGatewayAdapter` | 21 | 6 | under the length floor |
+| `InvoiceReconciliationHost` | 25 | 13 | excused by the word test |
+| `EventBusSubscriberHostV2` | 24 | 9 | excused by the word test |
+
+It takes naming like four-or-more short abbreviations run together. Real — the
+adopter hit it — but not the common case.
+
+**A wider fix was built, measured and then dropped.** The same false positive can
+hit the commit command, where there is no route out: three of my own shell
+commands were refused while building the fixture for this review, because a
+temporary path carrying a session id was 38, 40 and 47 characters. The fix was to
+ask whether a candidate names something on disk — decidable rather than a guess,
+and it worked on every case including the adversarial one.
+
+It is not shipped, for three reasons. Six realistic adopter paths do not trip the
+detector at all, so it buys little. It puts filesystem reads into the secrets path
+on every commit. And the case that kept biting was *writing about* the bug — a
+bare CamelCase run with no directory around it names nothing on disk, so the fix
+would not have excused it anyway, and the gate is right to refuse it.
+
+Recorded rather than built, so that if this recurs the shape and the measured
+answer are already here. `#116`'s author declined to attempt a randomness
+heuristic inside a false-positive fix; declining to attempt a filesystem one is
+the same judgement.
+
+**Splitting the candidate on `/` is worse and stays rejected.** Verified with a
+realistic key rather than AWS's documented example, which the detector correctly
+treats as a placeholder: a real key with slashes splits into parts of 12, 10 and
+18 — all under the 24-character floor, none flagged — while a path still has a
+28-character part that is. It lets the key through *and* keeps the false positive.
+
+### PY-ERROR:2 and TS-ERROR:3 do not disagree, and the text said they might
+
+Adopter issue #119 reported that `PY-ERROR:2` rejects a shape `TS-ERROR:3` allows —
+a handler returning the same answer the normal path already returns — and that the
+Python rule's own `instead` text recommends what it refuses. It framed the choice
+as a decision about what the rule means rather than a defect, and gave the argument
+both ways.
+
+**Measured, and both halves of the report are wrong in the same useful way.**
+2026-08-19, five shapes through each checker:
+
+| shape | Python | TypeScript |
+|---|---|---|
+| the default returned **inside** the `try` | silent | silent |
+| the default returned **before** the `try` | fires | fires |
+| bare `return None` | fires | fires |
+| logged, error not carried | fires | fires |
+| logged, error carried | silent | silent |
+
+**The two languages agree exactly.** The case in `audit/cases.ts` that the report
+quotes as the TypeScript allowance has its `return false` *inside* the `try`; the
+Python code it was compared against returns the default from a check *before* it.
+Different shapes, judged the same way by both rules.
+
+**So the rule does not recommend what it rejects — but the sentence was ambiguous
+enough to read that way**, and that is the real defect. It said *"return it from the
+`try` as well, so the handler is not the only place it appears"*. The second clause
+invites exactly the reading that any other appearance counts. The implementation is
+narrower and deliberate: `answersAlreadyGiven` is passed the try block, so the value
+must already be returned from inside it.
+
+Both texts now say that, and say why the narrower rule is the right one — a value on
+the success path is visibly the answer, while a value in a pre-check is only visibly
+a guard. `TS-ERROR:3` never mentioned this allowance at all, so a TypeScript reader
+who hit it had no hint the legal spelling existed; it has the line now too.
+
+Four cases pin it: the inside-the-`try` form silent and the before-the-`try` form
+firing, in both languages. No checker changed.
+
+**What the reporter actually needed** was one line moved, not a concession and not a
+rule change. Their 43 fixes stand.
+
+### `looper loop` shipped, and four things it said about itself
+
+`#122` built the command the loop design proposed. Reviewed by running it, and
+four defects came out — three that `looper law` named, and one the command found
+by lying about itself on its first demonstration.
+
+**A check that never answered reported `ok`.** The first run of a four-check demo
+printed `ok  loop.timeout  spawnSync sh ETIMEDOUT` — a check killed by its own
+patience, counted as healthy, by the command whose whole argument is that
+*unknown is never ok*. `spawnSync` can set `error` and a zero `status` together
+when a process exits at the same moment the timeout fires, and `verdictOf` read
+only the status. It now takes whether the check answered at all, and an
+unanswered check is `blind` when external and `broken` when internal, whatever
+exit code came with it. `verdictOf` is exported so that decision is tested
+directly rather than by racing a process.
+
+**An unreadable `loop.toml` read as a project that declared nothing.** Same class,
+one layer up, in the same pull request: `catch { return no checks }`. A file that
+is absent and a file that cannot be read are different answers, and only one of
+them means *nothing to do*.
+
+**A check that said nothing did not say why.** `${stdout ?? ""}${stderr ?? ""}`
+turned a timeout, a missing shell and a buffer overflow all into `no detail`.
+
+**And the fifth megabyte cap, through the door the check for it did not cover.**
+`#113` added an invariant after that defect was found in four places. It looked
+for `execFileSync` only, and this command uses `spawnSync`. Worse, it asked
+whether a call *reads* stdout by looking for an explicit `stdio` array, and
+`spawnSync` here relies on the default — so even naming `spawnSync` would not
+have caught it. The check is inverted now: a subprocess reads stdout unless it
+says otherwise, across `execFileSync`, `spawnSync` and `execSync`. Run against the
+uncapped call first, where it names `src/loop/run.ts:55`.
+
+### An adopter's own path was on main, and the check for it never runs on a merge
+
+Found while merging `main` into `#122`: `tests/secrets.test.ts` carried a real
+file path from an adopting organisation's C# codebase — a real namespace and a
+real class name — as the fixture for the very test proving a path is not a key. It
+arrived with `#116` and was merged here without anyone noticing. Two of this
+repository's own documents carried three more of that organisation's names, and
+those were written here, quoting what `#97` had itself published.
+
+All of them are replaced with invented names of the same shape. The tests never
+needed the real ones: 535 pass either way. The canon is one line — *nothing
+belonging to any adopting organisation enters this repo* — and it was broken four
+times in one day, twice by the person enforcing it.
+
+**The systemic half is worse than the instances.** `#105` built the check for
+exactly this: at push time, every word in the outgoing commits that appears
+nowhere else in the repository is named. It runs on `git push` from a machine. **A
+pull request merged through GitHub never pushes**, so the one check built to catch
+this class cannot see the route that most changes take. Recorded rather than
+built: the fix is not another local check but a gate on the merge itself, and that
+is a different piece of work with its own evidence to gather.
 

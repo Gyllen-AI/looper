@@ -1,11 +1,11 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { mkdtempSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
+import { chmodSync, mkdtempSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
 import { declaredIn, LOOP_FILE } from "../src/loop/checks.ts";
-import { ask, tallyOf, BLIND_EXIT, type Seen } from "../src/loop/run.ts";
+import { ask, tallyOf, verdictOf, BLIND_EXIT, type Seen } from "../src/loop/run.ts";
 
 function project(loopToml: string | null): string {
   const root = mkdtempSync(join(tmpdir(), "looper-loop-"));
@@ -34,7 +34,8 @@ test("a check with no reach is refused rather than guessed at", () => {
   const root = project(`[loop.nothing]\nrun = "true"\n`);
   const declared = declaredIn(root);
   assert.equal(declared.checks.length, 0);
-  assert.match(declared.complaints[0] ?? "", /reach/);
+  const said = declared.complaints[0];
+  assert.match(said === undefined ? "" : said, /reach/);
   rmSync(root, { recursive: true, force: true });
 });
 
@@ -78,4 +79,72 @@ test("blind is counted apart from broken and never as ok", () => {
   assert.equal(tally.broken, 1);
   assert.equal(tally.blind, 1);
   assert.deepEqual([...tally.failing], ["b", "c"]);
+});
+
+test("a loop file that cannot be read is a complaint, not an empty project", () => {
+  const root = project(`[loop.build]\nreach = "internal"\nrun = "true"\n`);
+  try {
+    chmodSync(join(root, LOOP_FILE), 0o000);
+    const declared = declaredIn(root);
+    if (declaredIn(root).complaints.length === 0 && declared.checks.length > 0) return;
+    assert.equal(declared.checks.length, 0);
+    assert.match(
+      declared.complaints[0] === undefined ? "" : declared.complaints[0],
+      /could not be read/,
+      "a loop file nobody can read answered exactly as a project that declared nothing, which is the report this whole design says must never happen",
+    );
+  } finally {
+    chmodSync(join(root, LOOP_FILE), 0o644);
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test("a check that says nothing says why it said nothing", () => {
+  const root = project(null);
+  try {
+    const seen = ask({ label: "loop.t", reach: "external", run: "sleep 5" }, root, 1);
+    assert.notEqual(seen.verdict, "ok");
+    assert.notEqual(
+      seen.detail,
+      "no detail",
+      "a check killed by its own timeout produced no output, and 'no detail' is the report that hides why",
+    );
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test("a check that did not answer is never ok, whatever exit code came with it", () => {
+  const root = project(null);
+  try {
+    const seen = ask({ label: "loop.slow", reach: "external", run: "sleep 5" }, root, 1);
+    assert.notEqual(
+      seen.verdict,
+      "ok",
+      "spawnSync can report a timeout and an exit status of zero together, and reading only the status called a check that never answered healthy — which is the one thing this whole design exists to prevent",
+    );
+    assert.equal(seen.verdict, "blind");
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test("the same failure on an internal check is broken, because nothing it needs is unreachable", () => {
+  const root = project(null);
+  try {
+    assert.equal(ask({ label: "loop.i", reach: "internal", run: "sleep 5" }, root, 1).verdict, "broken");
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test("a check that reported an error is never ok, even with a zero exit status", () => {
+  assert.equal(
+    verdictOf(0, "external", false),
+    "blind",
+    "spawnSync can set an error and a zero status together when a process exits as its own timeout fires — seen on the first run of this command. Reading only the status called a check that never answered healthy",
+  );
+  assert.equal(verdictOf(0, "internal", false), "broken");
+  assert.equal(verdictOf(0, "external", true), "ok");
+  assert.equal(verdictOf(0, "internal", true), "ok");
 });

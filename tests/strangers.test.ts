@@ -51,13 +51,13 @@ test("a push is read as a push", () => {
 test("a word that appears nowhere else in the repository is named before it leaves", () => {
   const root = repoWithARemote();
   try {
-    writeFileSync(join(root, "docs/plan.md"), "The gate reads Base.API and BaseWeb.\n");
+    writeFileSync(join(root, "docs/plan.md"), "The gate reads Contoso.Api and ContosoWeb.\n");
     git(root, "add", "-A");
     git(root, "commit", "-qm", "second");
 
     const spoken = said(pushing(root));
     assert.ok(
-      spoken.includes("BaseWeb"),
+      spoken.includes("ContosoWeb"),
       `adopter issue #97: a grep for the words somebody thought of reported clean, and three directory names nobody had pictured went to a public repository.\n${spoken}`,
     );
     assert.ok(spoken.includes("docs/plan.md"), spoken);
@@ -115,13 +115,13 @@ test("a branch with no upstream still has something to compare against", () => {
     git(root, "push", "-q", "origin", "HEAD:main");
     git(root, "checkout", "-q", "-b", "work");
 
-    writeFileSync(join(root, "docs/plan.md"), "The gate reads Base.API and BaseWeb.\n");
+    writeFileSync(join(root, "docs/plan.md"), "The gate reads Contoso.Api and ContosoWeb.\n");
     git(root, "add", "-A");
     git(root, "commit", "-qm", "second");
 
     const spoken = said(pushing(root));
     assert.ok(
-      spoken.includes("BaseWeb"),
+      spoken.includes("ContosoWeb"),
       `a branch with no upstream is the ordinary case for a first push, and git only sets origin/HEAD on a fresh clone. Falling back to it alone means the check gives up exactly when somebody is pushing new work for the first time.\n${spoken}`,
     );
   } finally {

@@ -1,6 +1,7 @@
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { ROOT_SECTION, parseToml, tableIn } from "../toml.ts";
+import { reasonFrom } from "../fields.ts";
 
 export type Reach = "internal" | "external";
 
@@ -33,11 +34,17 @@ function oneString(table: ReadonlyMap<string, unknown>, key: string): string | u
 }
 
 export function declaredIn(root: string): Declared {
+  const path = join(root, LOOP_FILE);
+  if (!existsSync(path)) return { checks: NOTHING, complaints: [] };
+
   let source: string;
   try {
-    source = readFileSync(join(root, LOOP_FILE), "utf8");
-  } catch {
-    return { checks: NOTHING, complaints: [] };
+    source = readFileSync(path, "utf8");
+  } catch (cause) {
+    return {
+      checks: NOTHING,
+      complaints: [`${LOOP_FILE} could not be read (${reasonFrom(cause)}), so nothing here was asked`],
+    };
   }
   const document = parseToml(source, LOOP_FILE);
   const checks: Check[] = [];

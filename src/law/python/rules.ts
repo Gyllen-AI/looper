@@ -56,7 +56,7 @@ export const PYTHON_RULES: readonly Rule[] = [
       "raise something the caller can act on: `raise Missing(path) from error`",
       "use the error, and this rule steps aside: `except OSError as error: logger.warning(\"...\", error); return None`",
       "return a real answer from a real place: `return fallback.read()`",
-      "if absence is a genuine answer, say so in the signature and return it from the `try` as well, so the handler is not the only place it appears",
+      "if absence is a genuine answer, return it from inside the `try` too — a check before the `try` does not count, because the value has to stand on the success path for a reader to see it is the answer rather than a patch over the failure",
       "leaving a command with a failing exit code is a report, not a fabrication — say it as one: `raise SystemExit(2)`",
     ],
     valve: { kind: "none" },

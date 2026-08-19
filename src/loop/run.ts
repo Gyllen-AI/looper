@@ -1,4 +1,7 @@
-import { spawnSync } from "node:child_process";
+import { spawnSync, type SpawnSyncReturns } from "node:child_process";
+
+import { A_READER_MAY_ANSWER_WITH } from "../config.ts";
+import { reasonFrom } from "../fields.ts";
 import type { Check, Reach } from "./checks.ts";
 
 export type Verdict = "ok" | "broken" | "blind";
@@ -30,7 +33,18 @@ function firstLine(raw: string): string {
   return NO_DETAIL;
 }
 
-function verdictOf(status: number | null, reach: Reach): Verdict {
+function whatItSaid(answered: SpawnSyncReturns<string>): string {
+  const out = typeof answered.stdout === "string" ? answered.stdout : "";
+  const err = typeof answered.stderr === "string" ? answered.stderr : "";
+  const said = `${out}${err}`;
+  if (said.trim().length > 0) return said;
+  if (answered.error !== undefined) return reasonFrom(answered.error);
+  if (answered.signal !== null) return `stopped by ${answered.signal} with nothing said`;
+  return NO_DETAIL;
+}
+
+export function verdictOf(status: number | null, reach: Reach, answered: boolean): Verdict {
+  if (!answered) return reach === "external" ? "blind" : "broken";
   if (status === 0) return "ok";
   if (status === BLIND_EXIT && reach === "external") return "blind";
   if (status === null) return reach === "external" ? "blind" : "broken";
@@ -43,10 +57,11 @@ export function ask(check: Check, root: string, seconds: number): Seen {
     cwd: root,
     encoding: "utf8",
     timeout: seconds * 1000,
+    maxBuffer: A_READER_MAY_ANSWER_WITH,
   });
   const millis = Date.now() - began;
-  const said = `${answered.stdout ?? ""}${answered.stderr ?? ""}`;
-  const verdict = verdictOf(answered.status, check.reach);
+  const said = whatItSaid(answered);
+  const verdict = verdictOf(answered.status, check.reach, answered.error === undefined);
   return { label: check.label, reach: check.reach, verdict, detail: firstLine(said), millis };
 }
 

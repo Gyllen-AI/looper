@@ -359,25 +359,27 @@ test("the file of deliberately key-shaped fixtures has a spelling both gates acc
 
 
 test("a reader that is listened to may answer with more than a megabyte", () => {
-  const READS_STDOUT = /stdio:\s*\[\s*"[^"]*",\s*"pipe"/;
+  const IGNORES_STDOUT = /stdio:\s*\[\s*"[^"]*",\s*"ignore"/;
   const unguarded: string[] = [];
 
   for (const file of ourFiles()) {
     const text = readFileSync(file, "utf8");
-    let at = text.indexOf("execFileSync(");
-    while (at !== -1) {
-      const call = text.slice(at, at + 400);
-      if (READS_STDOUT.test(call) && !call.includes("maxBuffer")) {
-        const line = text.slice(0, at).split("\n").length;
-        unguarded.push(`${file.slice(ROOT.length + 1)}:${line}`);
+    for (const starter of ["execFileSync(", "spawnSync(", "execSync("]) {
+      let at = text.indexOf(starter);
+      while (at !== -1) {
+        const call = text.slice(at, at + 400);
+        if (!IGNORES_STDOUT.test(call) && !call.includes("maxBuffer")) {
+          const line = text.slice(0, at).split("\n").length;
+          unguarded.push(`${file.slice(ROOT.length + 1)}:${line}`);
+        }
+        at = text.indexOf(starter, at + 1);
       }
-      at = text.indexOf("execFileSync(", at + 1);
     }
   }
 
   assert.deepEqual(
     unguarded,
     [],
-    `${unguarded.join(", ")} reads a subprocess's answer with node's one-megabyte default. Adopter PR #112 found 906 C# files reported unreadable because a reader's answer was cut mid-string at that cap; the same defect was in four places, and this is the only thing that stops a fifth.`,
+    `${unguarded.join(", ")} reads a subprocess's answer with node's one-megabyte default. Adopter PR #112 found 906 C# files reported unreadable because a reader's answer was cut mid-string at that cap. It was in four places then; a fifth arrived in #122 through spawnSync, which this check only looked for after it had already missed one.`,
   );
 });
