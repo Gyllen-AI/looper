@@ -1,0 +1,10 @@
+# Problems that were already here when looper arrived. They are not forgiven and
+# they are not exceptions: they are a list of work outstanding, and it can only
+# get shorter. looper refuses any new problem, and any problem on a line you
+# touch, so this shrinks wherever anyone does anything.
+#
+# Delete a line here once you have fixed it, or let looper shrink it for you.
+
+["audit/shape-probe.ts"]
+"TS-ERROR:4" = 3
+"TS-LOG:1" = 4

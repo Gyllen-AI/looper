@@ -32,6 +32,9 @@ export const AFTER_INIT: readonly string[] = [
   "  From the next session on, looper's own rules are in force.",
   "  .looper/doctrine/constitution.md is empty and costs nothing until you write a",
   "  line; read the README beside it to see what belongs there.",
+  "  Commit .looper/baseline.toml with everything else. It records what this",
+  "  project owed before looper arrived, and it only ever gets shorter. Left out,",
+  "  every colleague who clones this project is handed those problems as their own.",
 ];
 
 export function describeStep(step: Step): readonly string[] {

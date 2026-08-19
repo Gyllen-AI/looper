@@ -1,5 +1,11 @@
 import type { Out } from "../out.ts";
-import { totalIn, readBaseline, againstBaseline, linesChangedSinceHead } from "../law/baseline.ts";
+import {
+  adoptedButUnrecorded,
+  againstBaseline,
+  linesChangedSinceHead,
+  readBaseline,
+  totalIn,
+} from "../law/baseline.ts";
 import { formatReport } from "../law/report.ts";
 import { surveyProject } from "../law/project.ts";
 import { misspelledIn } from "../law/misspelled.ts";
@@ -10,6 +16,17 @@ import { here } from "../session.ts";
 export function law(asked: readonly string[], out: Out): number {
   for (const said of misspelledIn(readConcessions(here()), knownRuleIds())) {
     out.warn(said);
+  }
+  if (adoptedButUnrecorded(here())) {
+    out.warn(
+      [
+        "looper: this project has looper's doctrine but no .looper/baseline.toml.",
+        "Everything below is read as new, including anything that was here before",
+        "looper arrived. If you cloned this project, that file was never committed —",
+        "it belongs in the repository, or every person who checks the project out is",
+        "handed somebody else's older problems as their own.",
+      ].join("\n"),
+    );
   }
   const survey = surveyProject(here(), "everything", asked);
   if (survey.couldNotSkipIgnored.length > 0) {
