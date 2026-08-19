@@ -8,6 +8,7 @@ import {
   CSHARP_ENGINE_NAME,
   CSHARP_ENGINE_PROJECT,
   CSHARP_TIMEOUT_MS,
+  A_READER_MAY_ANSWER_WITH,
 } from "../../config.ts";
 import { fieldAt, reasonFrom } from "../../fields.ts";
 import { freshnessOf } from "../engine-age.ts";
@@ -99,6 +100,7 @@ function ranWith(binary: string, args: readonly string[]): Judged {
     output = execFileSync(binary, [...args], {
       encoding: "utf8",
       timeout: CSHARP_TIMEOUT_MS,
+      maxBuffer: A_READER_MAY_ANSWER_WITH,
       stdio: ["ignore", "pipe", "ignore"],
     });
   } catch (cause) {

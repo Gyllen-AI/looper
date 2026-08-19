@@ -2,7 +2,12 @@ import { execFileSync } from "node:child_process";
 import { existsSync } from "node:fs";
 import { join } from "node:path";
 
-import { RUST_ENGINE_DIR, RUST_ENGINE_NAME, RUST_TIMEOUT_MS } from "../../config.ts";
+import {
+  A_READER_MAY_ANSWER_WITH,
+  RUST_ENGINE_DIR,
+  RUST_ENGINE_NAME,
+  RUST_TIMEOUT_MS,
+} from "../../config.ts";
 import { fieldAt, reasonFrom } from "../../fields.ts";
 import { freshnessOf } from "../engine-age.ts";
 
@@ -79,6 +84,7 @@ function ranWith(binary: string, args: readonly string[]): Judged {
     output = execFileSync(binary, [...args], {
       encoding: "utf8",
       timeout: RUST_TIMEOUT_MS,
+      maxBuffer: A_READER_MAY_ANSWER_WITH,
       stdio: ["ignore", "pipe", "ignore"],
     });
   } catch (cause) {
@@ -150,6 +156,7 @@ export function shapeFromRust(
     output = execFileSync(builtAt(looperRoot), ["--shape", path, String(line), String(depth)], {
       encoding: "utf8",
       timeout: RUST_TIMEOUT_MS,
+      maxBuffer: A_READER_MAY_ANSWER_WITH,
       stdio: ["ignore", "pipe", "ignore"],
     });
   } catch (cause) {

@@ -4762,3 +4762,37 @@ machine, and are not touched here.
 | straight after touching the Rust source | 515 | 0 | 6 |
 | no `cargo`, no binary | 496 | 5 seer only | 20 |
 
+
+
+### A reader's answer was cut off at a megabyte, and 906 files went unjudged
+
+An adopter updated to the merged C# reader on 2026-08-19 and ran `looper law`.
+The first line back:
+
+```
+looper: could not read 906 C# files (it did not answer in JSON (Unterminated
+string in JSON at position 1053440)); it was not judged
+```
+
+`execFileSync` caps a child's output at one megabyte unless told otherwise, and
+none of the three drivers said otherwise. One of that adopter's files produces
+631 findings on its own; 779 files produce 22,803. The answer was cut mid-string
+and `JSON.parse` refused it.
+
+**The gate behaved correctly and that is why this was findable.** It did not
+report 906 clean files. It named them, said it could not read them, and said they
+were not judged — the same contract the Rust and Python halves have. A silent
+version of this would have read as a codebase with no problems in it.
+
+`A_READER_MAY_ANSWER_WITH` is 256MB, set on every reader rather than on the one
+that hit it. At the eighty-odd bytes a finding costs that is room for about three
+million, past which a project has a larger problem than a buffer. With it, the
+same 779 files return 22,803 findings and nothing unreadable.
+
+**Only C# has been seen to hit it.** The cap is shared by all three drivers, and
+the Rust and Python answers are smaller because neither language has a rule as
+loud as `CS-DEAD:2`. The fix is applied to all three because the defect is in all
+three, not because the other two were measured hitting it — they were not.
+
+The comment first written above that constant was itself refused by `TS-DEAD:2`
+on the next run, which is why this paragraph is here instead.

@@ -89,6 +89,8 @@ export const RUST_ENGINE_NAME = "looper-rust";
 
 export const RUST_TIMEOUT_MS = 120_000;
 
+export const A_READER_MAY_ANSWER_WITH = 256 * 1024 * 1024;
+
 export const PYTHON_EXTENSION = ".py";
 
 export const PYTHON_COMMAND = "python3";
