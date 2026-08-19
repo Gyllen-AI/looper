@@ -3837,3 +3837,49 @@ the place: `src/C.tsx:4 (userId)`. Only `REACT:2` sets it so far. This is the
 canon's rule about a refusal naming the route that is open, applied to the one
 rule where the reader cannot work the route out from the line alone.
 
+### The Rust half was never checked for network, and never carried its own crates
+
+The no-network invariant was held by `tests/invariants.test.ts`, which greps our
+own TypeScript and `node_modules`. **It said nothing at all about the Rust half.**
+Eighteen crates were resolved from `Cargo.lock` and nothing in the repository
+looked at what they contain, so a future dependency that could open a socket would
+have arrived unremarked.
+
+Two separate questions, and they had different answers.
+
+**Can it open a socket?** No, and now it is checked. `TcpStream`, `TcpListener`,
+`UdpSocket`, `socket2` and `libc::socket` appear in **zero** files across our own
+Rust and all eighteen crates. `serde` does reference `std::net`, and that is
+deliberately not banned: it implements `Serialize` and `Deserialize` for
+`SocketAddr`, `SocketAddrV4` and `SocketAddrV6`, which parse text into a struct
+and cannot connect to anything. The types that connect are the ones banned.
+
+**Can it build without a network?** It could not — not honestly.
+`cargo build --offline` never reaches out, but the crate sources were not here, so
+the build read whatever was in the machine's `~/.cargo/registry`. On a machine
+without one, `--offline` means the build *fails*, and that unstated precondition
+was the whole of our claim to being network free.
+
+All eighteen crates are now in the repository under `vendor/rust-law/vendor`, with
+`vendor/rust-law/.cargo/config.toml` pointing cargo at them. **13 MB, 780 files.**
+That is the price, it is permanent in the history, and it buys the thing the
+product rests on: proved on 2026-08-19 by building with `CARGO_HOME` set to an
+empty directory — `Finished release profile in 15.02s`, binary produced, nothing
+fetched.
+
+Three tests hold it, and each was run against a broken tree first:
+
+- a planted `use std::net::TcpStream;` in the Rust half fails the socket test
+- a planted `reqwest` entry in `Cargo.lock` fails the crate-list test
+- hiding `vendor/syn` fails the carries-its-own-crates test
+
+The crate list is now a fixed set of eighteen names. A nineteenth fails the suite
+until it is argued for here, which is what the canon already asks of every
+dependency and could not previously be enforced on this side.
+
+**What is still true and worth stating.** Three build scripts — `serde`,
+`serde_core` and `quote` — run `std::process::Command` to ask `rustc --version`.
+That is a program starting, not a socket opening, and it happens at build time
+rather than on an edit. It is named here so nobody re-discovers it and reads it as
+a network call.
+

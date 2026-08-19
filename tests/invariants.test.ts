@@ -400,3 +400,97 @@ test("the file of deliberately key-shaped fixtures has a spelling both gates acc
     "the markers are gone, so this test now passes for the wrong reason and would keep passing if the gate stopped working",
   );
 });
+
+const CONNECTING: readonly string[] = [
+  "TcpStream",
+  "TcpListener",
+  "UdpSocket",
+  "socket2",
+  "libc::socket",
+];
+
+const RUST_TREE = join(ROOT, "vendor", "rust-law");
+
+const CRATES_ALLOWED: readonly string[] = [
+  "equivalent",
+  "hashbrown",
+  "indexmap",
+  "looper-rust-law",
+  "memchr",
+  "proc-macro2",
+  "quote",
+  "serde",
+  "serde_core",
+  "serde_derive",
+  "serde_spanned",
+  "syn",
+  "toml",
+  "toml_datetime",
+  "toml_edit",
+  "toml_write",
+  "unicode-ident",
+  "winnow",
+];
+
+function rustFiles(dir: string): readonly string[] {
+  const found: string[] = [];
+  for (const entry of readdirSync(dir)) {
+    if (entry === "target") continue;
+    const path = join(dir, entry);
+    if (statSync(path).isDirectory()) {
+      found.push(...rustFiles(path));
+      continue;
+    }
+    if (entry.endsWith(".rs")) found.push(path);
+  }
+  return found;
+}
+
+test("nothing in the Rust half can open a socket either", () => {
+  const hits: string[] = [];
+  for (const file of rustFiles(RUST_TREE)) {
+    const text = readFileSync(file, "utf8");
+    for (const banned of CONNECTING) {
+      if (text.includes(banned)) hits.push(`${file.slice(ROOT.length + 1)} names ${banned}`);
+    }
+  }
+  assert.deepEqual(
+    hits,
+    [],
+    `${hits.length} file(s) in the Rust half reach for the network: ${hits.join(", ")}. The TypeScript invariant covers node_modules and says nothing about this half, so a crate that can connect would arrive unremarked. Address types are not banned here on purpose: serde parses SocketAddr out of text and cannot open anything with it, while TcpStream can.`,
+  );
+});
+
+test("the Rust half depends on exactly the crates that were argued for", () => {
+  const lock = readFileSync(join(RUST_TREE, "Cargo.lock"), "utf8");
+  const lines = lock.match(/^name = "(.+)"$/gm);
+  if (lines === null) {
+    throw new Error(
+      "Cargo.lock names no package at all, so this test would pass on an empty or truncated lock file and prove nothing",
+    );
+  }
+  const named = [...new Set(lines.map((one) => one.slice(8, -1)))];
+  const strangers = named.filter((one) => !CRATES_ALLOWED.includes(one)).sort();
+  assert.deepEqual(
+    strangers,
+    [],
+    `${strangers.join(", ")} arrived in the Rust half without being argued for in docs/PLAN.md. A dependency that can open a socket makes looper able to phone home whether we call it or not, and Cargo.lock is where one would appear first.`,
+  );
+});
+
+test("every crate the Rust half needs is in the repository, so no build reaches out", () => {
+  const vendored = join(RUST_TREE, "vendor");
+  assert.ok(
+    existsSync(vendored),
+    "vendor/rust-law/vendor is gone, so cargo has to find the crates in whatever ~/.cargo/registry the machine happens to have. --offline then means the build fails on a cold machine rather than reaching out, but the invariant is that the tree carries what it needs.",
+  );
+  const missing = CRATES_ALLOWED.filter(
+    (one) => one !== "looper-rust-law" && !existsSync(join(vendored, one)),
+  );
+  assert.deepEqual(missing, [], `these crates are locked but not vendored: ${missing.join(", ")}`);
+  const config = readFileSync(join(RUST_TREE, ".cargo", "config.toml"), "utf8");
+  assert.ok(
+    config.includes('replace-with = "vendored-sources"'),
+    "the vendored sources are here but cargo is not told to use them, so it would look in the registry instead",
+  );
+});
