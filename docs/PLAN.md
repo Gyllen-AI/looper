@@ -3883,3 +3883,16 @@ That is a program starting, not a socket opening, and it happens at build time
 rather than on an edit. It is named here so nobody re-discovers it and reads it as
 a network call.
 
+### The README no longer points at the vendored engine's provenance
+
+The `## Licence` section ended with a paragraph naming `vendor/rust-law` as
+somebody else's work and linking `PROVENANCE.md`. It is gone from the README.
+
+The credit itself stays and was not the thing being removed: `LICENSE` and
+`PROVENANCE.md` sit in `vendor/rust-law` where anyone opening that directory
+finds them, `CONTRIBUTING.md` points a contributor at the change log because that
+is the reader who needs it, and `tests/invariants.test.ts` still fails if either
+file is deleted. What went is a pointer on the front page to a subdirectory's
+paperwork — the first screen of a public repository is for what the tool is, and
+0BSD asks for nothing there.
+

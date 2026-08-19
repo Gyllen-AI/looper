@@ -115,7 +115,3 @@ claim that is expensive to fake.
 
 [Zero-Clause BSD](LICENSE). Use it, change it, ship it, sell it. No attribution
 required, no conditions at all.
-
-`vendor/rust-law` is somebody else's work under the same licence, with its
-origin recorded in [PROVENANCE.md](vendor/rust-law/PROVENANCE.md) — which 0BSD
-does not require and which is written down anyway.
