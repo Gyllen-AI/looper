@@ -4186,6 +4186,34 @@ table showed 1.49 to 9.32 against 0.65 and the inversion was already visible
 there, and it was read as "loud everywhere" rather than as "backwards". Adding
 codebases is not what found it. Asking whether the corpus was any good is.
 
+### Narrowing it was tried first, and there is nowhere to narrow to
+
+Removing a rule is worse than fixing one, so before it went, every sub-shape of
+`!` was counted on 2026-08-19 across `.cs` files only, so nothing turned on Razor
+markup being parsed as C#.
+
+| | `!` | `= null!` | `call()!` | `a.b!` | `x!` | in tests | chained |
+|---|---|---|---|---|---|---|---|
+| dotnet/runtime | 763 | 4% | 12% | 29% | 48% | 1% | 2% |
+| dotnet/aspnetcore | 1381 | 7% | 13% | 24% | 33% | 37% | 2% |
+| bitwarden/server | 2125 | 15% | 10% | 38% | 15% | 75% | 5% |
+| jellyfin | 665 | 15% | 16% | 39% | 25% | 32% | 7% |
+| Newtonsoft.Json | 288 | 0% | 23% | 39% | 34% | 0% | 11% |
+| the adopter | 174 | 3% | 12% | 56% | 24% | 7% | 6% |
+
+Five narrowings, five refusals. **Only outside tests**: Newtonsoft is 0% tests and
+the runtime 1%, so both still fire. **Only chained `a!.b!`**: Newtonsoft 11% and
+jellyfin 7% against the adopter's 6% — the adopter is below both. **Only
+`= null!`**: bitwarden 15% against 3%, so the adopter does it least. **Only on a
+member access**: the adopter's 56% is the highest, but Newtonsoft and jellyfin
+are at 39%, a gap of 1.4 against the fifty to a hundred and thirty the six kept
+rules show, which is noise. **Only on a bare identifier**: the runtime is at 48%
+against 24%.
+
+There is no shape of `!` the adopter uses more than carefully reviewed C# does.
+A narrower rule needs somewhere it earns its place and the measurement says there
+is nowhere, which is why this is a removal rather than a rewrite.
+
 `<Nullable>enable</Nullable>` stays in STACK.md. The setting is worth having and
 the gate on its escape hatch is not, which is a distinction the rest of this
 document should probably be asked about more often.
