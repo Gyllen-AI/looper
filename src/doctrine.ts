@@ -29,16 +29,25 @@ export function readProjectConstitution(root: string): ProjectHalf {
 
 const NOT_A_BRANCH: readonly string[] = ["constitution", "README"];
 
+function stemsUnder(dir: string, prefix: string): readonly string[] {
+  if (!existsSync(dir)) return [];
+  const found: string[] = [];
+  for (const entry of readdirSync(dir, { withFileTypes: true })) {
+    if (entry.isDirectory()) {
+      found.push(...stemsUnder(join(dir, entry.name), `${prefix}${entry.name}/`));
+      continue;
+    }
+    if (!entry.name.endsWith(".md")) continue;
+    found.push(`${prefix}${entry.name.slice(0, -".md".length)}`);
+  }
+  return found;
+}
+
 export function listBranches(root: string): readonly string[] {
   const names = new Set<string>(canonBranchNames());
-  const dir = join(root, DOCTRINE_DIR);
-  if (existsSync(dir)) {
-    for (const entry of readdirSync(dir)) {
-      if (!entry.endsWith(".md")) continue;
-      const stem = entry.slice(0, -".md".length);
-      if (NOT_A_BRANCH.includes(stem)) continue;
-      names.add(stem);
-    }
+  for (const stem of stemsUnder(join(root, DOCTRINE_DIR), "")) {
+    if (NOT_A_BRANCH.includes(stem)) continue;
+    names.add(stem);
   }
   return [...names].sort();
 }
@@ -47,10 +56,12 @@ export type BranchLookup =
   | { readonly kind: "nowhere" }
   | { readonly kind: "found"; readonly text: string; readonly halves: readonly string[] };
 
-const A_FILE_STEM = /^[A-Za-z0-9][A-Za-z0-9._-]*$/;
+const A_SEGMENT = "[A-Za-z0-9][A-Za-z0-9._-]*";
+const A_FILE_STEM = new RegExp(`^${A_SEGMENT}(/${A_SEGMENT})*$`);
 
 export function isABranchName(name: string): boolean {
   if (!A_FILE_STEM.test(name)) return false;
+  if (name.includes("\\")) return false;
   return !name.includes("..");
 }
 

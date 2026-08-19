@@ -544,6 +544,43 @@ and `secure/input` are true of code anywhere and match no glob. They are pulled
 by name, which works and is weaker, because it needs the reader to know they
 exist.
 
+### The tree is only half a tree until the adopter can follow it
+
+The first version of this shipped with the adopter locked out of it. Branch names
+become file paths through `readProjectBranch`, guarded by `A_FILE_STEM`, which
+allowed letters, digits, dot, dash and underscore and **no slash**. So
+`isABranchName("ui/state")` was false and every one of the twenty-two new
+branches was canon-only: an adopter could never write their half of one.
+`listBranches` did not recurse either, so a nested file of theirs was invisible.
+
+That is the whole point of the tree, so it is now a property:
+`canonBranchNames()` must all pass `isABranchName`, or the tree governs only half
+of itself. The guard still refuses `..`, a backslash, a leading slash and an empty
+segment, because a branch name is a name and never a way out of the folder.
+
+The pairing is one-to-one on purpose. A branch is a canon half and a project half
+under the same name, and the router sends both or neither. That is what makes
+many small branches better than one large one: the reader gets three branches
+about the thing they are touching instead of one file about everything, and both
+halves of each are about that thing.
+
+### A branch that cannot travel with a neighbour
+
+The canon's own 2,500 cap is a test, so it protects the canon and nothing else,
+which is exactly how an adopter's files reach 7,988 characters unnoticed. The
+ceiling is now derived rather than picked, and it is reported to the adopter:
+`INJECTION_BUDGET / 6`, or 1,633 characters for an assembled branch. Six because
+the router's required lines take the first third of the budget and a task
+routinely names three branches, so a branch that will not fit in a sixth is one
+that can only ever travel alone.
+
+`looper status` names every branch over it with its number, under "rule sets that
+will never arrive". Run against the project that prompted this work it named
+eight on the first run, and three of them are this canon's own: `law` at 2,563,
+`python` at 1,690 and `csharp` at 1,685. It is a complaint rather than a refusal,
+because splitting a doctrine is the adopter's judgement and a gate that blocks a
+commit over it would be a gate nobody keeps.
+
 That ratio is the argument for the next two steps, neither built.
 
 **Route on content, not on paths.** The law already parses every judged file to
