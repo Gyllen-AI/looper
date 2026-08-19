@@ -6,3 +6,11 @@ files = ["src/main.ts", "bin/looper.js", "audit/evasion.ts", "audit/dup-scan.ts"
 # engine refuses it rather than guessing. The type system says that value cannot
 # exist, which is the point, so there is no honest spelling without the cast.
 "tests/law.test.ts" = ["TS-TYPE:3"]
+
+# A corpus, not logic. This file is one entry per case and grows by one every
+# time a rule earns a new spelling, which is the discipline working. The cap is
+# there to find the second job hiding in a long file; a flat list of inputs has
+# no second job in it, and cutting it in half would not make any case easier to
+# read. It stood at 491 lines, so the next case written was going to cross 500
+# whoever wrote it.
+"audit/cases.ts" = ["TS-DECOMPOSITION:1"]
