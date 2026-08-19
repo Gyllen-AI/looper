@@ -156,3 +156,33 @@ test("the line that reports a drop is paid for out of the budget, not added to i
     }
   }
 });
+
+test("a doctrine branch that does not fit is dropped and named, never sent anyway", () => {
+  const branches = ["alpha", "beta", "gamma", "delta", "epsilon", "zeta"];
+  const capabilities = branches.map(
+    (name, at) =>
+      ({
+        name: `doctrine:${name}`,
+        inject: () => [
+          { source: `doctrine:${name}`, priority: 10 + at, text: "x".repeat(3000), required: false },
+        ],
+        hooks: () => NO_EVENTS,
+        onHook: (): Outcome => ({ kind: "pass" }),
+      }) satisfies Capability,
+  );
+  const { allocation } = allocate(capabilities, { root: process.cwd(), budget: INJECTION_BUDGET });
+  assert.ok(
+    allocation.chars <= INJECTION_BUDGET,
+    `doctrine went out at ${allocation.chars} chars against a ceiling of ${INJECTION_BUDGET}. Marking a branch required makes the budget decorative for the only thing it governs`,
+  );
+  assert.ok(
+    allocation.dropped.length > 0,
+    "six branches of 3000 chars fit in 9800 and nothing was dropped",
+  );
+  for (const one of allocation.dropped) {
+    assert.ok(
+      allocation.text.includes(one.source),
+      `${one.source} was dropped and its name never reached the reader`,
+    );
+  }
+});

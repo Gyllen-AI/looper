@@ -58,7 +58,7 @@ export class Router implements Capability {
         source: `doctrine:${name}`,
         priority: BRANCH_PRIORITY,
         text: branch.text,
-        required: true,
+        required: false,
       });
     }
 

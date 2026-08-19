@@ -544,6 +544,43 @@ and `secure/input` are true of code anywhere and match no glob. They are pulled
 by name, which works and is weaker, because it needs the reader to know they
 exist.
 
+### The tree is only half a tree until the adopter can follow it
+
+The first version of this shipped with the adopter locked out of it. Branch names
+become file paths through `readProjectBranch`, guarded by `A_FILE_STEM`, which
+allowed letters, digits, dot, dash and underscore and **no slash**. So
+`isABranchName("ui/state")` was false and every one of the twenty-two new
+branches was canon-only: an adopter could never write their half of one.
+`listBranches` did not recurse either, so a nested file of theirs was invisible.
+
+That is the whole point of the tree, so it is now a property:
+`canonBranchNames()` must all pass `isABranchName`, or the tree governs only half
+of itself. The guard still refuses `..`, a backslash, a leading slash and an empty
+segment, because a branch name is a name and never a way out of the folder.
+
+The pairing is one-to-one on purpose. A branch is a canon half and a project half
+under the same name, and the router sends both or neither. That is what makes
+many small branches better than one large one: the reader gets three branches
+about the thing they are touching instead of one file about everything, and both
+halves of each are about that thing.
+
+### A branch that cannot travel with a neighbour
+
+The canon's own 2,500 cap is a test, so it protects the canon and nothing else,
+which is exactly how an adopter's files reach 7,988 characters unnoticed. The
+ceiling is now derived rather than picked, and it is reported to the adopter:
+`INJECTION_BUDGET / 6`, or 1,633 characters for an assembled branch. Six because
+the router's required lines take the first third of the budget and a task
+routinely names three branches, so a branch that will not fit in a sixth is one
+that can only ever travel alone.
+
+`looper status` names every branch over it with its number, under "rule sets that
+will never arrive". Run against the project that prompted this work it named
+eight on the first run, and three of them are this canon's own: `law` at 2,563,
+`python` at 1,690 and `csharp` at 1,685. It is a complaint rather than a refusal,
+because splitting a doctrine is the adopter's judgement and a gate that blocks a
+commit over it would be a gate nobody keeps.
+
 That ratio is the argument for the next two steps, neither built.
 
 **Route on content, not on paths.** The law already parses every judged file to
@@ -5590,4 +5627,49 @@ cannot be appended to says the metric is measuring less than happened; a payload
 that will not parse says the same; a cache that will not read says so and names
 the command that would refresh it. `looper law` caught all three while they were
 being written.
+
+### Two corrections to what merged tonight, one of them to #125
+
+**The adopter was locked out of the tree it was given.** `#128` shipped 22 nested
+branches, and `isABranchName` refused a name containing a slash. So `ui/state` was
+not a name an adopter could write, all 22 were canon-only, and `listBranches` did
+not recurse either — a nested file of theirs was invisible even if they guessed.
+A tree that governs only half of itself. The guard now takes slash-joined
+segments and still refuses `..`, a backslash, a leading slash and an empty
+segment, because a branch name is a name and never a way out of the doctrine
+folder. Verified: `ui/state` and `secure/input` allowed, `../escape`, `/abs` and
+`a//b` refused.
+
+**And the budget never applied to the only thing it exists to govern.** `#125`
+made every routed branch `required: true` so none could be dropped. The reasoning
+was right — a rule that never arrived reads exactly like a rule that was followed
+— and the consequence was not: the ceiling then constrained nothing but looper's
+own status lines. Measured on the project that prompted it, nine branches went out
+at **19,354 characters against a stated 9,800**, and the only things dropped were
+`law`, `recall`, `decisions` and `stall`. An adopter's doctrine could grow without
+any consequence they could observe, because the number meant to stop it was never
+applied to it.
+
+**The resolution keeps both halves.** Branches are droppable again, but they sort
+at priority 10 — immediately after the constitution and ahead of everything else —
+so they fill the budget first and looper's own status lines yield to them. A branch
+that does not fit is named **with its size**, and the marker already points at the
+`doctrine` tool that fetches a rule set by name:
+
+```
+[looper: 1 contribution(s) dropped for budget — doctrine:law (3894 chars). A name
+cannot be weighed, so the size is here: run looper law to see what the
+outstanding-work count would have said, and the doctrine tool for a rule set by
+name.]
+```
+
+So the absence is stated rather than silent, and the rule is still reachable. That
+is the difference between this and what `#124` reported: there, a branch vanished
+and nothing said so. `#125`'s guarantee was that a missing rule must be visible,
+not that the ceiling must be ignored — and honouring the first by breaking the
+second made the ceiling decorative.
+
+Both commits carried their reasoning in code comments, which `TS-DEAD:2` refused
+on the first run here. The reasoning is above instead, which is what that rule's
+own `instead` list says to do.
 

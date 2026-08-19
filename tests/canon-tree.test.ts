@@ -4,6 +4,7 @@ import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
 import { join } from "node:path";
 
 import { canonBranchNames, canonGoverns, pulledByName } from "../src/canon.ts";
+import { isABranchName } from "../src/doctrine.ts";
 
 const CANON = join(import.meta.dirname, "..", "src", "canon");
 
@@ -59,4 +60,22 @@ test("a branch stays small enough to be worth injecting whole", () => {
     [],
     `a branch past ${TOO_BIG} chars is one the budget will drop whole; split it instead`,
   );
+});
+
+test("every canon branch can hold a project half, or the tree only ever governs half of it", () => {
+  const unreachable = canonBranchNames().filter((name) => !isABranchName(name));
+  assert.deepEqual(
+    unreachable,
+    [],
+    "readProjectBranch refuses a name this guard rejects, so these branches would be canon-only forever: an adopter could never write their half of them, which is the whole reason the tree has this many branches",
+  );
+});
+
+test("a branch name is still a name and never a way out of the doctrine folder", () => {
+  for (const escape of ["../secrets", "ui/../../etc/passwd", "/etc/passwd", "ui\\state", "..", "ui//state", ""]) {
+    assert.equal(isABranchName(escape), false, `${escape} was accepted as a branch name and it is a path`);
+  }
+  for (const fine of ["frontend", "ui/state", "data/schema", "work/deploy"]) {
+    assert.equal(isABranchName(fine), true, `${fine} is a branch name and was refused`);
+  }
 });
