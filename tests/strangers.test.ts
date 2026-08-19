@@ -8,6 +8,7 @@ import { Secrets } from "../src/secrets/capability.ts";
 import { dispatchHook } from "../src/registry.ts";
 import { intentOf } from "../src/law/commit-command.ts";
 import { everyWordAt } from "../src/git.ts";
+import { strangers } from "../src/commands/strangers.ts";
 import { gitIn as git } from "./helpers.ts";
 
 function repoWithARemote(): string {
@@ -137,4 +138,39 @@ test("a repository whose vocabulary is larger than a megabyte still has one", ()
     "words",
     `looper's own vocabulary is over a megabyte, and git's answer was capped at one, so the push check could not build it: ${said.kind === "cannot-tell" ? said.why : ""}. Every reader got a larger cap in #112; the git commands they are read through did not.`,
   );
+});
+
+test("the command names a stranger, its file and its line", () => {
+  const bare = mkdtempSync(join(tmpdir(), "looper-remote-"));
+  git(bare, "init", "-q", "--bare");
+  const root = mkdtempSync(join(tmpdir(), "looper-cmd-"));
+  const wasIn = process.cwd();
+  try {
+    mkdirSync(join(root, "docs"), { recursive: true });
+    git(root, "init", "-q");
+    git(root, "config", "user.email", "t@example.com");
+    git(root, "config", "user.name", "t");
+    writeFileSync(join(root, "docs/plan.md"), "The gate reads the staged text.\n");
+    git(root, "add", "-A");
+    git(root, "commit", "-qm", "first");
+    git(root, "remote", "add", "origin", bare);
+    git(root, "push", "-q", "-u", "origin", "HEAD");
+
+    writeFileSync(join(root, "docs/plan.md"), "The gate reads Contoso.Widgets now.\n");
+    git(root, "add", "-A");
+    git(root, "commit", "-qm", "second");
+
+    process.chdir(root);
+    const out: string[] = [];
+    const said = strangers([], { say: (line) => out.push(line), warn: (line) => out.push(line) });
+    const spoken = out.join("\n");
+
+    assert.equal(said, 0, "it reports and never fails a build");
+    assert.match(spoken, /ContosoWeb|Contoso/, spoken);
+    assert.match(spoken, /docs\/plan\.md:1/, spoken);
+  } finally {
+    process.chdir(wasIn);
+    rmSync(root, { recursive: true, force: true });
+    rmSync(bare, { recursive: true, force: true });
+  }
 });
