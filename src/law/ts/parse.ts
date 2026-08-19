@@ -24,13 +24,36 @@ export type Parsed =
     }
   | { readonly kind: "unreadable"; readonly line: number; readonly detail: string };
 
-const TS_PLUGINS: readonly string[] = ["typescript", "decorators"];
+const TS_PLUGINS: readonly string[] = ["typescript", "decorators", "decoratorAutoAccessors"];
 
-const TSX_PLUGINS: readonly string[] = ["typescript", "jsx", "decorators"];
+const TSX_PLUGINS: readonly string[] = [
+  "typescript",
+  "jsx",
+  "decorators",
+  "decoratorAutoAccessors",
+];
+
+const TS_PLUGINS_LEGACY: readonly string[] = [
+  "typescript",
+  "decorators-legacy",
+  "decoratorAutoAccessors",
+];
+
+const TSX_PLUGINS_LEGACY: readonly string[] = [
+  "typescript",
+  "jsx",
+  "decorators-legacy",
+  "decoratorAutoAccessors",
+];
 
 export function pluginsFor(file: string): readonly string[] {
   if (file.endsWith(".tsx") || file.endsWith(".jsx")) return TSX_PLUGINS;
   return TS_PLUGINS;
+}
+
+export function legacyPluginsFor(file: string): readonly string[] {
+  if (file.endsWith(".tsx") || file.endsWith(".jsx")) return TSX_PLUGINS_LEGACY;
+  return TS_PLUGINS_LEGACY;
 }
 
 type Remembered = {
@@ -58,11 +81,19 @@ export function parseSource(file: string, text: string): Parsed {
 }
 
 function parseFresh(file: string, text: string): Parsed {
+  const standing = parseWith(file, text, pluginsFor(file));
+  if (standing.kind === "parsed") return standing;
+  const legacy = parseWith(file, text, legacyPluginsFor(file));
+  if (legacy.kind === "parsed") return legacy;
+  return standing;
+}
+
+function parseWith(file: string, text: string, plugins: readonly string[]): Parsed {
   try {
     const ast = parse(text, {
       sourceType: "module",
       errorRecovery: false,
-      plugins: [...pluginsFor(file)],
+      plugins: [...plugins],
     });
     const program: unknown = ast.program;
     if (!isNode(program)) {
