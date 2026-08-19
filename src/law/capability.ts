@@ -402,6 +402,7 @@ export class Law implements Capability {
       {
         source: "law",
         priority: BASELINE_PRIORITY,
+        required: false,
         text: `looper: ${outstanding} thing(s) in this project were already here before looper arrived and are still to fix. They block nothing. Fixing one while you are already in that file is the cheapest it will ever be.`,
       },
     ];

@@ -48,6 +48,14 @@ function droppedMarker(dropped: readonly string[]): string {
   return `[looper: ${dropped.length} contribution(s) dropped for budget — ${dropped.join(", ")}]`;
 }
 
+function overBudgetMarker(chars: number, budget: number): string {
+  return [
+    `[looper: the rules for what you are touching came to ${chars} characters and the`,
+    `budget is ${budget}. Every one of them is below anyway, because a rule that never`,
+    `arrived reads exactly like a rule that was followed. Nothing was silently cut.]`,
+  ].join(" ");
+}
+
 export function allocate(
   capabilities: readonly Capability[],
   context: InjectContext,
@@ -62,40 +70,49 @@ export function allocate(
   let used = 0;
   let overflowed = false;
 
-  for (const injection of ordered) {
+  const take = (injection: Injection): void => {
     const width = injection.text.length;
     const separator = parts.length === 0 ? 0 : INJECTION_SEPARATOR.length;
-    const projected = used + separator + width;
-    if (parts.length === 0) {
-      parts.push(injection.text);
-      contributors.push(injection.source);
-      weighed.push({ source: injection.source, chars: width });
-      used = width;
-      overflowed = width > context.budget;
+    parts.push(injection.text);
+    contributors.push(injection.source);
+    weighed.push({ source: injection.source, chars: width });
+    used += separator + width;
+  };
+
+  for (const injection of ordered) {
+    if (injection.required) {
+      take(injection);
       continue;
     }
-    if (projected <= context.budget) {
-      parts.push(injection.text);
-      contributors.push(injection.source);
-      weighed.push({ source: injection.source, chars: width });
-      used = projected;
+    const separator = parts.length === 0 ? 0 : INJECTION_SEPARATOR.length;
+    if (used + separator + injection.text.length <= context.budget) {
+      take(injection);
       continue;
     }
     dropped.push(injection.source);
   }
 
-  while (dropped.length > 0 && parts.length > 1) {
+  overflowed = used > context.budget;
+
+  while (dropped.length > 0 && parts.length > 1 && !overflowed) {
     const projected = used + INJECTION_SEPARATOR.length + droppedMarker(dropped).length;
     if (projected <= context.budget) break;
     const last = parts.pop();
     const name = contributors.pop();
-    weighed.pop();
-    if (last === undefined || name === undefined) break;
+    const held = weighed.pop();
+    if (last === undefined || name === undefined || held === undefined) break;
+    if (ordered.some((one) => one.source === name && one.required)) {
+      parts.push(last);
+      contributors.push(name);
+      weighed.push(held);
+      break;
+    }
     used -= last.length + INJECTION_SEPARATOR.length;
     dropped.push(name);
   }
 
   if (dropped.length > 0) parts.push(droppedMarker(dropped));
+  if (overflowed) parts.push(overBudgetMarker(used, context.budget));
 
   const text = parts.join(INJECTION_SEPARATOR);
   return {
@@ -104,7 +121,7 @@ export function allocate(
       contributors,
       weighed,
       dropped,
-      overflowed: overflowed || text.length > context.budget,
+      overflowed,
       chars: text.length,
     },
     complaints,

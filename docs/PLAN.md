@@ -5396,3 +5396,60 @@ barrier that is not wired, which this project's own process doctrine forbids.
 Measured on the pull request that carried the leak: the words a reader needed were
 in the list.
 
+### A rule that never arrived read exactly like a rule that was followed
+
+Adopter PR `#124` counted a session's own transcript: `doctrine:frontend` dropped
+for budget **32 times** while interface work was being done, `law` six times while
+its own languages were being written. Confirmed here on 2026-08-19 against this
+repository, with the allocator an adopter runs:
+
+| contributor | chars | share of 9,800 |
+|---|---:|---:|
+| `doctrine:law` | 4,418 | 45% |
+| `router` | 3,428 | 35% |
+| `doctrine:process` | 1,034 | 11% |
+| `doctrine:evidence` | 787 | 8% |
+| | | **dropped: `law`** |
+
+**Every doctrine branch carried priority 10**, so which one survived was the order
+`gather` happened to produce — arbitrary, not relevance. And a branch is emitted
+*precisely because* the session changed files it governs: `signalled()` returns
+branches whose governed files are in `changedPaths`. Having earned its way in on
+relevance, it then competed on none.
+
+This is the failure the plan already refuses one level down, applied to governance
+itself. `#96` had it for *older*, `#107` and `#110` for *unbuildable*, `#117` for
+*unreadable*: **something that could not be asked reading as something that was
+asked and passed.** A rule set that never arrived produces exactly what a rule set
+that was obeyed produces — silence.
+
+**`Injection` now says whether the work raised it.** `required` is a stated field,
+not an inferred one, and the allocator never drops a required contribution. The
+router's constitution and every signalled branch are required; the outstanding-work
+count, recall and decisions are not. What may be dropped still is, and is still
+named.
+
+**A budget that cannot hold the turn says so, in place of trimming.** Over budget,
+everything required is included anyway and the reader is told the number:
+
+```
+[looper: the rules for what you are touching came to 10456 characters and the
+budget is 9800. Every one of them is below anyway, because a rule that never
+arrived reads exactly like a rule that was followed. Nothing was silently cut.]
+```
+
+That is the trade taken deliberately: the cost of a turn rises by about a kilobyte
+on this repository, and in exchange no rule governing the work can go missing
+without the reader seeing it. Measured after the change, `doctrine:contribution`
+— 781 characters, silently absent before — now arrives.
+
+**And a missing word cannot mean no.** Nothing type-checks this repository, so an
+emitter that omitted `required` would read as droppable, which is the same defect
+wearing the fix's clothes. `tests/invariants.test.ts` refuses any injection built
+without saying, and was run against a silenced emitter first.
+
+**Not done here.** `#124`'s other two findings — proposing checks from what the
+agent reached for, and injecting the loop verdict rather than leaving a command —
+stay design. The router's 35% is untouched: it is the constitution, and cutting it
+is a separate argument with its own evidence.
+
