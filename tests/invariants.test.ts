@@ -131,6 +131,7 @@ const MAY_SPAWN: readonly string[] = [
   SPAWN_SANCTUM,
   "law/rust/drive.ts",
   "law/python/drive.ts",
+  "law/csharp/drive.ts",
   "seer/drive.ts",
 ];
 
@@ -179,6 +180,7 @@ test("the files that may start a process start only what they were allowed to", 
   const starts: Record<string, string> = {
     [SPAWN_SANCTUM]: '"git"',
     "law/rust/drive.ts": '"cargo"',
+    "law/csharp/drive.ts": '"dotnet"',
     "seer/drive.ts": '"wslpath"',
   };
   for (const [file, expected] of Object.entries(starts)) {

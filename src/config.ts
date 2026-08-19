@@ -65,6 +65,8 @@ export const JUDGED_EXTENSIONS: readonly string[] = [
   ".cjs",
   ".rs",
   ".py",
+  ".cs",
+  ".razor",
 ];
 
 export const RUST_EXTENSION = ".rs";
@@ -96,6 +98,18 @@ export const PYTHON_READER = "src/law/python/read.py";
 export const PYTHON_SKELETON = "src/law/python/skeleton.py";
 
 export const PYTHON_TIMEOUT_MS = 60_000;
+
+export const CSHARP_EXTENSIONS: readonly string[] = [".cs", ".razor"];
+
+export const CSHARP_ENGINE_DIR = "vendor/csharp-law";
+
+export const CSHARP_ENGINE_NAME = "looper-csharp";
+
+export const CSHARP_ENGINE_PROJECT = "looper-csharp.csproj";
+
+export const CSHARP_TIMEOUT_MS = 120_000;
+
+export const CSHARP_BUILD_TIMEOUT_MS = 300_000;
 
 export const STACK_PATH = "CURRENTSTACK.md";
 

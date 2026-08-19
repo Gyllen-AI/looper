@@ -92,6 +92,37 @@ Reading it costs no dependency: Python ships its own parser as the `ast` module,
 driven over the same protocol as the Rust engine. The only requirement is that
 `python3` exists, and a repository with no `.py` files never looks for it.
 
+## The C# backend it also governs
+
+An adopter ships a .NET service with a Blazor interface, which is the condition
+`docs/PLAN.md` sets for reading a language at all. Four rules are built and
+enforced on every edit and every commit: the swallowed `catch`, the failure type
+that names nothing, the `!` that overrules the null check, and `async void`
+outside an event handler.
+
+| job | tool |
+|---|---|
+| HTTP API | ASP.NET Core |
+| API contract | OpenAPI, emitted from the types that bind the request |
+| validation | DataAnnotations or FluentValidation, one model per concept |
+| database | PostgreSQL |
+| database access | EF Core, typed models, migrations in the repository |
+| logging | Serilog, structured |
+| errors | an exception class per failure |
+| tracing | OpenTelemetry |
+| tests | xUnit, Playwright end to end |
+| formatting | `dotnet format` — style only, the law is not a linter |
+| nullable | `<Nullable>enable</Nullable>`, project-wide, warnings as errors |
+
+Its interface half is Blazor, and looper reads `.razor` files as C#: the `@code`
+blocks are judged and the markup around them is not. Line numbers count from the
+top of the `.razor` file, so a report names the line somebody has to open.
+
+Reading it costs three NuGet packages, vendored beside the engine and pinned by a
+`NuGet.config` that clears every remote source. The only requirement is that
+`dotnet` exists, and a repository with no `.cs` or `.razor` files never looks for
+it.
+
 ## Seven entries are load-bearing for the law, not the product
 
 - **Pino** gives the "a failure must be observed" rule a named symbol whose
@@ -111,9 +142,14 @@ driven over the same protocol as the Rust engine. The only requirement is that
   refuses an unvalidated request is only fair where validating one is obvious.
 - **mypy strict** is not a preference but the whole of it. Python's annotations
   mean nothing unless something checks them, so the setting is the check.
+- **Serilog** is the C# side of the requirement Pino carries, for the same
+  reason: a named symbol whose origin can be checked.
+- **`<Nullable>enable</Nullable>`** is what makes `CS-TYPE:1` mean anything. The
+  rule bans overruling the compiler's null finding with `!`, and there is no
+  finding to overrule unless the setting is on.
 
 The prescription is for new services. An existing service in a language looper
 cannot read is governed by everything except the law: the rule sets, the secrets
-gate and the staleness check all still apply. **TypeScript and Rust are both read
-in full** — that used to be one language, and the sentence saying otherwise
-outlived the fact.
+gate and the staleness check all still apply. **TypeScript, Rust, Python and C# are
+all read** — that used to be one language, and every sentence claiming a smaller
+number has outlived the fact at least once.

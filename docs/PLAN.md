@@ -1215,25 +1215,30 @@ lets an agent do that the others do not.
 Every rule the engine loads appears exactly once below, and
 `tests/plan-is-true.test.ts` refuses the suite if one is added without a row.
 
-| what goes wrong | TypeScript | Rust | Python |
-|---|---|---|---|
-| a failure vanishes, and nobody hears it | `TS-ERROR:1` `TS-ERROR:4` `TS-ERROR:6` `TS-ERROR:7` `TS-ERROR:8` | `RUST-ERROR:1` `RUST-ERROR:2` `RUST-ERROR:4` `RUST-ERROR:6` `RUST-ERROR:8` `RUST-ERROR:9` | `PY-ERROR:1` `PY-TRUTH:2` |
-| a failure is answered with a made-up value | `TS-ERROR:3` `TS-TYPE:5` | `RUST-ERROR:3` `RUST-TYPE:5` | `PY-ERROR:2` |
-| the failure survives but names nothing | `TS-TYPE:2` | `RUST-TYPE:1` `RUST-TYPE:2` `RUST-TYPE:3` | `PY-ERROR:3` |
-| the checker is told to trust you | `TS-TYPE:3` `TS-TYPE:4` `TS-DEAD:1` | `RUST-TYPE:4` `RUST-DEAD:1` | `PY-TYPE:1` |
-| "what happens when nobody said" is answered in more than one place | `TS-TRUTH:1` `TS-TRUTH:2` | `RUST-TRUTH:1` `RUST-TRUTH:2` | `PY-TRUTH:1` |
-| output is taken from whoever ran the program | `TS-LOG:1` | `RUST-LOG:1` `RUST-LOG:2` | `PY-LOG:1` |
-| a log line cannot be asked a question, because the value is inside the sentence | `TS-LOG:3` | `RUST-LOG:3` | `PY-LOG:3` |
-| the shape of the code hides what it does | `TS-DECOMPOSITION:1` `TS-LAYER:2` `TS-DEAD:4` | `RUST-DECOMPOSITION:1` `RUST-DECOMPOSITION:2` `RUST-DECOMPOSITION:3` `RUST-LAYER:1` `RUST-LAYER:2` `RUST-LAYER:3` `RUST-DEAD:4` | `PY-LAYER:1`, and **open on purpose** — 500 does not port, measured below |
-| unfinished work reads as finished | `TS-DEAD:2` `TS-DEAD:3` | `RUST-DEAD:2` `RUST-DEAD:3` | **tried and not shippable**, measured 2026-08-18 — the argument is below |
-| the language's own guarantees are stepped around | none built | `RUST-ERROR:5` `RUST-ERROR:7` `RUST-TESTS:1` | none built |
-| something from outside is used as an instruction | `DATA:1` `DATA:2` `NODE:1` `NEXT:1` | none built | `PY-SECURITY:1` `PY-SECURITY:2` |
-| a framework's own contract is broken in silence | `REACT:1` `REACT:2` `TAURI:1` | — | — |
-| the project gains a language nobody chose | `STACK:1`, which reads the project rather than a file, so it answers for all three | | |
+| what goes wrong | TypeScript | Rust | Python | C# |
+|---|---|---|---|---|
+| a failure vanishes, and nobody hears it | `TS-ERROR:1` `TS-ERROR:4` `TS-ERROR:6` `TS-ERROR:7` `TS-ERROR:8` | `RUST-ERROR:1` `RUST-ERROR:2` `RUST-ERROR:4` `RUST-ERROR:6` `RUST-ERROR:8` `RUST-ERROR:9` | `PY-ERROR:1` `PY-TRUTH:2` | `CS-ERROR:1` |
+| a failure is answered with a made-up value | `TS-ERROR:3` `TS-TYPE:5` | `RUST-ERROR:3` `RUST-TYPE:5` | `PY-ERROR:2` | none built |
+| the failure survives but names nothing | `TS-TYPE:2` | `RUST-TYPE:1` `RUST-TYPE:2` `RUST-TYPE:3` | `PY-ERROR:3` | `CS-ERROR:2` |
+| the checker is told to trust you | `TS-TYPE:3` `TS-TYPE:4` `TS-DEAD:1` | `RUST-TYPE:4` `RUST-DEAD:1` | `PY-TYPE:1` | `CS-TYPE:1` |
+| "what happens when nobody said" is answered in more than one place | `TS-TRUTH:1` `TS-TRUTH:2` | `RUST-TRUTH:1` `RUST-TRUTH:2` | `PY-TRUTH:1` | none built |
+| output is taken from whoever ran the program | `TS-LOG:1` | `RUST-LOG:1` `RUST-LOG:2` | `PY-LOG:1` | none built |
+| a log line cannot be asked a question, because the value is inside the sentence | `TS-LOG:3` | `RUST-LOG:3` | `PY-LOG:3` | none built |
+| the shape of the code hides what it does | `TS-DECOMPOSITION:1` `TS-LAYER:2` `TS-DEAD:4` | `RUST-DECOMPOSITION:1` `RUST-DECOMPOSITION:2` `RUST-DECOMPOSITION:3` `RUST-LAYER:1` `RUST-LAYER:2` `RUST-LAYER:3` `RUST-DEAD:4` | `PY-LAYER:1`, and **open on purpose** — 500 does not port, measured below | none built |
+| unfinished work reads as finished | `TS-DEAD:2` `TS-DEAD:3` | `RUST-DEAD:2` `RUST-DEAD:3` | **tried and not shippable**, measured 2026-08-18 — the argument is below | `CS-TRUTH:1` |
+| the language's own guarantees are stepped around | none built | `RUST-ERROR:5` `RUST-ERROR:7` `RUST-TESTS:1` | none built | none built |
+| something from outside is used as an instruction | `DATA:1` `DATA:2` `NODE:1` `NEXT:1` | none built | `PY-SECURITY:1` `PY-SECURITY:2` | none built |
+| a framework's own contract is broken in silence | `REACT:1` `REACT:2` `TAURI:1` | — | — | — |
+| the project gains a language nobody chose | `STACK:1`, which reads the project rather than a file, so it answers for all four | | | |
 
 **A cell that says `open` is a gap, not a decision.** A cell that says a harm does
 not exist in that language has to carry the argument, not the assertion, and none
 of them does yet — which is why the four blanks above say `open` instead.
+
+Counted from the table on 2026-08-19, when C# joined: it answers four of the
+twelve rows with four rules. That is the smallest column here on purpose — the
+reader landed with the rules that had counted evidence behind them in a real
+codebase, and the rest wait for the same.
 
 **The weight is in the wrong place and this table is what makes that visible.**
 The section below already argues that Python is the language where the law is
@@ -3896,3 +3901,88 @@ file is deleted. What went is a pointer on the front page to a subdirectory's
 paperwork — the first screen of a public repository is for what the tool is, and
 0BSD asks for nothing there.
 
+
+## C#, the fourth language, and the Razor half nobody was reading
+
+The condition chunk 7 set for any new language reader was that **an adopter ships
+it**. Rust met it, then Python. C# meets it now: an adopter runs an ASP.NET Core
+service with a Blazor interface, both in one repository, and the interface is
+683 C# files and 96 Razor files.
+
+### What the adopter's own CURRENTSTACK.md said
+
+looper was installed there on 2026-08-19 and wrote this without being asked:
+
+| half | languages |
+|---|---|
+| Backend | JavaScript, 27 files. Python, 19 files |
+| Frontend | *Nothing found* |
+
+A Blazor application, and looper reported no interface at all and no C#
+anywhere. `.cs` was already in `A_LANGUAGE_BY_EXTENSION` and had been since
+before any of this, but `walkProject` filters to `JUDGED_EXTENSIONS` first, so
+the entry was unreachable — the name existed and nothing could ever reach it.
+That is the whole argument for the change in one measurement: the stack gate and
+the law are not two doors, and a language listed in one but absent from the other
+is listed nowhere.
+
+### Roslyn costs three packages, and they are vendored
+
+The Rust engine is a compiled binary built from crates vendored beside it. This
+is the same arrangement: `Microsoft.CodeAnalysis.CSharp` and its two
+dependencies sit under `vendor/csharp-law/vendor` as `.nupkg` files, and
+`NuGet.config` clears every remote source so the build cannot reach past them.
+Checked by restoring into an empty package folder with no source available:
+it succeeds, so the vendored copies are complete rather than merely present.
+
+Roslyn also ships inside the .NET SDK, which would have cost nothing at all. It
+was not used: referencing an SDK's internal assemblies is unsupported and breaks
+between patch versions, and a reader that stops working when somebody updates
+their toolchain is worse than one that costs 25MB.
+
+### Razor is read as C#, and only the half that is code
+
+A `.razor` file is markup with `@code { }` blocks in it. The blocks are judged;
+the markup is not. Rather than compute an offset, every line outside a block is
+replaced by an empty line and the `@code {` line becomes `class __Razor {`, so
+the line count never changes and a reported line is the line somebody opens.
+`tests/csharp-cases.test.ts` pins that with a Razor file whose only fault is on
+line 7.
+
+The markup is a real gap and is recorded as one: a `catch { }` written inside an
+`@onclick` expression is not read. `audit/csharp-cases.ts` carries that as a
+case expecting silence, so the limit is written down rather than discovered.
+
+### Four rules, each with a count behind it
+
+Measured on 2026-08-19 across the adopter's `Base.API`, `BaseWeb` and
+`Base.Shared` — 683 C# files and 96 Razor files:
+
+| rule | bans | found | disposition |
+|---|---|---|---|
+| `CS-ERROR:1` | a `catch` whose body is empty, including one holding only a comment | 454 | built 2026-08-19 |
+| `CS-ERROR:2` | `throw new Exception(...)` — the failure type that says nothing about itself | 67 | built 2026-08-19 |
+| `CS-TYPE:1` | the `!` that tells the compiler a value is not null | 210 | built 2026-08-19 |
+| `CS-TRUTH:1` | `async void` on a method that is not an event handler | 25 | built 2026-08-19 |
+
+**197 of the 454 swallowed catches are inside `.razor` files**, which is the
+number that decided Razor was worth reading rather than skipping.
+
+A regex over the same files finds 110 swallowed catches where Roslyn finds 257
+in `.cs` alone. The difference is entirely `catch` blocks holding a comment and
+`catch` blocks written across more than one line. That gap is why this is a
+parser and not a pattern.
+
+### What is not built
+
+`--shape`, which the Rust engine answers and the `report` flow uses. It returns
+an error naming itself, rather than an empty shape that would read as an answer.
+It waits until the rules here are accepted and the shapes `report` asks for are
+known.
+
+Seven further rules were drafted and are not here: the made-up value returned
+from a `catch`, the unawaited `Task`, interpolated SQL, the unobserved failure,
+the stray `Console.WriteLine`, `#pragma warning disable`, and a layer crossing.
+They were left out because a first reader is already a large change, and each of
+those wants its own counted evidence rather than a place in somebody else's
+paragraph.

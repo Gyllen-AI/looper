@@ -15,6 +15,7 @@ export const A_LANGUAGE_BY_EXTENSION: readonly (readonly [string, string])[] = [
   [".kt", "Kotlin"],
   [".swift", "Swift"],
   [".cs", "C#"],
+  [".razor", "C#"],
   [".php", "PHP"],
   [".ex", "Elixir"],
   [".scala", "Scala"],
@@ -33,4 +34,4 @@ export const A_MANIFEST_BY_NAME: readonly (readonly [string, string])[] = [
   ["mix.exs", "Elixir"],
 ];
 
-export const THE_INTERFACE_SPEAKS: readonly string[] = [".tsx", ".jsx", ".css", ".scss", ".html", ".vue", ".svelte"];
+export const THE_INTERFACE_SPEAKS: readonly string[] = [".tsx", ".jsx", ".css", ".scss", ".html", ".vue", ".svelte", ".razor"];
