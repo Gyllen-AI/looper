@@ -298,7 +298,7 @@ function today(): string {
 function writeStack(root: string): Step {
   const path = join(root, STACK_PATH);
   if (existsSync(path)) return { kind: "yours-already", path };
-  writeAtomically(path, stackDocument(stackOf(root), today()));
+  writeAtomically(path, stackDocument(stackOf(root), today(), root));
   return { kind: "scaffolded", path };
 }
 

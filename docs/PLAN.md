@@ -3302,6 +3302,37 @@ Python nobody here wrote before it counted as done. Naming all seven up front wa
 not a promise to build all seven; it was so the gap stayed visible while it was
 open. It was open for a few hours, and the record of each is below.
 
+**What `PY-LOG:1`'s guard actually exempts, said out loud. Corrected 2026-08-19,
+adopter issue #80.** The ban text read "in a file that does not say it starts the
+program", which sounds like a claim about the file's role. It is a claim about one
+token appearing anywhere in it: a file holding `if __name__ == "__main__":` is
+exempt **in full**, including functions an importer can reach. Reproduced here —
+a print two calls below the guard draws nothing.
+
+**Told, not seen.** The counts are from the issue: 104 Python files there hold a
+real guard, five of those are imported by other modules and print, 57 prints
+between them. What was seen here is the probe rerun on this machine, which
+reports nothing exactly as they said.
+
+**The exemption stays, and the reason is theirs.** They traced every one of those
+imports and **none reaches a printing function** — the importers take constants
+and auth helpers, all silent. So there is a gap in what the rule can see and no
+harm anybody can point at. The narrow alternative they offer, exempting only the
+lines lexically inside the guard, would fire on the `main()` of essentially every
+script that legitimately starts a program — blunt in the other direction, on a
+problem that has not happened.
+
+The precise version is reachability: a print is exempt when every path to it
+begins at the guard **and** its function is imported by nobody. That needs a call
+graph and an import map across the project, which the Python reader does not
+build, and it is a different kind of analysis for a harm nobody has shown. It is
+written here so the next person starts from the argument rather than the
+surprise.
+
+What was actually wrong was the text, and that is fixed: the ban says the file is
+exempt in full and that the guard marks the file rather than the block, and a case
+pins it so the decision is mechanical rather than remembered.
+
 `PY-SECURITY:2` is its sibling, built the same day and the same way: the query
 half of the same row. It mirrors `DATA:1`, whose precision comes from two
 conditions together rather than one — the method is a querying one, `execute`,
