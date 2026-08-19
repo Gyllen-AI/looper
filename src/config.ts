@@ -304,7 +304,7 @@ export const TEMP_SUFFIX = ".looper-tmp";
 
 export const BACKUP_SUFFIX = ".looper-backup";
 
-export const EDIT_TOOLS = "Edit|MultiEdit|Write";
+export const EDIT_TOOLS = "Edit|MultiEdit|Write|Bash";
 
 export type Invocation =
   | { readonly kind: "installed" }

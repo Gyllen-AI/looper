@@ -1,4 +1,4 @@
-import { NOT_A_WAY_THROUGH, PYTHON_EXTENSION, RUST_EXTENSION, STACK_PATH } from "../config.ts";
+import { NOT_A_WAY_THROUGH, PYTHON_EXTENSION, RUST_EXTENSION, STACK_PATH, whereTheUserLives } from "../config.ts";
 import { writeAtomically } from "../atomic.ts";
 import { stackOf } from "../stack/read.ts";
 import { stackDocument } from "../stack/write.ts";
@@ -24,6 +24,7 @@ import { changedLines, stagedFiles, stagedLines, stagedText } from "../git.ts";
 import { withLock } from "../atomic.ts";
 import {
   againstBaseline,
+  type Carried,
   isRecorded,
   readBaseline,
   countsOf,
@@ -42,6 +43,7 @@ import { misspelledIn } from "./misspelled.ts";
 import { checksAdoptedIn } from "./adopted.ts";
 import type { Violation } from "./rule.ts";
 import { fieldAt, reasonFrom } from "../fields.ts";
+import { aCommandIsAboutToRun, whenTheCommandStarted, writtenSince } from "../watching.ts";
 
 const EVERYTHING: readonly string[] = [];
 
@@ -118,6 +120,103 @@ function lawFor(relative: string): "rust" | "python" | "csharp" | "typescript" {
   if (relative.endsWith(PYTHON_EXTENSION)) return "python";
   if (isCsharp(relative)) return "csharp";
   return "typescript";
+}
+
+function judgeOneFile(root: string, target: Judging): Carried {
+  const law = lawFor(target.relative);
+  const found = law === "rust"
+    ? judgedByTheRustLaw(root, target)
+    : law === "python"
+    ? judgedByThePythonLaw(root, target)
+    : law === "csharp"
+    ? judgedByTheCsharpLaw(root, target)
+    : judge(
+        [...CHECKS, ...checksAdoptedIn(root)],
+        "fast",
+        {
+          file: target.relative,
+          text: readFileSync(target.path, "utf8"),
+          role: roleOf(shapeOf(root), target.relative),
+        },
+        readConcessions(root),
+      ).violations;
+  if (found.length === 0) return { yours: [], older: [] };
+
+  const touched = changedLines(root, target.relative, "commit");
+  return againstBaseline(readBaseline(root), found, () => touched);
+}
+
+function judgeWhatTheCommandWrote(root: string): Outcome {
+  const since = whenTheCommandStarted(root, whereTheUserLives());
+  if (since.kind === "no-mark") return { kind: "pass" };
+  if (since.kind === "unreadable") {
+    return {
+      kind: "mention",
+      note: `looper: files this command wrote were not judged, because ${since.why}. They are still judged at the commit. Nothing here is a verdict on them.`,
+    };
+  }
+
+  const written = writtenSince(root, since.at);
+  if (written.kind === "cannot-tell") {
+    return {
+      kind: "mention",
+      note: `looper: git could not say which files this command changed (${written.why}), so none of them were judged. They are still judged at the commit.`,
+    };
+  }
+
+  const yours: Violation[] = [];
+  const older: Violation[] = [];
+  for (const path of written.paths) {
+    const full = resolve(root, path);
+    if (!existsSync(full)) continue;
+    if (underAnotherLaw(root, path)) continue;
+    const split = judgeOneFile(root, { path: full, relative: path });
+    yours.push(...split.yours);
+    older.push(...split.older);
+  }
+
+  const couldNotStat =
+    written.vanished.length === 0
+      ? ""
+      : `\n\nlooper could not read ${written.vanished.join(", ")}, so those were not judged.`;
+
+  if (yours.length > 0) {
+    return {
+      kind: "block",
+      reason: `${formatReport(yours, "some-new")}${alsoHere(older)}${couldNotStat}`,
+    };
+  }
+  if (older.length > 0 || couldNotStat.length > 0) {
+    const named = [...new Set(older.map((one) => one.file))].join(", ");
+    return {
+      kind: "mention",
+      note: `looper: this command changed ${named.length === 0 ? "files" : named}, which still ${older.length === 1 ? "has" : "have"} ${older.length} thing(s) from before looper arrived. Nothing is blocked.${couldNotStat}`,
+    };
+  }
+  return { kind: "pass" };
+}
+
+type Tool =
+  | { readonly kind: "unreadable"; readonly why: string }
+  | { readonly kind: "named"; readonly name: string };
+
+function toolNamed(payload: string): Tool {
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(payload);
+  } catch (cause) {
+    return { kind: "unreadable", why: reasonFrom(cause) };
+  }
+  const named = fieldAt(parsed, "tool_name");
+  if (typeof named !== "string") {
+    return { kind: "unreadable", why: "the payload names no tool" };
+  }
+  return { kind: "named", name: named };
+}
+
+function isBash(payload: string): boolean {
+  const tool = toolNamed(payload);
+  return tool.kind === "named" && tool.name === "Bash";
 }
 
 export function targetOf(root: string, payload: string): Target {
@@ -317,12 +416,19 @@ export class Law implements Capability {
     if (context.event === "Stop") return shrinkBaseline(context.root);
     if (context.payload.kind === "none") return { kind: "pass" };
     if (context.event === "PreToolUse") {
+      if (isBash(context.payload.text)) {
+        aCommandIsAboutToRun(context.root, whereTheUserLives());
+      }
       if (!aboutToCommit(context.payload.text)) return { kind: "pass" };
       return judgeStaged(context.root);
     }
 
     const mistyped = misspelledIn(readConcessions(context.root), knownRuleIds());
     if (mistyped.length > 0) return { kind: "mention", note: mistyped.join("\n") };
+
+    if (isBash(context.payload.text)) {
+      return judgeWhatTheCommandWrote(context.root);
+    }
 
     const target = targetOf(context.root, context.payload.text);
     if (target.kind === "none") {
@@ -334,28 +440,8 @@ export class Law implements Capability {
     if (target.kind !== "judge") return { kind: "pass" };
     if (!existsSync(target.path)) return { kind: "pass" };
 
-    const law = lawFor(target.relative);
-    const found = law === "rust"
-      ? judgedByTheRustLaw(context.root, target)
-      : law === "python"
-      ? judgedByThePythonLaw(context.root, target)
-      : law === "csharp"
-      ? judgedByTheCsharpLaw(context.root, target)
-      : judge(
-          [...CHECKS, ...checksAdoptedIn(context.root)],
-          "fast",
-          {
-            file: target.relative,
-            text: readFileSync(target.path, "utf8"),
-            role: roleOf(shapeOf(context.root), target.relative),
-          },
-          readConcessions(context.root),
-        ).violations;
-    if (found.length === 0) return { kind: "pass" };
-    const verdict = { violations: found };
-
-    const touched = changedLines(context.root, target.relative, "commit");
-    const split = againstBaseline(readBaseline(context.root), verdict.violations, () => touched);
+    const split = judgeOneFile(context.root, target);
+    if (split.yours.length === 0 && split.older.length === 0) return { kind: "pass" };
     if (split.yours.length > 0) {
       return { kind: "block", reason: `${formatReport(split.yours, "some-new")}${alsoHere(split.older)}` };
     }

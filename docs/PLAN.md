@@ -4468,3 +4468,56 @@ is worth more than one nobody tried.
 The VS Code column was measured over 71% of that codebase — 2,425 of its 8,319
 files could not be parsed at all, which #102 fixed after this was filed.
 
+### A file changed through Bash was judged by nothing until the commit
+
+Adopter issue #95. `looper init` wired `PostToolUse` with the matcher
+`Edit|MultiEdit|Write`, so the per-edit check fired for three tools and for
+nothing else. An agent that changes files through Bash — `sed -i`, a `python3`
+heredoc, a shell redirect, a formatter — got no rule feedback at all.
+
+Not an exotic path: they split a 1,614-line file into five by writing all five
+with one heredoc, and those five carried **nine new blocking problems**. looper
+said nothing. The commit gate would have caught them, which is why nothing bad
+reached the repository — but as nine at once, long after the reasoning that
+produced them was still in the agent's head. That is the expensive version of the
+same information.
+
+**The shape.** The per-edit check answers *which file did this tool name*, read
+from the payload. Bash names none, and the command cannot be parsed for filenames:
+a heredoc, `make`, `npm run` are all unreadable. So the question has to become
+*which files changed on disk*, and only the filesystem can answer it.
+
+`PreToolUse` on Bash already fires, for the commit gate. It now also touches a
+mark file, one per project, beside the session record in the user's home.
+`PostToolUse` on Bash asks git which paths differ from HEAD, keeps the ones newer
+than that mark, and judges each through exactly the same path a single edit takes
+— `judgeOneFile` is now shared by both rather than written twice.
+
+**The mark carries no time, and that is the fix rather than an accident.** The
+first version wrote `Date.now()` into the file and compared it against file
+mtimes. It failed one run in four, and the trace says why:
+
+```
+file mtime 1787139869667.89     mark 1787139869670     keep false
+```
+
+The file was written **after** the mark and its mtime reads two milliseconds
+**earlier**. `Date.now()` and the filesystem's timestamps are not guaranteed to be
+the same clock, and two milliseconds is exactly the window this has to be precise
+in. The mark file's own mtime is the mark now, so both sides of the comparison
+come from one clock and the skew cancels. Five runs, no flake.
+
+**Why it does not repeat itself.** Git's dirty set does not shrink between
+commands, so judging everything dirty would re-report the same problem after every
+`ls` until it was fixed or committed. The mark scopes it to what this command
+wrote. A test pins that a later command reports nothing.
+
+Verified end to end on a fresh project: a heredoc writing five files, all five
+judged in one report immediately after the command, and the next command silent.
+
+Two things looper caught in the writing. `writtenSince` first swallowed a failed
+`stat` with `catch { continue }`, and now carries the unreadable paths the way
+every other walk here does. `toolNamed` answered an unparseable payload with an
+empty string, which `TS-ERROR:3` refuses; it returns a named absence and the
+existing `targetOf` path reports the reason, so nothing is lost.
+
