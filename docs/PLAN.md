@@ -4796,3 +4796,37 @@ three, not because the other two were measured hitting it — they were not.
 
 The comment first written above that constant was itself refused by `TS-DEAD:2`
 on the next run, which is why this paragraph is here instead.
+
+### The fourth place the megabyte cap was, and the check that stops a fifth
+
+`#112` found node's one-megabyte default on `execFileSync` cutting a reader's
+answer mid-string: 906 C# files reported unreadable rather than judged. It fixed
+all three language drivers with one constant.
+
+**There was a fourth, and it was already live.** `src/git.ts` reads every git
+command through `askWhole`, with no cap, and the strangers check `#105` shipped
+this morning reads a whole revision's vocabulary through it. On this repository,
+measured 2026-08-19:
+
+```
+$ git grep -h -o -E '[A-Za-z_$][A-Za-z0-9_$]{2,}' HEAD -- ':!vendor' | wc -c
+1071122          # 1.02 MB
+
+everyWordAt(root, "HEAD", …)   ->   cannot-tell: spawnSync git ENOBUFS
+```
+
+Over the line on looper itself, hours after shipping. The push check announced it
+rather than passing quietly — the same property `#112` credits the C# gate with —
+but it did not work. With the cap it sweeps normally: 7 strangers against the
+previous commit.
+
+**Four places is a class, not four bugs, so the fix is a check rather than a
+fifth patch.** Every `execFileSync` in code we wrote that pipes stdout must set
+`maxBuffer`. `tests/invariants.test.ts` greps for it, and it was run against the
+un-capped `git.ts` first to watch it fail.
+
+The audit that came with it: ten `execFileSync` calls in `src/`, eight pipe stdout
+and all eight are capped. The two that are not are `cargo build` and `dotnet
+build`, both `stdio: ["ignore", "ignore", "pipe"]` — stderr only, nothing to
+overflow.
+

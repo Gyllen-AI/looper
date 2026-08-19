@@ -7,6 +7,7 @@ import { join } from "node:path";
 import { Secrets } from "../src/secrets/capability.ts";
 import { dispatchHook } from "../src/registry.ts";
 import { intentOf } from "../src/law/commit-command.ts";
+import { everyWordAt } from "../src/git.ts";
 import { gitIn as git } from "./helpers.ts";
 
 function repoWithARemote(): string {
@@ -127,4 +128,13 @@ test("a branch with no upstream still has something to compare against", () => {
     rmSync(root, { recursive: true, force: true });
     rmSync(bare, { recursive: true, force: true });
   }
+});
+
+test("a repository whose vocabulary is larger than a megabyte still has one", () => {
+  const said = everyWordAt(join(import.meta.dirname, ".."), "HEAD", ["vendor", "package-lock.json"]);
+  assert.equal(
+    said.kind,
+    "words",
+    `looper's own vocabulary is over a megabyte, and git's answer was capped at one, so the push check could not build it: ${said.kind === "cannot-tell" ? said.why : ""}. Every reader got a larger cap in #112; the git commands they are read through did not.`,
+  );
 });
