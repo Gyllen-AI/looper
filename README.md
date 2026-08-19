@@ -81,8 +81,10 @@ it in the same turn, while the reasoning that produced it is still in the room.
 ③  before each commit    everything staged is judged again, plus a scan for
                          anything shaped like a password or a key
 
-④  before each push      every word that appears nowhere else in the
-                         repository is named, so nothing leaves unseen
+④  before it leaves     every word that appears nowhere else in the
+                         repository is named — on a push from your machine,
+                         and on every pull request, because a merge through
+                         GitHub never pushes
 ```
 
 Nothing in that list can reach the network. `npm test` holds it: no file in the

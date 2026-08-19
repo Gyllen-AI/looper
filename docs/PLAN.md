@@ -5367,3 +5367,32 @@ this class cannot see the route that most changes take. Recorded rather than
 built: the fix is not another local check but a gate on the merge itself, and that
 is a different piece of work with its own evidence to gather.
 
+### The leak check ran on the route nothing takes
+
+`#105` names every word in what you are about to push that appears nowhere else in
+the repository. It is wired to `git push` from a machine. **A pull request merged
+through GitHub never pushes**, so on 2026-08-19 an adopting organisation's real
+file path reached `main` through `#116` and the check for exactly that never ran.
+
+Everything merged here today took that route. The check has been running on the
+one path almost nothing uses.
+
+**So it runs in CI, on `pull_request`, against the merge base.** `looper strangers`
+is the command, and adding a command is a reversal of the position taken in `#97`,
+which is worth stating rather than quietly doing. There, `looper strangers <range>`
+was refused because *a command somebody has to remember is the same shape as the
+grep that failed* — it depends on a person thinking of it. That objection is about
+a command **left to memory**. Wired into CI it is remembered by nobody and runs on
+every pull request, which is the property the push hook was reaching for and missed.
+Both callers exist now: the hook for a local push, the command for the merge.
+
+**It is a report, not a gate, and that is a limit rather than a design choice.**
+Nothing here can mechanically separate an adopter's namespace from a new identifier
+of ours — `#118` measured that and dropped a fix for it. So this fails no build. It
+writes the list to the pull request's own summary, where the person merging is
+already looking, and says how many. Calling it a control would be describing a
+barrier that is not wired, which this project's own process doctrine forbids.
+
+Measured on the pull request that carried the leak: the words a reader needed were
+in the list.
+

@@ -1,0 +1,34 @@
+name: words nobody here has used before
+
+on:
+  pull_request:
+
+jobs:
+  strangers:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24.x"
+      - name: name every word this change brings that the repository has never held
+        env:
+          BASE_REF: ${{ github.base_ref }}
+        run: |
+          set -eu
+          git fetch --quiet origin "$BASE_REF"
+          node src/main.ts strangers --against "origin/$BASE_REF" | tee said.txt
+          {
+            echo "## Words this change brings that the repository has never held"
+            echo
+            echo '```'
+            cat said.txt
+            echo '```'
+            echo
+            echo "This fails nothing. It is here because a check that greps for words"
+            echo "somebody thought of can only find those, and it runs on a pull request"
+            echo "because a merge through GitHub never pushes, which is how an adopting"
+            echo "organisation's own file path reached main once already."
+          } >> "$GITHUB_STEP_SUMMARY"
