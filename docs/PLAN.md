@@ -207,18 +207,41 @@ nothing reads like silence, and silence reads like fine. **A verdict is `ok`,
 `9 ok, 0 broken, 4 blind` is not healthy; it is a project that can see two thirds
 of itself.
 
-**The internal metric, the stall: how much of the session was spent building.**
-This is not a statistic about a project. **It is how looper is judged.** Time
-writing code over time doing anything else, and everything else is the
-denominator: reading logs, re-running a search with a different filter,
-restarting something to find out what it is, waiting to learn whether a change
-landed. The more of a session goes into writing, the better the tool underneath
-it is, and a session that goes badly is looper's failure before it is anyone's.
+**The internal metric: output over input.** Not code against not-code, which
+counts the wrong things. Input is everything taken in to decide: files read, logs
+tailed, command output, search results. Output is everything produced: code,
+documents, commit messages, the plan itself.
 
-It resists the obvious gaming, which is why it is the right one. A metric counting
-lines rewards writing more of them, and more bad lines return later as diagnosis,
-which lands in the denominator. Time is harder to fake than output: the only way
-to raise the ratio is to make the non-writing parts genuinely shorter. Time writing
+**It is how looper is judged**, not a statistic about a project. A session that
+reads two hundred thousand tokens to produce two is worse than one that reads
+twenty for the same two, and no measure of time spent typing can tell those
+apart. Context is the scarce thing, and input is what spends it.
+
+**The enemy it names precisely is input that produced no new information.** Not
+input as such: reading an unfamiliar system carefully is the work. Reading the
+same file eleven times with different filters is eleven times the input for one
+answer, and it is the second kind the fingerprints already catch. So the target
+is never "read less". It is "never read the same thing twice to learn one fact",
+which is also why the answer to a stall is a capability rather than a discipline.
+
+**The guard, without which this metric teaches the wrong lesson: the target is
+the least input per unit of certainty, never the least input.** Guessing has an
+input cost near zero and is the worst available outcome. Every serious error in
+the session that produced this document came from too little input rather than
+too much: claiming what had not been checked, reading a stale process as the
+current one, treating silence as an answer. A score that rewards reading less
+rewards all three.
+
+So the instruction is not "read less". It is "make one read enough". A verdict
+line that settles a question beats a thousand-line log, and it also beats the
+guess that would have skipped both. Where the two readings conflict, the stricter
+one wins, as everywhere else in this document: read again rather than assert.
+
+It resists the obvious gaming for the same reason. Output produced on too little
+input is wrong, and wrong work returns as diagnosis, which is input, and lands in
+the denominator with interest. The ratio can only be raised honestly by making
+each unit of output need less input to be right the first time, which is the
+whole point of every capability listed below. Time writing
 code as a fraction of time working at all. A long stall is not a fact about the
 problem, it is a fact about the environment, and the environment is fixable.
 
