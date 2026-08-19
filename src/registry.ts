@@ -6,6 +6,8 @@ import { Secrets } from "./secrets/capability.ts";
 import { Seer } from "./seer/capability.ts";
 import type { Capability, HookContext, Outcome } from "./capability.ts";
 import { reasonFrom } from "./fields.ts";
+import { Loop } from "./loop/capability.ts";
+import { Stall } from "./stall/capability.ts";
 
 export type Refusal = {
   readonly capability: string;
@@ -29,7 +31,16 @@ export type Dispatch = {
 };
 
 export function registry(): readonly Capability[] {
-  return [new Router(), new Law(), new Secrets(), new Recall(), new Decisions(), new Seer()];
+  return [
+    new Router(),
+    new Law(),
+    new Secrets(),
+    new Recall(),
+    new Decisions(),
+    new Seer(),
+    new Loop(),
+    new Stall(),
+  ];
 }
 
 function verdict(capability: Capability, context: HookContext): Outcome {

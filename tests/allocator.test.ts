@@ -95,7 +95,7 @@ test("overflow is dropped and the drop is visible, for what may be dropped", () 
   );
 
   assert.deepEqual([...run.allocation.contributors], ["first"]);
-  assert.deepEqual([...run.allocation.dropped], ["second"]);
+  assert.deepEqual(run.allocation.dropped.map((one) => one.source), ["second"]);
   assert.ok(run.allocation.text.includes("dropped for budget"));
   assert.ok(run.allocation.text.includes("second"));
 });
