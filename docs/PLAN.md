@@ -4594,3 +4594,41 @@ both call the same `additionsIn`. And a duplicated type name made `src/git.ts`
 unparseable — `TS-ERROR:8`, caught by looper on the next run rather than by a test,
 which is the rule that #99 and #102 were about doing its job here.
 
+### The baseline never travelled, so a clone inherited somebody else's debt as its own
+
+`.looper/baseline.toml` was neither tracked nor ignored in this repository, and
+had never been tracked. Every other file `looper init` writes under `.looper/` is
+committed — the doctrine, `secrets.allow`. Only the record of what the project
+owed was left behind.
+
+Measured on a fresh clone of this repository, 2026-08-19:
+
+```
+baseline present? NO
+7 problems still standing. Fix every one above, then run again.
+exit=2
+```
+
+**All seven are older than looper.** A colleague cloning this project is handed
+them as new and blocking, and nothing says why — the failure is closed and silent,
+which is the exact inversion of the rule this repo holds itself to.
+
+It bit this session twice in the mild form: a `git stash -u` took the file as
+untracked and the drop discarded it, and switching to a contributor's branch left
+it behind, both times making `looper law` exit 2 on code nobody had touched.
+
+Two halves, because there are two causes.
+
+**It is tracked now.** The baseline is shared knowledge: which problems predate
+looper is not a per-machine opinion, and two people judging the same commit must
+get the same answer. It only ever shrinks — `shrinkToward` is `Math.min` — so the
+diffs are monotonic and each one is debt going down.
+
+**And its absence is now said out loud.** `readBaseline` answers a missing file
+with `NOTHING_FORGIVEN`, which is indistinguishable from a project that owes
+nothing, so no caller could tell the two apart. `adoptedButUnrecorded` asks the
+one question that separates them — the doctrine is here and the baseline is not —
+and `looper law` says so before it reports anything. `looper init` now names the
+file among the things to commit, which nothing did before: not the README, not
+CONTRIBUTING, not the doctrine.
+

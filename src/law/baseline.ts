@@ -6,6 +6,7 @@ import { join } from "node:path";
 import { writeAtomically } from "../atomic.ts";
 import {
   BASELINE_PATH,
+  DOCTRINE_DIR,
 } from "../config.ts";
 import { changedLines, type Touched } from "../git.ts";
 import { parseToml, tableIn } from "../toml.ts";
@@ -32,6 +33,11 @@ export function readBaseline(root: string): Baseline {
     baseline.set(file, counts);
   }
   return baseline;
+}
+
+export function adoptedButUnrecorded(root: string): boolean {
+  if (!existsSync(join(root, DOCTRINE_DIR))) return false;
+  return !existsSync(join(root, BASELINE_PATH));
 }
 
 export function countsOf(violations: readonly Violation[]): Baseline {
