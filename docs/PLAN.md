@@ -207,7 +207,18 @@ nothing reads like silence, and silence reads like fine. **A verdict is `ok`,
 `9 ok, 0 broken, 4 blind` is not healthy; it is a project that can see two thirds
 of itself.
 
-**The internal metric, the stall: how much of the session was spent building.** Time writing
+**The internal metric, the stall: how much of the session was spent building.**
+This is not a statistic about a project. **It is how looper is judged.** Time
+writing code over time doing anything else, and everything else is the
+denominator: reading logs, re-running a search with a different filter,
+restarting something to find out what it is, waiting to learn whether a change
+landed. The more of a session goes into writing, the better the tool underneath
+it is, and a session that goes badly is looper's failure before it is anyone's.
+
+It resists the obvious gaming, which is why it is the right one. A metric counting
+lines rewards writing more of them, and more bad lines return later as diagnosis,
+which lands in the denominator. Time is harder to fake than output: the only way
+to raise the ratio is to make the non-writing parts genuinely shorter. Time writing
 code as a fraction of time working at all. A long stall is not a fact about the
 problem, it is a fact about the environment, and the environment is fixable.
 
@@ -262,6 +273,78 @@ and nothing a project wrote runs because a session opened.
 
 **The stall metric is design only.** Nothing reads the hook stream for repeat
 clusters yet, and no fingerprint is implemented.
+
+## What is missing, ranked by what its absence costs
+
+**None of this is built.** It is a list of capabilities an agent asked for after
+an evening in which each absence was paid for, and it is here so the next
+argument starts from evidence rather than from taste. Each entry carries the cost
+that produced it.
+
+**The investment reflex this list exists to serve.** A tool that only reports is
+half a tool. The other half is knowing when to stop reporting and spend an hour:
+a stall shape seen nine times in one session, or three times a week, is worth
+more than the capability that would end it. That is a calculation, not a feeling,
+and the numbers for it are the ones the stall metric already collects. So the
+same mechanism that names a recurring shape should be able to say **this has cost
+you four hours this month and the thing that ends it is an afternoon**, and say it
+unprompted. An agent will not propose spending an hour on tooling while it is
+being asked for a feature; it needs the arithmetic handed to it.
+
+### 1. The shape of the code, not only its text
+
+The out-of-scope list below excludes a code navigator, and the reason given is
+that the languages have editor tooling that answers location. **That reason is
+about humans. An agent has no editor.**
+
+What the absence costs, measured on 2026-08-19: fifteen minutes establishing
+which of two configuration functions a binary actually called, when both existed
+and both read the same environment variables. A type defined twice because the
+generated one could not be found. A removal that missed two of its own call sites
+across six files, one of which shipped and had to be taken out again the same
+evening.
+
+"Who calls this, and what breaks if I delete it" is the question an agent asks
+most and answers worst, with search and luck.
+
+### 2. Cost, which the law has no opinion about
+
+Every rule here judges correctness. Nothing judges what a thing costs, and waste
+is invisible at the moment it is written, which is the only cheap moment to fix
+it.
+
+Measured the same day: an asset tree holding 44.5 MiB of decoded image to draw
+marks nineteen pixels wide, source art thirty times its drawn size; a poll every
+sixty milliseconds making sixteen round trips a second to learn nothing had
+changed. All of it compiles, type-checks and passes every rule in this document.
+An image whose source is thirty times its draw size is as checkable as a
+swallowed exception, and cheaper to check.
+
+### 3. What can reach what
+
+A content security policy left unset from the commit that created an application
+until somebody went looking. A flag exposing an entire command surface to page
+script, read by nothing. A stored preference that could be neither written nor
+read because one arm of a conversion was never added.
+
+Three findings, one question: **what crosses this boundary, and what is on the
+other side.** Security work is mostly that question, and it is answered today by
+reading files until tired. The edges are declarable and the answer is checkable.
+
+### 4. Evidence produced and thrown away
+
+A `catch {}` is refused here because it deletes evidence. **A log line nobody will
+ever read is the same failure with more steps**, and nothing refuses it. A
+diagnostic written into a process on an end user's machine, reaching no collector
+and no operator, is a swallowed exception that took longer and looked responsible.
+
+### 5. Looking without touching
+
+The seer can see a window and cannot act in it. An agent that needs one control
+toggled to distinguish two hypotheses must ask a person and wait, and the round
+trip costs more than the observation was worth. Whether the answer is letting it
+act is a consent question this document is not ready to settle; the asymmetry is
+recorded because it is paid for regularly.
 
 ## Deliberately out of scope
 
