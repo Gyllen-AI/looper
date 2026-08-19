@@ -31,7 +31,7 @@ test("a rule set the work raised is never dropped for budget", () => {
   ).allocation;
 
   assert.deepEqual(
-    [...said.dropped],
+    said.dropped.map((one) => one.source),
     [],
     "adopter PR #124 counted doctrine:frontend going over the side 32 times in one session while interface work was being done. A rule that never arrived is indistinguishable from a rule that was followed, so a branch the files raised must not be droppable",
   );
@@ -57,18 +57,20 @@ test("a budget that cannot hold the turn says so, rather than trimming quietly",
   );
 });
 
-test("what is not required still gives way, and is named", () => {
+test("what is not required still gives way, and is named with its weight", () => {
   const said = allocate(
     [
       speaking([
         { source: "router", priority: 0, text: "c".repeat(60), required: true },
-        { source: "recall", priority: 30, text: "r".repeat(80), required: false },
+        { source: "recall", priority: 30, text: "r".repeat(600), required: false },
       ]),
     ],
-    AT,
+    { root: "/nowhere", budget: 500 },
   ).allocation;
 
-  assert.deepEqual([...said.dropped], ["recall"]);
+  assert.deepEqual(said.dropped.map((one) => one.source), ["recall"]);
+  assert.equal(said.dropped[0]?.chars, 600, "a name cannot be weighed, so the size travels with it");
+  assert.match(said.text, /recall \(600 chars\)/);
   assert.equal(said.overflowed, false, "dropping something optional is not an overflow");
 });
 
@@ -78,7 +80,7 @@ test("everything fits, and nothing is said about budget at all", () => {
     AT,
   ).allocation;
 
-  assert.deepEqual([...said.dropped], []);
+  assert.deepEqual(said.dropped.map((one) => one.source), []);
   assert.equal(said.overflowed, false);
   assert.doesNotMatch(said.text, /budget/i);
 });

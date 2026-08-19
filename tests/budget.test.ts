@@ -93,7 +93,7 @@ test("a turn that touches everything drops the least urgent set, and says which"
     run.allocation.text.includes("dropped for budget"),
     "a rule set was left out and the agent was not told. A doctrine that quietly shrinks is worse than a short one, because nothing downstream can tell which rules were in force.",
   );
-  for (const name of run.allocation.dropped) {
+  for (const { source: name } of run.allocation.dropped) {
     assert.ok(
       run.allocation.text.includes(name),
       `${name} was dropped and not named, so nobody can tell what was missing`,
@@ -151,7 +151,7 @@ test("the line that reports a drop is paid for out of the budget, not added to i
         `at a budget of ${budget} the answer is ${allocation.chars} characters and nothing says it went over. The marker naming what was dropped grows with the number dropped, so the case that reports the problem is the case that makes it worse.`,
       );
     }
-    for (const name of allocation.dropped) {
+    for (const { source: name } of allocation.dropped) {
       assert.ok(allocation.text.includes(name), `${name} was dropped without being named`);
     }
   }

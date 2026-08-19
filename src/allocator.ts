@@ -8,7 +8,7 @@ export type Allocation = {
   readonly text: string;
   readonly contributors: readonly string[];
   readonly weighed: readonly Weighed[];
-  readonly dropped: readonly string[];
+  readonly dropped: readonly Weighed[];
   readonly overflowed: boolean;
   readonly chars: number;
 };
@@ -44,8 +44,9 @@ function byPriority(left: Injection, right: Injection): number {
   return left.priority - right.priority;
 }
 
-function droppedMarker(dropped: readonly string[]): string {
-  return `[looper: ${dropped.length} contribution(s) dropped for budget — ${dropped.join(", ")}]`;
+function droppedMarker(dropped: readonly Weighed[]): string {
+  const named = dropped.map((one) => `${one.source} (${one.chars} chars)`).join(", ");
+  return `[looper: ${dropped.length} contribution(s) dropped for budget — ${named}. A name cannot be weighed, so the size is here: run looper law to see what the outstanding-work count would have said, and the doctrine tool for a rule set by name.]`;
 }
 
 function overBudgetMarker(chars: number, budget: number): string {
@@ -66,9 +67,8 @@ export function allocate(
   const parts: string[] = [];
   const contributors: string[] = [];
   const weighed: Weighed[] = [];
-  const dropped: string[] = [];
+  const dropped: Weighed[] = [];
   let used = 0;
-  let overflowed = false;
 
   const take = (injection: Injection): void => {
     const width = injection.text.length;
@@ -89,12 +89,12 @@ export function allocate(
       take(injection);
       continue;
     }
-    dropped.push(injection.source);
+    dropped.push({ source: injection.source, chars: injection.text.length });
   }
 
-  overflowed = used > context.budget;
+  const requiredAlone = used > context.budget;
 
-  while (dropped.length > 0 && parts.length > 1 && !overflowed) {
+  while (dropped.length > 0 && parts.length > 1 && !requiredAlone) {
     const projected = used + INJECTION_SEPARATOR.length + droppedMarker(dropped).length;
     if (projected <= context.budget) break;
     const last = parts.pop();
@@ -108,11 +108,11 @@ export function allocate(
       break;
     }
     used -= last.length + INJECTION_SEPARATOR.length;
-    dropped.push(name);
+    dropped.push(held);
   }
 
   if (dropped.length > 0) parts.push(droppedMarker(dropped));
-  if (overflowed) parts.push(overBudgetMarker(used, context.budget));
+  if (requiredAlone) parts.push(overBudgetMarker(used, context.budget));
 
   const text = parts.join(INJECTION_SEPARATOR);
   return {
@@ -121,7 +121,7 @@ export function allocate(
       contributors,
       weighed,
       dropped,
-      overflowed,
+      overflowed: requiredAlone || text.length > context.budget,
       chars: text.length,
     },
     complaints,

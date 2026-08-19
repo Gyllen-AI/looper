@@ -5453,3 +5453,51 @@ agent reached for, and injecting the loop verdict rather than leaving a command 
 stay design. The router's 35% is untouched: it is the constitution, and cutting it
 is a separate argument with its own evidence.
 
+### The rest of #124, built
+
+`#125` took finding 1 half way. All three are built now, and one correction to
+the first was owed.
+
+**A dropped contribution says what it contained.** A name cannot be weighed, so
+the marker carries the size and names the route to the rest: `law (412 chars)`
+rather than `law`. The reader can now tell a paragraph from a page.
+
+**The loop verdict is injected, and nothing runs on the hook path.** `looper loop`
+exists and nothing carried its answer, so it fired only when somebody remembered
+— which this plan already calls a check that does not fire. The command now writes
+its tally to a cache beside the session record, and a capability injects **that**.
+
+The shape is what the two standing invariants require, not a way around them:
+`tests/invariants.test.ts` refuses any new file that starts a process unless it is
+named, and refuses the registry any path to `src/loop/run.ts`, because a project's
+shell line must not run because a session opened. So the injecting capability
+imports `loop/cache.ts` and never `loop/run.ts`, and **no new file starts a
+process at all**. Both invariants pass untouched.
+
+It is silent when the loop is whole. When it is not, the answer arrives with its
+age — five hours old is still injected, labelled *old enough to re-ask*, because
+an old answer is information and silence is not. `looper init` needs no change:
+the capability is in the registry, so an adopter never has to discover a command.
+
+**The stall metric reads the hook stream for the four fingerprints.**
+`PostToolUse` already fires on `Edit|MultiEdit|Write|Bash`, so what a session
+reached for is recorded — tool and shape only, and for a shell line only its first
+two words, never the arguments. The four the plan names are all built: one command
+shape repeated in a window, one file read repeatedly, an edit rewritten within
+minutes, and a long run of reads with no write between them.
+
+The guard is in the text it injects, because the metric is dangerous without it:
+**least input per unit of certainty, never least input.** A guess costs almost
+nothing and is the worst outcome available, so the answer to a stall shape is one
+more check rather than a shorter one.
+
+Measured after building, on this repository: six identical shell shapes in twenty
+minutes produce `ps aux — 6 times over 1 minute(s): no single call answers the
+question`, and ordinary work — read, edit, read, edit — produces nothing.
+
+**What a failure does here.** Neither new capability swallows one. A stream that
+cannot be appended to says the metric is measuring less than happened; a payload
+that will not parse says the same; a cache that will not read says so and names
+the command that would refresh it. `looper law` caught all three while they were
+being written.
+

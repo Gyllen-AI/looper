@@ -28,7 +28,7 @@ export function status(out: Out): number {
     `  used this turn     ${allocation.chars} chars`,
     `  contributors`,
     ...costLines(here(), allocation.weighed),
-    `  dropped            ${describeList(allocation.dropped)}`,
+    `  dropped            ${describeList(allocation.dropped.map((one) => `${one.source} (${one.chars})`))}`,
     `  left to fix        ${outstanding === 0 ? "nothing" : `${outstanding} from before looper arrived`}`,
   ];
   const governed = surveyProject(here(), "everything", NOTHING_NAMED).selfGoverned;
