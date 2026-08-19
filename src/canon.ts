@@ -53,7 +53,7 @@ const WIRE_LIVES: readonly string[] = ["**/protocol/**", "**/*.proto", "**/schem
 const WHO_YOU_ARE: readonly string[] = ["**/*auth*", "**/*session*", "**/*permission*", "**/*role*"];
 const DRAWN: readonly string[] = ["**/*.tsx", "**/*.jsx", "**/pages/**", "**/components/**"];
 const PICTURES: readonly string[] = ["**/assets/**", "**/design/**", "**/*.svg", "**/*.png", "**/*.woff2"];
-const STYLED: readonly string[] = ["**/*.css", "**/*.scss"];
+const MOVING: readonly string[] = ["**/*.css", "**/*.scss", "**/*anim*", "**/*motion*", "**/*transition*"];
 const PROVEN: readonly string[] = ["**/tests/**", "**/*.test.*", "**/*_test.*", "**/*spec*"];
 const SHIPPED: readonly string[] = ["**/deploy*", "**/*.service", "**/.github/workflows/**", "**/Dockerfile*"];
 const SETTINGS: readonly string[] = ["**/config.*", "**/*.env*", "**/settings.*"];
@@ -87,7 +87,7 @@ export function canonGoverns(): ReadonlyMap<string, readonly string[]> {
     ["secure/identity", WHO_YOU_ARE],
     ["ui/state", DRAWN],
     ["ui/assets", PICTURES],
-    ["ui/motion", STYLED],
+    ["ui/motion", MOVING],
     ["ui/reach", DRAWN],
     ["work/testing", PROVEN],
     ["work/deploy", SHIPPED],

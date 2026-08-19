@@ -1,7 +1,7 @@
 import type { Out } from "../out.ts";
 import { DEV, INJECTION_BUDGET, namedProject, projectRoot, searchPath, whereTheUserLives, type Invocation } from "../config.ts";
 import { NO_SESSION_EVER, lastRun, noteRun, sayWhenHooksRan, worthSayingAtCommit } from "../seen.ts";
-import { AFTER_INIT, USAGE, costLines, describeStep, mapComplaints } from "../announce.ts";
+import { AFTER_INIT, USAGE, costLines, describeStep, mapComplaints, oversizedComplaints } from "../announce.ts";
 import { totalIn, readBaseline } from "../law/baseline.ts";
 import { surveyProject } from "../law/project.ts";
 import { here, currentAllocation } from "../session.ts";
@@ -38,7 +38,7 @@ export function status(out: Out): number {
       lines.push(`    ${held.where} — ${held.why}, ${held.files} file(s) not judged here`);
     }
   }
-  const unheard = mapComplaints(here());
+  const unheard = [...mapComplaints(here()), ...oversizedComplaints(here())];
   if (unheard.length > 0) {
     lines.push(`  rule sets that will never arrive`, ...unheard);
   }

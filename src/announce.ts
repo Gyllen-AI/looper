@@ -1,11 +1,11 @@
 import { relative } from "node:path";
 
-import { AGENT_DIR, MAP_PATH } from "./config.ts";
+import { AGENT_DIR, INJECTION_BUDGET, MAP_PATH } from "./config.ts";
 import { canonBranch } from "./canon.ts";
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 
-import { listBranches, readProjectBranch } from "./doctrine.ts";
+import { assembleBranch, listBranches, readProjectBranch } from "./doctrine.ts";
 import { trackedFiles } from "./git.ts";
 import { branchLinesOutsideASection, matches, readMap, unheardIn } from "./map.ts";
 import type { Weighed } from "./allocator.ts";
@@ -165,6 +165,28 @@ function strayBranchLines(root: string): readonly string[] {
     `  ${MAP_PATH} has ${stray.length} branch line(s) above any section, so none of them is read:`,
     ...stray.map((line) => `    ${line}`),
     `    a branch belongs under [governs], or under [freshness] to say when it goes stale`,
+  ];
+}
+
+// A task names three or four branches, and the router's own required lines take
+// the first third of the budget. A branch that will not fit in a sixth of it is
+// one that can only ever travel alone, and the allocator drops whole branches.
+const BRANCHES_AT_ONCE = 6;
+
+export function oversizedComplaints(root: string): readonly string[] {
+  const ceiling = Math.floor(INJECTION_BUDGET / BRANCHES_AT_ONCE);
+  const heavy: { readonly branch: string; readonly chars: number }[] = [];
+  for (const name of listBranches(root)) {
+    const branch = assembleBranch(root, name);
+    if (branch.kind !== "found") continue;
+    if (branch.text.length > ceiling) heavy.push({ branch: name, chars: branch.text.length });
+  }
+  if (heavy.length === 0) return [];
+  heavy.sort((a, b) => b.chars - a.chars);
+  return [
+    `  ${heavy.length} branch(es) are over ${ceiling} chars, so naming three at once cannot fit ${INJECTION_BUDGET}:`,
+    ...heavy.map((one) => `    ${one.branch}  ${one.chars} chars`),
+    `    a branch is injected whole or dropped whole, so split one into the branches under it`,
   ];
 }
 
