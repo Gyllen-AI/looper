@@ -383,3 +383,25 @@ test("a reader that is listened to may answer with more than a megabyte", () => 
     `${unguarded.join(", ")} reads a subprocess's answer with node's one-megabyte default. Adopter PR #112 found 906 C# files reported unreadable because a reader's answer was cut mid-string at that cap. It was in four places then; a fifth arrived in #122 through spawnSync, which this check only looked for after it had already missed one.`,
   );
 });
+
+test("every injection says whether the work raised it, because a missing word reads as no", () => {
+  const silent: string[] = [];
+
+  for (const file of ourFiles()) {
+    const text = readFileSync(file, "utf8");
+    let at = text.indexOf("priority:");
+    while (at !== -1) {
+      const nearby = text.slice(Math.max(0, at - 200), at + 200);
+      if (!nearby.includes("required:") && !nearby.includes("priority: number")) {
+        silent.push(`${file.slice(ROOT.length + 1)}:${text.slice(0, at).split("\n").length}`);
+      }
+      at = text.indexOf("priority:", at + 1);
+    }
+  }
+
+  assert.deepEqual(
+    silent,
+    [],
+    `${silent.join(", ")} builds an injection without saying whether it is required. Nothing type-checks this repository, so the missing word reads as "no" and the contribution becomes droppable — which is how adopter PR #124 counted a project's own doctrine going over the side 32 times in one session.`,
+  );
+});

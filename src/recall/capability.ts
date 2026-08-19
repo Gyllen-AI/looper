@@ -57,6 +57,7 @@ export class Recall implements Capability {
       {
         source: this.name,
         priority: RECALL_PRIORITY,
+        required: false,
         text: `looper: this project has ${notes.length} note(s) of things it worked out before — call the \`recall\` tool before assuming anything you would otherwise have to work out again.`,
       },
     ];

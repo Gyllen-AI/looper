@@ -37,12 +37,18 @@ export class Router implements Capability {
         source: this.name,
         priority: ROUTER_PRIORITY,
         text: constitution.text,
+        required: true,
       },
     ];
 
     const unreachable = this.unreachable(context.root);
     if (unreachable.length > 0) {
-      injections.push({ source: this.name, priority: ROUTER_PRIORITY, text: unreachable });
+      injections.push({
+        source: this.name,
+        priority: ROUTER_PRIORITY,
+        text: unreachable,
+        required: true,
+      });
     }
 
     for (const name of this.signalled(context.root)) {
@@ -52,6 +58,7 @@ export class Router implements Capability {
         source: `doctrine:${name}`,
         priority: BRANCH_PRIORITY,
         text: branch.text,
+        required: true,
       });
     }
 
