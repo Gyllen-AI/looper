@@ -209,6 +209,33 @@ test("only what is being added is scanned, so old files do not block every commi
   }
 });
 
+test("the baseline looper writes itself is not scanned for keys", () => {
+  const root = repo();
+  const held = 'Base.Shared/ChatV2/Tools/ListBrandingPromptsTool.cs';
+  try {
+    mkdirSync(join(root, ".looper"), { recursive: true });
+    stage(root, ".looper/baseline.toml", `["${held}"]\n"CS-DEAD:2" = 31\n`);
+    assert.deepEqual(
+      [...scanStaged(root)],
+      [],
+      "every byte of the baseline is a path, a rule id or a count that looper wrote, and a deep namespace reads as random to the blob check",
+    );
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test("the same string in a file somebody wrote is still caught", () => {
+  const root = repo();
+  const held = 'Base.Shared/ChatV2/Tools/ListBrandingPromptsTool.cs';
+  try {
+    stage(root, "src/held.ts", `const value = "${held}";\n`);
+    assert.equal(scanStaged(root).length, 1);
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
 test("a value on the allow list, with the reason beside it, passes", () => {
   const root = repo();
   try {
