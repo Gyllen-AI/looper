@@ -171,6 +171,18 @@ full strength and none of them could be disputed. See finding 92.
 `tests/invariants.test.ts` fails if a newer copy of lawkeeper arrives without this
 file.
 
+**The crates are here too, since 2026-08-19.** `vendor/` holds the source of all
+eighteen crates this depends on, and `.cargo/config.toml` points cargo at them.
+Before that, `cargo build --offline` never reached out but read whatever was in
+the machine's `~/.cargo/registry`, so on a machine without one the build simply
+failed. Proved by building with `CARGO_HOME` set to an empty directory: finished
+in 15.02s, binary produced, nothing fetched. `tests/invariants.test.ts` fails if
+a crate goes missing, if a nineteenth arrives, or if anything here names
+`TcpStream`, `TcpListener`, `UdpSocket`, `socket2` or `libc::socket`.
+
+Run `cargo vendor --offline vendor` from this directory after changing a
+dependency, and argue the dependency in `docs/PLAN.md` first.
+
 **Updating it.** Nothing fetches this. If lawkeeper gains something worth having,
 someone copies the new source in by hand, deliberately, re-applies the changes
 listed above, and says so in the commit. That is the price of never downloading
