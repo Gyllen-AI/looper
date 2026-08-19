@@ -3776,3 +3776,64 @@ to agree with the code can only agree with the code, which is the reason cases a
 written from the ban text first. The corrected tests leave out a prop instead, and
 a new test pins the module `const` as silent with the issue number in its message.
 
+### REACT:2 read TypeScript types as if they were values
+
+Follow-up on adopter issue #87, after the module-`const` fix landed. They reported
+`REACT:2` had gone 31 → 21 in their console but three sites survived that they
+could not reproduce in isolation after ten probes, and — the part that cost them —
+**no name could be added that satisfied any of them**.
+
+Run against the real files, the rule names what it thinks is missing:
+`Section`, and `Set` twice. A TypeScript type and a JavaScript global. Neither can
+be a dependency of anything.
+
+`gather` walked every key of every node, so a declaration's **type annotation** was
+read as if it declared values. `(at: Section, held: Set<Section>)` yields
+`at, Section, held, Set, Section`. Any effect body mentioning one of those names
+then fired, with nothing to add. `gather` now skips `typeAnnotation`,
+`typeParameters`, `typeArguments` and `returnType` on both sides of the question,
+because a type does not exist at runtime and cannot change between renders.
+
+Two more of the same class came out of the same measurement.
+
+**A `catch` binding inside the effect was not counted as declared there.**
+`declaredWithin` knew about variable declarators and function parameters, not
+`CatchClause`. So `catch (cause) { report(cause) }` inside an effect fired on
+`cause` whenever any other function in the file happened to have a `cause`
+parameter.
+
+**A parameter of one function made a global unarguable in another.** The rule
+gathered every binding in the whole file into one set, so an effect using
+`typeof window` fired because a different callback, 113 lines away, took a
+parameter named `window`. The same failure that was measured and rejected for
+`TS-TRUTH:1` — a set of parameter names gathered across a file is not a scope.
+Here it is fixed rather than worked around: the rule now descends the tree
+carrying the names visible at each point, adding a function's own parameters and
+its own body's declarations on the way in and stopping at each nested function
+boundary. `boundInThisFile` and the module-`const` special case are both gone —
+a module `const` is simply not in scope, which it never was. A module `let` stays
+judged, so it is seeded at the top.
+
+Measured 2026-08-19. On 4,015 files of the JavaScript bundled with an editor:
+**15 before and 15 after**, unchanged — that corpus is compiled JavaScript with
+no annotations, so it could not have caught this and did not lose anything to it.
+On the 4,062-file workspace that filed the issue: **34 → 23**. Every one of the
+11 silenced was judged by hand — eight type names (`Section`, `Set` twice,
+`WinState`, `AutoPlan`, `Book` twice, and `spend`, which is only ever a property
+name inside a type literal), and three `catch` bindings. One further finding kept
+firing but changed the name it reports from `window` to a real component value.
+All 23 that remain name a value declared in the component.
+
+### A rule that says something is missing now says what
+
+The reason this took ten probes is in their words: *"there is no name I can add,
+which means a reader has nowhere to go."* A `REACT:2` finding named a file and a
+line. The shape from `looper report` is depth-limited, so the names were truncated
+out of it, and they correctly read the shape as containing nothing that could be a
+dependency.
+
+`Finding` and `Violation` gain an optional `said`, and the report prints it beside
+the place: `src/C.tsx:4 (userId)`. Only `REACT:2` sets it so far. This is the
+canon's rule about a refusal naming the route that is open, applied to the one
+rule where the reader cannot work the route out from the line alone.
+

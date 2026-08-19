@@ -8,7 +8,7 @@ export type Subject = {
   readonly role?: Role;
 };
 
-export type Finding = { readonly line: number };
+export type Finding = { readonly line: number; readonly said?: string };
 
 export type Check = {
   readonly rule: Rule;
@@ -47,7 +47,12 @@ export function judge(
       continue;
     }
     for (const finding of check.run(subject, concessions)) {
-      violations.push({ rule: check.rule, file: subject.file, line: finding.line });
+      violations.push({
+        rule: check.rule,
+        file: subject.file,
+        line: finding.line,
+        said: finding.said,
+      });
     }
   }
 

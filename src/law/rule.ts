@@ -33,6 +33,7 @@ export type Violation = {
   readonly rule: Rule;
   readonly file: string;
   readonly line: number;
+  readonly said?: string;
 };
 
 export const CATEGORY_ORDER: readonly Category[] = [

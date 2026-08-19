@@ -9,8 +9,9 @@ import {
 const WHOLE_FILE = 0;
 
 function where(violation: Violation): string {
+  const named = typeof violation.said === "string" ? ` (${violation.said})` : "";
   if (violation.line === WHOLE_FILE) return `${violation.file} (the whole file)`;
-  return `${violation.file}:${violation.line}`;
+  return `${violation.file}:${violation.line}${named}`;
 }
 
 function groupByRule(

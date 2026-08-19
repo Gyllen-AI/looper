@@ -153,3 +153,18 @@ test("REACT:2 sees props and patterns, and leaves stable things alone", () => {
     assert.equal(count(lyingDependenciesCheck, code), expected, `wanted ${expected} for: ${code}`);
   }
 });
+
+test("a REACT:2 finding says which name is missing, so there is something to add", () => {
+  const lying = `function C({ userId }) {
+  useEffect(() => {
+    load(userId);
+  }, []);
+}`;
+  const found = lyingDependenciesCheck.run({ file: "C.tsx", text: lying });
+  assert.equal(found.length, 1);
+  assert.equal(
+    found[0]?.said,
+    "userId",
+    "adopter issue #87 took ten probes to narrow because the finding named a line and nothing else. A rule that says something is missing and will not say what has closed the one route open to the reader",
+  );
+});
