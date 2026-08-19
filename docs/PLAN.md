@@ -3386,28 +3386,12 @@ wrong unprompted:
 - **What crosses a boundary is defined once**, and is parsed at the edge.
 - **What a person looks at renders what it is told and decides nothing.**
 
-**What did not land, and the reason was believed to be a hard ceiling.**
-This section long claimed that a Claude Code hook may return at most 10,000
-characters, and that 9,800 was 200 under a limit nothing here controls. Nothing
-ever checked it. **Measured on 2026-08-20 against Claude Code 2.1.236, by
-installing a temporary hook that emits sentinels at known character offsets and
-reading which ones arrive, that is not what happens.** A UserPromptSubmit hook
-emitting exactly 10,001 characters arrived whole, every sentinel intact,
-including the one at offset 9,980. So 10,000 is not a truncation point.
-
-What does happen was never written down and is worse than truncation. At 16,001
-characters the output is not trimmed: it is diverted to a file and replaced by a
-2,000-character preview (`k2r` in the binary), so only the sentinel at offset 0
-survived. **Crossing the real ceiling costs the whole injection, constitution
-included, rather than its last lines.** The cliff lies between 10,001 and 16,001
-and has not been bisected.
-
-Two things follow, pointing opposite ways. The budget has headroom nobody
-claimed, so a rule deleted to stay under 9,800 may have been deleted for nothing.
-And the ceiling matters more than believed, not less, because overflow is
-near-total loss. The number stays at 9,800 until the cliff is measured and the
-test still refuses a budget at or above `HOOK_OUTPUT_CEILING`, but the reason is
-now a measurement with a date and a version on it.
+**What did not land, and the reason is a hard ceiling rather than a judgement.**
+A Claude Code hook may return at most 10,000 characters. The injection budget of
+9,800 is not a preference — it is 200 under a limit nothing here controls, and a
+test refuses any budget at or above it, because truncation the agent performs is
+truncation looper cannot mark. **So the canon cannot grow. It can only be
+chosen.**
 
 **Measured on 2026-08-20 against Claude Code 2.1.236, because a number this
 load-bearing should not rest on a document.** A `UserPromptSubmit` hook was made
@@ -3424,6 +3408,11 @@ to quote the last thirty:
 | 30,000 | persisted to a file |
 
 **The ceiling is exactly 10,000 and it is real.** `HOOK_OUTPUT_CEILING` is right.
+
+**The limit is on what the hook writes in total, and a trailing newline is part
+of it.** 9,999 characters followed by a newline is 10,000 bytes and arrives;
+10,000 characters followed by a newline is 10,001 and does not. A hook that
+prints its payload with `echo` spends one of the ten thousand on the newline.
 
 What was not known is what crossing it costs, and it is far worse than
 truncation. The output is not trimmed: it is written to a file and replaced with
@@ -5745,3 +5734,51 @@ Both commits carried their reasoning in code comments, which `TS-DEAD:2` refused
 on the first run here. The reasoning is above instead, which is what that rule's
 own `instead` list says to do.
 
+
+## NODE:1 read a regular expression as a shell
+
+Found by looper refusing its own commit. `A_SENTENCE.exec(gathered.join(" "))`
+in `src/router.ts` was reported as *building a command for the operating system
+by pasting values into it* — the callee is named `exec`, and `.join()` counts as
+pasting, so a regular expression matching a wrapped line looked exactly like a
+shell call.
+
+**Run over 1,068 JavaScript files nobody here wrote** — every `.js`, `.mjs` and
+`.cjs` under the machine's global `node_modules`, `.min.js` excluded — the rule
+fired three times, and **all three were the same false positive**:
+
+```
+ip-address/dist/ipv6.js:116  const subnet = constants6.RE_SUBNET_STRING.exec(address);
+ip-address/dist/ipv6.js:131  const zone = constants6.RE_ZONE_STRING.exec(address);
+ip-address/dist/ipv4.js:59   const subnet = constants.RE_SUBNET_STRING.exec(address);
+```
+
+Zero true positives. A security rule that fires only on innocent code teaches the
+reader to skip it, which is the failure this repo calls *judge a rule on
+precision, never severity*.
+
+**The first fix was not enough and the corpus said so.** Tracing the receiver to
+a `RegExpLiteral` catches `AT_END.exec(...)`, but the three real hits keep their
+regular expression behind a namespace, so the receiver is `constants6.RE_SUBNET_
+STRING` and there is nothing in the file to trace.
+
+What holds without naming a module: a call to `exec` or `execSync` through a
+member reaches a shell only when the receiver is a plain identifier that does not
+resolve to a regular expression. A module is bound to one name — `cp.exec`,
+`childProcess.exec` — while a regular expression is very often two deep.
+
+Checking provenance directly was tried first and abandoned: it needs the literal
+`"node:child_process"`, and `tests/invariants.test.ts` refuses any file
+containing it that is not one of the six allowed to start a process. That guard
+is right, and a rule about shells is not a file that should be starting one.
+
+After: **0 hits in the same 1,068 files**, 0 in looper's own 176. Both real
+shapes still fire and both regular expressions stay silent:
+
+```
+a.ts:4  exec("ls " + dir);
+a.ts:5  childProcess.exec(`ls ${dir}`);
+```
+
+Four cases in `audit/cases.ts` hold it, one of them the nested-namespace shape
+the corpus supplied.

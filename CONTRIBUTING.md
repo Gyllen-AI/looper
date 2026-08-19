@@ -60,9 +60,14 @@ Fork it. Then, in this order, because the order is the whole discipline:
 2. **Then change the code**, until `node --test 'tests/**/*.test.ts'` is green
    and `node audit/evasion.ts` reports zero mismatches.
 3. **Then run it over code nobody here wrote.** A rule tested only on its
-   author's fixtures agrees with its author. There is a foreign corpus in any
-   `node_modules` and any `~/.cargo/registry` — point it at fifty thousand lines
-   of somebody else's work and judge every hit by hand.
+   author's fixtures agrees with its author. Not this repo's own
+   `node_modules` — it holds seven files, because looper takes on almost no
+   dependencies on purpose. A machine's *global* `node_modules` and any
+   `~/.cargo/registry` hold real corpora: point it at thousands of lines of
+   somebody else's work and judge every hit by hand. Say how many files you
+   scanned and how many hits you read, and do this for a rule you *changed* as
+   well as one you added — `NODE:1` had been reading every `regex.exec(...)` as
+   a shell command, and only a foreign corpus said so.
 4. **Write the words in the reader's terms.** The ban says what is not allowed,
    the reason says what it costs a person, and the instead gives a spelling that
    works. Someone who cannot read code has to be able to act on it.

@@ -26,14 +26,22 @@ const FRESHNESS_EVENTS: readonly HookEvent[] = ["CommitMessage"];
 const NO_BRANCHES: readonly string[] = [];
 
 const A_HEADING = /^\s*(—|#)/;
+const A_SENTENCE = /^(.*?[.!?])(\s|$)/;
 
-function firstLineOf(text: string): string {
+function firstSentenceOf(text: string): string {
+  const gathered: string[] = [];
   for (const line of text.split("\n")) {
     const said = line.trim();
-    if (said.length === 0 || A_HEADING.test(said)) continue;
-    return said.replace(/^[-*]\s+/, "").replace(/\*\*/g, "").slice(0, 90);
+    if (said.length === 0 || A_HEADING.test(said)) {
+      if (gathered.length > 0) break;
+      continue;
+    }
+    gathered.push(said.replace(/^[-*]\s+/, "").replace(/\*\*/g, ""));
+    const ended = A_SENTENCE.exec(gathered.join(" "));
+    const sentence = ended === null ? undefined : ended[1];
+    if (sentence !== undefined) return sentence;
   }
-  return "";
+  return gathered.join(" ").slice(0, 90);
 }
 
 const EMPTY_MAP: ReadonlyMap<string, readonly string[]> = new Map();
@@ -70,7 +78,7 @@ export class Router implements Capability {
         priority: BRANCH_PRIORITY,
         text: branch.text,
         required: false,
-        summary: firstLineOf(branch.text),
+        summary: firstSentenceOf(branch.text),
       });
     }
 

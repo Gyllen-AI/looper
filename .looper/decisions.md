@@ -31,9 +31,9 @@ characters against a stated ceiling of 9,800, and the only things reported as
 dropped were looper's own status lines. Nobody was told.
 
 Overflow is not a trimmed tail. Measured against Claude Code 2.1.236 with a
-temporary hook emitting sentinels at known offsets, 10,001 characters arrived
-whole, and 16,001 characters were replaced by a 2,000-character preview and a
-file path. So past the real cliff nothing arrives, including the constitution.
+temporary hook emitting a sentinel at each end, 10,000 characters arrive whole
+and 10,001 are replaced by a 2,000-character preview and a file path. So one
+character past the ceiling nothing arrives, including the constitution.
 Required was therefore not protecting doctrine; it was risking the whole prompt
 to protect one branch.
 
