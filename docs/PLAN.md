@@ -515,6 +515,58 @@ trip costs more than the observation was worth. Whether the answer is letting it
 act is a consent question this document is not ready to settle; the asymmetry is
 recorded because it is paid for regularly.
 
+## The canon is a tree, and the tree is how it scales
+
+A flat canon forces a coarse adopter. Measured in one project on 2026-08-19: its
+frontend doctrine was a single 6,233-character file holding fifteen unrelated
+rules, from design tokens to navigation promises to how an unreadable panel
+should fail. Editing a drawing routine pulled all fifteen. The file was one file
+because **the canon offered one slot**, and that is the general shape: an
+adopter's knowledge lands in the containers this canon defines, so the canon's
+granularity sets theirs.
+
+So the canon is grouped, two levels, and a branch is small enough to be worth
+sending whole. `tests/canon-tree.test.ts` holds four properties, and the fourth
+is the one with a number in it: **a branch over 2,500 characters fails the
+suite**, because a branch that large is one the budget drops whole. It caught the
+TypeScript branch at 2,570 on its first run.
+
+That failure found a real duplication rather than a size problem. The same
+logging rule was written into four language branches and, by this work, a fifth.
+It now lives once in `observe/logging` and the language branches point at it,
+which took the canon *down* by about 1,500 characters while adding twenty-two
+branches to it.
+
+**Routing is where the honesty is.** Of the twenty-two, fifteen are selected by
+path and seven cannot be: `runtime/time`, `runtime/failure`,
+`runtime/concurrency`, `runtime/performance`, `observe/logging`, `observe/health`
+and `secure/input` are true of code anywhere and match no glob. They are pulled
+by name, which works and is weaker, because it needs the reader to know they
+exist.
+
+That ratio is the argument for the next two steps, neither built.
+
+**Route on content, not on paths.** The law already parses every judged file to
+an AST. So it already knows a file contains SQL, opens a socket, holds a lock,
+spawns a process, catches an error. That is enormously more precise than a glob
+and costs nothing new, because the parse has happened either way. A file with a
+lock in it should raise `runtime/concurrency`; no path expression will ever say
+that.
+
+**Push an index, pull the body.** The constitution already instructs the reader
+to pull the branches their task touches, so pushing whole branches is the
+fallback that spends the budget. Inverted, the per-turn cost stops growing with
+the rule set: a two-level tree of two hundred branches indexes in about forty
+lines, and the bodies arrive only when asked for. That is the only arrangement
+that survives a canon which keeps growing, and it is what makes "more branches"
+an improvement rather than a heavier bill.
+
+**And everything checkable belongs in the law rather than here.** "An index
+exists before the query that needs it", "a migration that has been applied is
+immutable", "art is stored at the size it is drawn" are all checks wearing prose.
+A law rule is already content-routed and already mechanical, which is why the law
+scales without a budget and the doctrine does not.
+
 ## Deliberately out of scope
 
 - **A code navigator.** No AST index, no call graph, no `find`/`callers`/
