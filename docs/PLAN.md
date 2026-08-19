@@ -274,6 +274,34 @@ looper must not assume. The mechanism is: the sweep, the verdict vocabulary,
 the two metrics, the stall fingerprints, and the injection. A project that declares nothing still gets
 its full internal report, and an external count of zero rather than a silence.
 
+**Nobody will write the checks, so looper proposes them.** A design that ends at
+"declare your checks in a file" has moved the problem rather than solved it. The
+adopter who most needs this is the one who does not know what their chain is made
+of, and an empty `.looper/loop.toml` is indistinguishable from a healthy project.
+Asking a person to author checks is asking them to already have the map the tool
+was supposed to draw.
+
+It does not need to be told. **The hooks already see every tool call, and what an
+agent reaches for is the chain, revealed by use.** A session that opens two ssh
+connections, queries a database and fetches one endpoint has just named four
+external layers, none of them guessed. So the proposal is: name what was reached
+for, how often, and say that none of it is covered.
+
+> two hosts, one database and one endpoint were reached this session and no check
+> covers any of them. Write them?
+
+That is the same evidence discipline the rule set already runs on, and it keeps
+the property that makes this safe: **looper never assumes what a project is made
+of, it reports what the project's own agent did.** A draft check is a proposal a
+person accepts, never a file that appears.
+
+**Init wires it, because a capability an adopter has to discover is a capability
+most adopters do not have.** The injection hook is written by `looper init`
+alongside the ones already there. Nothing about the loop should require knowing a
+command exists: the sweep is a command for the author and for debugging, and the
+verdict arrives without anyone asking for it. An adopter who has to be told to run
+something has already been failed by this design.
+
 **It must be injected, and it is not yet.** By the principle already stated
 above, a check that fires when somebody remembers to run it is a check that does
 not fire, so the failing labels and the two numbers belong where the reader
@@ -289,13 +317,93 @@ drivers on its own tree. `tests/invariants.test.ts` holds both halves: the runne
 is named among the files that may start a process, and a second test refuses to
 let the registry reach it, so a hook cannot run a project's line today.
 
-What would close it, when it is built: run declared checks only from an explicit
-invocation, cache the last result with its age, and inject **the cached result**
-rather than running anything. The reader gets the fact where they already are,
-and nothing a project wrote runs because a session opened.
+What closes it: run declared checks only from an explicit invocation, cache the
+last result with its age, and inject **the cached result** rather than running
+anything. The reader gets the fact where they already are, and nothing a project
+wrote runs because a session opened. When the cached answer is older than a
+threshold, start a refresh out of band and still inject the old one, labelled with
+its age, because a stale answer that says it is stale beats no answer.
+
+**Measured before being asked for, in an adopter, 2026-08-19.** The shape above
+was built there first to find out what it costs on a hook that runs on every
+prompt: **9 ms cold and 23 ms warm**, against the seconds it would take to
+actually run a sweep with several remote calls and a compile in it. It says
+nothing at all when the loop is whole, because a line that appears every time is
+a line nobody reads. That is the number this design needed and did not have: the
+objection to injecting anything is that it costs something on every turn, and the
+answer is that reading one cached line does not.
 
 **The stall metric is design only.** Nothing reads the hook stream for repeat
 clusters yet, and no fingerprint is implemented.
+
+## The budget drops the branch the session is standing in
+
+**Measured in one adopter's session, 2026-08-19, counted from its own transcript.**
+The session spent most of its length on interface work. Contributions dropped for
+budget, by name:
+
+| dropped | times |
+|---|---|
+| `doctrine:frontend` | 32 |
+| `doctrine:architecture` | 10 |
+| `decisions` | 8 |
+| `recall` | 6 |
+| `law` | 6 |
+| `doctrine:game` | 6 |
+
+The branch governing the work actually being done was the one most often absent,
+and it was absent silently: the marker names what was dropped and never what was
+in it, so the reader cannot tell whether it mattered. `law` went six times while
+its own languages were being written. `recall` went six times while the session
+re-derived things this project had already worked out and written down.
+
+**The mechanism, and it is not a tuning problem.** Priorities are `router` 0, every
+doctrine branch 10, baseline 20, decisions and recall 30, and the allocator fills
+in that order until the budget runs out. Two consequences follow.
+
+The tail is structural: `decisions` and `recall` sit last, so they are dropped
+first whenever anything else grows. That is a choice worth making deliberately,
+and it is currently made by an ordering nobody argued.
+
+The worse one: **every branch shares a single number, so which branch survives is
+arbitrary order rather than relevance.** A branch is signalled precisely because
+the session is touching the files it governs. Having earned its way in on
+relevance, it then competes on none. Dropping the frontend branch during frontend
+work is the allocator preferring a branch that was signalled more weakly.
+
+**The router costs 37% of the budget on every message** (3,659 of 9,800 measured
+the same day). That is the always-on half crowding out the situational half, and
+the situational half is the part that changes what gets written.
+
+**A rule that never arrived is indistinguishable from a rule that was followed.**
+That is the same failure this document already refuses one level down, where a
+check that could not be asked must never read as `ok`. A dropped branch is the
+`blind` case for governance: the work happens, the output looks like compliance,
+and nothing anywhere records that the rule was absent rather than obeyed.
+
+So it is not a reporting problem and better wording does not close it. **The
+branch raised by the files being edited must not be droppable.** If the budget
+cannot hold what this turn actually needs, that is a fact to say out loud, not a
+trim to make quietly.
+
+**And it must not depend on anybody noticing.** This was found by reading a
+transcript after an evening had already gone wrong, which is exactly the route
+this document says never works: the adopter who is being failed is the least able
+to see it, and by construction they are reading fewer rules than they think. So
+looper counts its own drops per project, notices when what it dropped governs what
+was being edited, and surfaces that itself. Every adopter has this today and none
+of them know.
+
+That is the loop applied to looper. The tool that asks whether a project can see
+itself owes the same answer about its own delivery, and by the same vocabulary: a
+rule delivered is `ok`, a rule refused is `broken`, and a rule silently dropped is
+`blind`.
+
+The rest, none of it built: rank a branch by the strength of the signal that
+raised it, so the files being edited outrank anything weaker; say what a dropped
+contribution contained rather than only its name, since a name cannot be weighed;
+and decide on purpose whether `recall` and `decisions` belong at the end rather
+than inheriting it.
 
 ## What is missing, ranked by what its absence costs
 
