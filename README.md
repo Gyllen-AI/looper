@@ -18,6 +18,27 @@ npx looper init
 That is the whole setup. `init` adds its hooks beside any you already have,
 never over them, and running it twice leaves the project byte-identical.
 
+## Before you write anything
+
+An agent reads this file, then starts work. These are the three that change what
+gets written, and the order is the point.
+
+1. **Read [STACK.md](STACK.md) — what looper recommends building with.** The web
+   framework, the database layer, the front end, one tool per job, for
+   TypeScript, Rust and Python alike. It judges nothing and refuses nothing. It
+   is there so the first file in a language this project does not already use is
+   a choice between named options rather than whatever came to hand.
+2. **Read `CURRENTSTACK.md`, which `init` writes into your project.** That one is
+   what your project already *is*, measured from disk rather than chosen. It is
+   also the gate: `STACK:1` refuses a source file in a language it does not list.
+3. **Pull the doctrine for whatever you are about to touch**, with the `doctrine`
+   tool. The sets tied to files you have already edited arrive on their own. The
+   rest arrive only if you ask — and the first file in a new area is precisely
+   the one nothing has arrived for yet.
+
+Skipping the first two is how a project ends up with a second runtime nobody
+chose. Skipping the third is how a screen gets built that nobody ever looked at.
+
 ## What happens then
 
 **Before each turn**, the rules that matter to what you are touching are put in
@@ -51,7 +72,8 @@ swallowed error, `PY-ERROR:2`, the made-up answer that hides it, `PY-TRUTH:1`,
 the mutable default argument, `PY-TRUTH:2`, `assert` used where `python -O` will
 delete it, `PY-TYPE:1`, the silenced type checker, `PY-LAYER:1`, the star import,
 and `PY-ERROR:3`, the failure raised without a name.
-[STACK.md](STACK.md) prescribes the rest of the Python stack, and every rule
+[STACK.md](STACK.md) prescribes the rest of the Python stack — and every other
+stack looper governs, not only this one — and every rule
 `docs/PLAN.md` names for Python is now built.
 
 ## When a rule is wrong
