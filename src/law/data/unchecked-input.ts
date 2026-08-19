@@ -7,9 +7,9 @@ export const UNCHECKED_INPUT: Rule = {
   id: "DATA:2",
   category: "SECURITY",
   pass: "fast",
-  bans: "using what arrived from outside without checking it first",
+  bans: "reading a request body into an object and trusting its fields",
   why:
-    "whatever is sent to your program is written by whoever is sending it, and they are not obliged to send what you expected. Unchecked, a missing field becomes undefined halfway through, a number arrives as text and every sum after it is wrong, and an extra field you never asked for gets written to the database. The type you wrote down is a wish until something checks it",
+    "whatever is sent to your program is written by whoever is sending it, and they are not obliged to send what you expected. Unchecked, a missing field becomes undefined halfway through, a number arrives as text and every sum after it is wrong, and an extra field you never asked for gets written to the database. The type you wrote down is a wish until something checks it. This fires on .json() and .formData(), which hand back an object with fields in it, and the only thing that satisfies it is a schema parse: a hand-written check can prove one field and says nothing about the rest, which is the half that hurts you. Reading text is not this rule, because a string has no fields to be wrong about",
   instead: [
     "const order = OrderSchema.parse(await request.json())",
     "const result = OrderSchema.safeParse(body); if (!result.success) return badRequest(result.error)",
@@ -17,7 +17,7 @@ export const UNCHECKED_INPUT: Rule = {
   valve: { kind: "none" },
 };
 
-const ARRIVING: readonly string[] = ["json", "formData", "text"];
+const ARRIVING: readonly string[] = ["json", "formData"];
 
 const CHECKING: readonly string[] = ["parse", "safeParse", "parseAsync", "safeParseAsync"];
 

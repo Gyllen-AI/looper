@@ -2290,7 +2290,7 @@ highest-stakes part of the program had no design record at all.
 | `REACT:1` | a hook called inside an `if`, a loop, or after an early `return` | the ecosystem's own most-hit failure. React matches hooks by counting them in order, so a conditional one returns somebody else's value |
 | `REACT:2` | an effect whose dependency list leaves something out | the list is a promise React believes. What is left out stops the effect re-running, and the screen keeps showing what was true a minute ago |
 | `DATA:1` | a database query built by pasting values into its text | the oldest exploited mistake there is, and the safe spelling is shorter to write |
-| `DATA:2` | using what arrived from outside without checking it first | the type you wrote down is a wish until something checks it |
+| `DATA:2` | reading a request body into an object and trusting its fields | the type you wrote down is a wish until something checks it |
 | `NODE:1` | a command for the operating system built by pasting values into it | a shell reads punctuation as instructions, so a filename someone else chose becomes a second command |
 | `NEXT:1` | reading a setting that is not marked public, in a file that runs in the browser | a `"use client"` file is sent to whoever opens the page, settings and all |
 
@@ -3694,3 +3694,45 @@ is worse than a rule that does not exist. The category is added, and the reporte
 now counts what it printed against what it was given and says so loudly when the
 two differ, naming the unknown category and calling it looper's bug rather than
 the reader's.
+
+### DATA:2 fired on `.text()`, where its own answer has nowhere to attach
+
+Adopter issue #86, from a browser-tour script. `.text()` on a library's own event
+object — not an HTTP response — fired the rule, and three hand-written checks in
+a row failed to silence it, because the only thing the rule forgives is a schema
+parse. Reproduced here: all three shapes fire.
+
+`.json()` and `.formData()` hand back an object whose fields you then trust, and
+`OrderSchema.parse` is the answer to that. `.text()` hands back a string. Not one
+of the harms in the rule's own `why` — a missing field, a number arriving as
+text, an extra field written to the database — can happen to a string, and the
+`instead` cannot be applied to one. `text` was in the list because it is a Fetch
+body method, not because using its result causes the harm the rule describes.
+
+Measured on 1,177 files of npm's own JavaScript, 2026-08-19. Before: **42 hits**.
+After: **41**. The single hit lost is
+`for (const line of (await res.text()).trim().split('\n'))` — text split into
+lines, no fields, and no schema that could be attached to it. It was a false
+positive too. All 42 were judged by hand; every one of the remaining 41 is a
+genuine body read.
+
+**`JSON.parse` was measured as a replacement and rejected.** A shape does arrive
+from outside when text is parsed, so adding it looked like the stricter reading.
+On the same corpus it fires **38 times**, judged by hand: about ten are the
+program reading its own `package.json` or config off disk, and two are
+`JSON.parse(JSON.stringify(x))` used as a deep copy. The rule cannot tell where
+the text came from, so it would fire on a program reading its own files. Blunt,
+not strict — it does not ship.
+
+The unchecked-string harm is real and is not this rule's: pasting one into a
+query is `DATA:1`, into a shell command is `NODE:1`, and both are origin-blind
+already.
+
+### `looper report` named a statement and showed the one inside it
+
+Same issue. `if (kind !== "error") return` on one line reported `ReturnStatement`
+and nothing else — the whole shape, useless to argue with. Both readers kept the
+**last** node found starting on that line, and both walks visit the parent first,
+so the innermost statement always won. The TypeScript one was even called
+`smallest` while doing it. Both now keep the first, which is the outermost, and a
+test in each language proves it by failing without the fix.

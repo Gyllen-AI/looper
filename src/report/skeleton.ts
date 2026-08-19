@@ -158,6 +158,18 @@ function spanOf(node: Node): Span | null {
   return { node, from: node.loc.start.line, to: ending };
 }
 
+function outermostStartingOn(root: Node, line: number): Span | null {
+  let held: Span | null = null;
+  walk(root, (node) => {
+    if (held !== null) return;
+    if (!ENCLOSING.includes(node.type)) return;
+    const span = spanOf(node);
+    if (span === null || span.from !== line) return;
+    held = span;
+  });
+  return held;
+}
+
 function smallestAround(root: Node, line: number): Span | null {
   let held: Span | null = null;
   walk(root, (node) => {
@@ -177,15 +189,9 @@ export function shapeAt(file: string, text: string, line: number, depth: number)
     return { kind: "not-found", why: "the file could not be read as TypeScript" };
   }
 
-  let smallest: Node | null = null;
-  walk(parsed.root, (node) => {
-    if (!ENCLOSING.includes(node.type)) return;
-    if (node.loc === null || node.loc.start.line !== line) return;
-    smallest = node;
-  });
-
-  if (smallest !== null) {
-    return { kind: "found", shape: shapeOf(smallest, anonymiser(), depth) };
+  const outermost = outermostStartingOn(parsed.root, line);
+  if (outermost !== null) {
+    return { kind: "found", shape: shapeOf(outermost.node, anonymiser(), depth) };
   }
 
   const around = smallestAround(parsed.root, line);
