@@ -22,7 +22,15 @@ import type {
 } from "../capability.ts";
 import { changedLines, stagedFiles, stagedLines, stagedText } from "../git.ts";
 import { withLock } from "../atomic.ts";
-import { isRecorded, readBaseline, countsOf, shrinkToward, totalIn, writeBaseline } from "./baseline.ts";
+import {
+  againstBaseline,
+  isRecorded,
+  readBaseline,
+  countsOf,
+  shrinkToward,
+  totalIn,
+  writeBaseline,
+} from "./baseline.ts";
 import { surveyProject, underAnotherLaw } from "./project.ts";
 import { BASELINE_PATH, BASELINE_PRIORITY } from "../config.ts";
 import { intentOf } from "./commit-command.ts";
@@ -33,7 +41,6 @@ import { CHECKS, knownRuleIds } from "./checks.ts";
 import { misspelledIn } from "./misspelled.ts";
 import { checksAdoptedIn } from "./adopted.ts";
 import type { Violation } from "./rule.ts";
-import type { Touched } from "../git.ts";
 import { fieldAt, reasonFrom } from "../fields.ts";
 
 const EVERYTHING: readonly string[] = [];
@@ -151,35 +158,6 @@ export function aboutToCommit(payload: string): boolean {
 function isUnreadableRust(violation: Violation): boolean {
   const known = rustRuleFor("ERROR:9");
   return known.kind === "known" && violation.rule.id === known.rule.id;
-}
-
-type Split = {
-  readonly yours: readonly Violation[];
-  readonly older: readonly Violation[];
-};
-
-function separate(
-  root: string,
-  file: string,
-  violations: readonly Violation[],
-  touched: Touched,
-): Split {
-  const baseline = readBaseline(root);
-  const yours: Violation[] = [];
-  const older: Violation[] = [];
-
-  for (const violation of violations) {
-    if (!isRecorded(baseline, file, violation.rule.id)) {
-      yours.push(violation);
-      continue;
-    }
-    if (touched.kind === "lines" && touched.lines.has(violation.line)) {
-      yours.push(violation);
-      continue;
-    }
-    older.push(violation);
-  }
-  return { yours, older };
 }
 
 function wentUnjudged(blinding: readonly string[], staged: readonly string[]): string {
@@ -376,12 +354,8 @@ export class Law implements Capability {
     if (found.length === 0) return { kind: "pass" };
     const verdict = { violations: found };
 
-    const split = separate(
-      context.root,
-      target.relative,
-      verdict.violations,
-      changedLines(context.root, target.relative, "commit"),
-    );
+    const touched = changedLines(context.root, target.relative, "commit");
+    const split = againstBaseline(readBaseline(context.root), verdict.violations, () => touched);
     if (split.yours.length > 0) {
       return { kind: "block", reason: `${formatReport(split.yours, "some-new")}${alsoHere(split.older)}` };
     }

@@ -4217,3 +4217,52 @@ is nowhere, which is why this is a removal rather than a rewrite.
 `<Nullable>enable</Nullable>` stays in STACK.md. The setting is worth having and
 the gate on its escape hatch is not, which is a distinction the rest of this
 document should probably be asked about more often.
+||||||| 4bc7aa8
+### `looper law` and the gates answered the same question two different ways
+
+Adopter issue #94. `looper law` called a problem written one minute ago
+pre-existing, and exited 0, while the commit gate on the same file refused it.
+The command a person runs to check their own work gave the reassuring answer.
+
+They read the cause as a count comparison letting anything under the recorded
+number through. It was worse than that: **no count was compared at all.**
+`againstBaseline` asked one question — is this rule recorded for this file — and
+called every hit of a recorded rule older, however many there were and whenever
+they were written.
+
+The gates never made that mistake because they ask a second question:
+`separate` and `judgeStaged` also check whether the violation sits on a line you
+changed, from the staged diff. `looper law` had no line information at all, so it
+could only ask the first half.
+
+Two decision procedures for one question, and the one a person runs was the weaker
+half of the other. There is now one: `againstBaseline` takes a
+`LinesYouTouched` lookup and makes the gate's decision. `separate` is deleted and
+the edit gate calls `againstBaseline` with the lines it already had.
+`looper law` passes `linesChangedSinceHead`, which is `git diff HEAD -U0` per
+file, memoised, so staged and unstaged changes both count — the working tree is
+what that command judges.
+
+Reproduced on a fresh two-file repository, 2026-08-19. A file with one
+`TS-TRUTH:1` and one `TS-TRUTH:2` recorded, then two new `TS-TRUTH:1` added on new
+lines:
+
+| | before | after |
+|---|---|---|
+| what it said | `All 4 of these were already here` | `2 … The other 2 are new and are blocking` |
+| exit code | **0** | **2** |
+
+**The surplus slots are not what let it through, and a test now says so.** Their
+report blamed the twelve spare `TS-TRUTH:1` left behind by splitting a 1,614-line
+file — which is what obeying `TS-DECOMPOSITION:1` produces. A recorded count
+larger than what is in the file now changes no verdict, because the decision asks
+whether you touched the line and a surplus grants nothing. Their second suggested
+fix, shrinking a file's entry whenever looper judges it, is not taken: the
+baseline already shrinks on every `Stop`, `shrinkToward` is `Math.min` so it
+cannot grow, and after this change a stale entry is untidy rather than wrong.
+
+One thing this found in the writing: the first spelling of the test guard read a
+missing count as `0` through `??`, which `TS-TRUTH:1` refused. It was right — a
+fixture that stopped recording the rule would have read as recorded-zero and the
+probe would have proved nothing.
+

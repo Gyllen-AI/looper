@@ -1,5 +1,5 @@
 import type { Out } from "../out.ts";
-import { totalIn, readBaseline, againstBaseline } from "../law/baseline.ts";
+import { totalIn, readBaseline, againstBaseline, linesChangedSinceHead } from "../law/baseline.ts";
 import { formatReport } from "../law/report.ts";
 import { surveyProject } from "../law/project.ts";
 import { misspelledIn } from "../law/misspelled.ts";
@@ -47,7 +47,11 @@ export function law(asked: readonly string[], out: Out): number {
     out.say(`looper: ${survey.files} files, nothing to fix.`);
     return 0;
   }
-  const carried = againstBaseline(readBaseline(here()), survey.violations);
+  const carried = againstBaseline(
+    readBaseline(here()),
+    survey.violations,
+    linesChangedSinceHead(here()),
+  );
   const older = carried.older.length;
   const yours = carried.yours.length;
   out.say(formatReport(survey.violations, yours === 0 ? "all-older" : "some-new"));
