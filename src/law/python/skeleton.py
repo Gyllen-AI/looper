@@ -98,14 +98,13 @@ def shape_of(node, names, depth):
 
 
 def statement_on(tree, line):
-    held = None
     for node in ast.walk(tree):
         if not isinstance(node, ENCLOSING):
             continue
         if getattr(node, "lineno", None) != line:
             continue
-        held = node
-    return held
+        return node
+    return None
 
 
 def statement_around(tree, line):
