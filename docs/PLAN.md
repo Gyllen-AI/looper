@@ -168,6 +168,83 @@ but infrequent", "this is the ecosystem convention", "a beginner would find this
 harsh". None of those is an argument. There is no rule budget, convention is not
 evidence, and severity is paid by the agent.
 
+## The loop: what a project cannot see about itself, and what that costs
+
+A governed project is a chain of parts that hand work to each other. Each part
+logs to itself, and nothing joins them, so the question "is it working" is
+answered by reading several places and guessing. That is expensive for a human
+and ruinous for a model, which pays for every line it reads and cannot skim.
+
+**Internal and external, and the difference is not cosmetic.** An internal check
+is answerable from the checkout alone: does it build, does it type-check, is the
+law clean, is the branch level with its remote. It can fail but it can never be
+`blind`, because nothing it needs can be unreachable. An external check has to
+reach something that can be down: a host, a database, a deployed service, a
+running process. It can be `blind`, and that is information rather than an error.
+
+Keeping them apart is what stops one poisoning the other. A project with a
+network it cannot reach must still be told, precisely, that its own build is
+fine. Reporting `13 checks, 4 failed` when four of them merely could not be asked
+is the report that made somebody stop reading these.
+
+Two metrics, and they measure different things: one internal to the session, one
+external to it.
+
+**The external metric, the loop: can this project be seen at all.** Four numbers, and the last
+is the one that matters.
+
+| number | what it says |
+|---|---|
+| `ok` | checks that answered and passed |
+| `broken` | checks that answered and failed |
+| `blind` | checks that could not be asked at all |
+| `whole for` | how long since the last break |
+
+`blind` is the deepest of the four because it is the one that masquerades as
+health. A check that cannot reach the thing it checks returns nothing, and
+nothing reads like silence, and silence reads like fine. **A verdict is `ok`,
+`broken` or `unknown`, and `unknown` is never `ok`.** A project whose loop is
+`9 ok, 0 broken, 4 blind` is not healthy; it is a project that can see two thirds
+of itself.
+
+**The internal metric, the stall: how much of the session was spent building.** Time writing
+code as a fraction of time working at all. A long stall is not a fact about the
+problem, it is a fact about the environment, and the environment is fixable.
+
+This one needs no self-report, which matters because self-reporting is precisely
+what would be wrong. The hooks already see every tool call, and the fingerprints
+of being stuck are mechanical:
+
+| fingerprint | what it means |
+|---|---|
+| one command shape repeated N times in a window | no single call answers the question |
+| one file read repeatedly with different filters | it is a dump where a view was needed |
+| an edit reverted or rewritten within minutes | acting on a guess, because looking was too expensive |
+| a long run of reads with no write between them | diagnosing rather than building |
+
+**Both metrics rise on their own, which is the point.** A repeat cluster that
+crosses the threshold is not a scolding; it names a shape, and the answer to that
+shape is one more check. The set of checks grows where the stalls actually
+happened rather than where somebody guessed they would, so the same stall does
+not happen twice.
+
+**The scanner is one sweep, not a drawer of tools.** A model asked to run six
+commands runs four. One sweep reports every layer at once, in labels, and every
+label is unique in the project so a single search lands on the check, its output
+and its documentation together.
+
+**Which half is looper's.** Every internal check is looper's, because they are
+true of every project it governs and it can run them with nothing declared. Every
+external check is the project's, because what a chain is made of is the one thing
+looper must not assume. The mechanism is: the sweep, the verdict vocabulary,
+the two metrics, the stall fingerprints, and the injection. A project that declares nothing still gets
+its full internal report, and an external count of zero rather than a silence.
+
+**It is injected, never only a command.** By the principle already stated above,
+a check that fires when somebody remembers to run it is a check that does not
+fire. The failing labels and the two numbers arrive where the reader already is,
+the way the baseline count and the stale rule set warning already do.
+
 ## Deliberately out of scope
 
 - **A code navigator.** No AST index, no call graph, no `find`/`callers`/
