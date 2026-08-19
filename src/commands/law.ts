@@ -76,7 +76,7 @@ export function law(asked: readonly string[], out: Out): number {
     out.say(alreadyHere(older, yours));
   }
   if (survey.unjudged > 0) {
-    out.say(couldNotBeRead(survey.unjudged, survey.files));
+    out.say(couldNotBeRead(survey.unjudged, survey.judged));
   }
   return yours === 0 ? 0 : 2;
 }
