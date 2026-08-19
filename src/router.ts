@@ -25,6 +25,17 @@ const FRESHNESS_EVENTS: readonly HookEvent[] = ["CommitMessage"];
 
 const NO_BRANCHES: readonly string[] = [];
 
+const A_HEADING = /^\s*(—|#)/;
+
+function firstLineOf(text: string): string {
+  for (const line of text.split("\n")) {
+    const said = line.trim();
+    if (said.length === 0 || A_HEADING.test(said)) continue;
+    return said.replace(/^[-*]\s+/, "").replace(/\*\*/g, "").slice(0, 90);
+  }
+  return "";
+}
+
 const EMPTY_MAP: ReadonlyMap<string, readonly string[]> = new Map();
 
 export class Router implements Capability {
@@ -59,6 +70,7 @@ export class Router implements Capability {
         priority: BRANCH_PRIORITY,
         text: branch.text,
         required: false,
+        summary: firstLineOf(branch.text),
       });
     }
 
