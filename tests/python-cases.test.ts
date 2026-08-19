@@ -6,7 +6,7 @@ import { dirname, join } from "node:path";
 
 import { PYTHON_CASES } from "../audit/python-cases.ts";
 import { judgePython } from "../src/law/python/drive.ts";
-import { judgePythonIn } from "../src/law/project.ts";
+import { judgePythonIn } from "../src/law/readers.ts";
 
 const LOOPER = join(import.meta.dirname, "..");
 

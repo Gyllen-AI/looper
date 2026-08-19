@@ -1,9 +1,10 @@
 import { execFileSync } from "node:child_process";
-import { existsSync, readdirSync, statSync } from "node:fs";
+import { existsSync } from "node:fs";
 import { join } from "node:path";
 
 import { RUST_ENGINE_DIR, RUST_ENGINE_NAME, RUST_TIMEOUT_MS } from "../../config.ts";
 import { fieldAt, reasonFrom } from "../../fields.ts";
+import { freshnessOf } from "../engine-age.ts";
 
 export type RustHit = {
   readonly rule: string;
@@ -18,59 +19,22 @@ export type Judged =
   | { readonly kind: "refused"; readonly detail: string }
   | { readonly kind: "found"; readonly hits: readonly RustHit[]; readonly names: readonly string[] };
 
+export function engineIsBuilt(looperRoot: string): boolean {
+  return freshnessOf(builtAt(looperRoot), sourcesOf(looperRoot), manifestsOf(looperRoot)).kind === "current";
+}
+
+function sourcesOf(looperRoot: string): readonly string[] {
+  return [join(looperRoot, RUST_ENGINE_DIR, "src")];
+}
+
+function manifestsOf(looperRoot: string): readonly string[] {
+  return ENGINE_MANIFESTS.map((name) => join(looperRoot, RUST_ENGINE_DIR, name));
+}
+
 function builtAt(looperRoot: string): string {
   return join(looperRoot, RUST_ENGINE_DIR, "target", "release", RUST_ENGINE_NAME);
 }
 
-function newestUnder(at: string): number {
-  let newest = 0;
-  let entries: readonly string[] = [];
-  try {
-    entries = readdirSync(at);
-  } catch {
-    return newest;
-  }
-  for (const entry of entries) {
-    const here = join(at, entry);
-    let held;
-    try {
-      held = statSync(here);
-    } catch {
-      continue;
-    }
-    if (held.isDirectory()) {
-      newest = Math.max(newest, newestUnder(here));
-      continue;
-    }
-    newest = Math.max(newest, held.mtimeMs);
-  }
-  return newest;
-}
-
-function engineWrittenAt(looperRoot: string): number {
-  const engine = join(looperRoot, RUST_ENGINE_DIR);
-  let newest = newestUnder(join(engine, "src"));
-  for (const name of ENGINE_MANIFESTS) {
-    try {
-      newest = Math.max(newest, statSync(join(engine, name)).mtimeMs);
-    } catch {
-      continue;
-    }
-  }
-  return newest;
-}
-
-export function engineIsBuilt(looperRoot: string): boolean {
-  const binary = builtAt(looperRoot);
-  if (!existsSync(binary)) return false;
-  let standing;
-  try {
-    standing = statSync(binary);
-  } catch {
-    return false;
-  }
-  return standing.mtimeMs >= engineWrittenAt(looperRoot);
-}
 
 export function buildEngine(looperRoot: string): Judged {
   try {

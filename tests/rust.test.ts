@@ -401,6 +401,10 @@ function fakeEngine(): { root: string; binary: string; source: string } {
   const source = join(src, "patterns.rs");
   writeFileSync(source, "pub fn f() {}\n");
   writeFileSync(binary, "");
+  for (const name of ["Cargo.toml", "Cargo.lock"]) {
+    writeFileSync(join(root, "vendor", "rust-law", name), "");
+    utimesSync(join(root, "vendor", "rust-law", name), new Date(1000), new Date(1000));
+  }
   return { root, binary, source };
 }
 
@@ -436,11 +440,26 @@ test("a manifest newer than the binary is stale too, because the crates are the 
   const { root, binary } = fakeEngine();
   try {
     const manifest = join(root, "vendor", "rust-law", "Cargo.toml");
-    writeFileSync(manifest, "[package]\nname = \"x\"\n");
     utimesSync(binary, new Date(1000), new Date(1000));
     utimesSync(manifest, new Date(2000), new Date(2000));
 
     assert.equal(engineIsBuilt(root), false, "a changed manifest is a changed engine");
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test("an engine whose manifest has been deleted is rebuilt, not read as age zero", () => {
+  const { root, binary } = fakeEngine();
+  try {
+    rmSync(join(root, "vendor", "rust-law", "Cargo.lock"));
+    utimesSync(binary, new Date(9000), new Date(9000));
+
+    assert.equal(
+      engineIsBuilt(root),
+      false,
+      "the old reader swallowed a missing manifest and called the engine current, so a half-deleted engine judged every Rust file with whatever binary was lying there",
+    );
   } finally {
     rmSync(root, { recursive: true, force: true });
   }

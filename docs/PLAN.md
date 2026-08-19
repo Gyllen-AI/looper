@@ -4266,3 +4266,70 @@ missing count as `0` through `??`, which `TS-TRUTH:1` refused. It was right — 
 fixture that stopped recording the rule would have read as recorded-zero and the
 probe would have proved nothing.
 
+### The C# half arrived clean and unheld, and both drivers swallowed the same failure
+
+`#93` merged: a Roslyn reader for C# and Razor, with the strongest evidence any
+contribution here has carried — 493,083 lines of Newtonsoft.Json and MudBlazor,
+and two rule defects found and fixed before shipping. Three things were left for
+this side, and all three are ours rather than the contributor's: holding someone
+else's work while asking them to do what we could do is the failure the canon
+names.
+
+**`looper law` said no: 9 new blocking problems.** CI runs `npm test` and not
+`looper law`, so they would have landed unremarked. Seven were in
+`src/law/csharp/drive.ts` and mirrored `src/law/rust/drive.ts` line for line —
+`catch { return newest }`, `catch { continue }`, `catch { return false }`. Those
+were baselined debt on the Rust side, which is a record of what we owe, not a
+licence to add a second copy.
+
+Both drivers asked the same question — is the built engine newer than every
+source — and both answered a failure with a value. An unreadable source read as
+age zero, which means a stale engine judges every file with rules nobody can see,
+silently. `src/law/engine-age.ts` now answers it once, for both:
+`freshnessOf(binary, sources, manifests)` returns `current` or `rebuild` **with
+the reason**, and an unreadable anything is a rebuild that names the file. That is
+stricter than what it replaced, and it caught a real gap: a deleted `Cargo.lock`
+used to read as current. A test pins it.
+
+The duplicated staleness code is gone from both drivers, which closed the 7 new
+problems **and** the same 7 baselined on the Rust side. `looper law` went 22 → 7,
+and the 7 that remain are older problems in `audit/shape-probe.ts`.
+
+`csharpRuleFor` returned `Rule | undefined`, which `TS-TYPE:2` refuses. It now
+matches the `Known` union `rustRuleFor` has had all along, and `project.ts` — which
+had its own inline `.find` for the same thing — uses it.
+
+`src/law/project.ts` crossed 500 lines. The half that drives the three language
+readers and turns their answers into violations is its own subject and is now
+`src/law/readers.ts`, 183 lines.
+
+**The network invariant now covers the C# half**, to the shape `#91` set for Rust:
+nothing in our C# source names a connecting type, the package list is exactly the
+three that were argued for, and `NuGet.config` clears every remote source and
+points at `vendor/`. Each was run against a planted fault first — a `TcpClient`
+field, a fourth `.nupkg`, a removed `<clear />`.
+
+**Measured by hand, 2026-08-19, and recorded here because a test cannot do it.**
+The three vendored packages are `.nupkg` archives, so the binaries cannot be
+grepped the way Rust source can. Unpacked all three and searched every one of the
+**114 DLLs** for `Socket`, `TcpClient`, `TcpListener`, `UdpClient`, `HttpClient`,
+`WebRequest`, `WebClient`, `Dns` and `NetworkStream`. **The only `System.Net` type
+referenced anywhere is `WebUtility`** — HTML and URL string encoding, which Roslyn
+uses for XML doc escaping and which cannot open a connection. This is the same
+distinction the Rust test draws for `serde`'s `SocketAddr`. The method works
+because type references survive in IL metadata as strings: `System.IO` and
+`System.Net` both appear.
+
+**A new precondition, named once.** The C# half needs the .NET SDK. Without it six
+tests fail, and they fail saying which — *"the C# reader did not answer, so every
+case below would fail as though the rules were wrong"* — while `looper law` still
+exits 0 and judges everything else. That is fail-open-but-never-fail-silent
+working, and it stays exactly as the contributor built it.
+
+**And I broke looper doing this.** The split created a circular import, `looper`
+would not load, and every hook in the session announced it: *"looper is not
+judging anything in this session … treat every verdict as absent rather than
+clean."* Nothing was judged for the minutes it took to fix. That announcement is
+the only reason it was caught immediately, and it is finding 74's fix earning its
+place a second time.
+

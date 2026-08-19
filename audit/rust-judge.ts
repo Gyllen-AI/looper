@@ -2,7 +2,7 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
-import { judgeRustIn } from "../src/law/project.ts";
+import { judgeRustIn } from "../src/law/readers.ts";
 import { type RustCase } from "./rust-cases.ts";
 
 export type Mismatch = {
