@@ -23,6 +23,22 @@ function firedOn(code: string, named: string | undefined): readonly string[] {
   }
 }
 
+test("the C# reader answers at all, and says why when it does not", () => {
+  const root = mkdtempSync(join(tmpdir(), "looper-cs-"));
+  try {
+    const path = join(root, "Held.cs");
+    writeFileSync(path, `class C { void F() { } }\n`);
+    const said = judgeCsharp(LOOPER, root, [path]);
+    assert.equal(
+      said.kind,
+      "found",
+      `the C# reader did not answer, so every case below would fail as though the rules were wrong. It said: ${said.kind === "found" ? "" : said.detail}`,
+    );
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
 test("every C# case agrees with the rule it was written from", () => {
   const wrong: string[] = [];
   for (const held of CSHARP_CASES) {

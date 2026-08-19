@@ -18,6 +18,9 @@ jobs:
             os: macos-latest
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.x'
       - uses: actions/setup-node@v4
         with:
           node-version: ${{ matrix.node }}
