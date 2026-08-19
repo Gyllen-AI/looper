@@ -40,6 +40,44 @@ The reason is longevity. Each pillar below is a defence against the specific way
 a codebase becomes unmaintainable, and each one costs something today to save
 much more later. That trade is the whole bet.
 
+**A gate is the floor, not the ceiling.** There are three ways to make something
+hold, and they are not equal. They are ranked, and the rank is a design
+instruction rather than a preference:
+
+1. **Impossible.** The wrong state cannot be expressed, so no check exists
+   because none is needed. A generated type cannot diverge from its schema
+   because nobody writes it. A declared check cannot carry a duplicate label
+   because the label *is* the config section name and a file cannot hold the same
+   section twice. Nothing runs, nothing can be skipped, and it costs nothing per
+   turn.
+2. **Gated.** A check refuses it at a moment nobody can route around. Real, but
+   it is code that runs, and code that runs can be argued with, exempted or
+   quietly widened. `tests/invariants.test.ts` refusing a new file that starts a
+   process is this level, and on 2026-08-19 it stopped exactly the thing it was
+   written for.
+3. **Told.** Prose that arrives if there is room. This is the weakest level and
+   it is the one most rules live at.
+
+**The instruction: the more a thing matters, the further up it must live, and
+anything at level 3 is a suggestion.** Measured on 2026-08-19, `doctrine:frontend`
+was dropped for budget 32 times during a session that was almost entirely
+frontend work. Those rules did not fail to persuade. They never arrived, and a
+rule that never arrived is indistinguishable from one that was followed.
+
+**Level 3 also cannot scale, by construction.** A fixed character budget against a
+project that grows means the newest and most specific rules lose to the oldest and
+most general, forever, and the failure is silent. Levels 1 and 2 have no per-turn
+cost and no ceiling: the law already judges every write mechanically without
+spending a character of the budget, which is why the law scales and the doctrine
+does not. So the answer to a project outgrowing its budget is not a larger budget.
+It is moving what matters down into the law, or out of the problem entirely by
+making the wrong state unrepresentable.
+
+**And looper is not exempt from any of it.** It governs itself with its own
+doctrine, its own law and its own invariants, which is why its suite could refuse
+its author. Every claim in this document about what adopters owe is a claim about
+this repository first.
+
 1. **No dead code.** No unreferenced export, no unreachable branch, no
    commented-out block kept "just in case", no stub that returns nothing.
    Dead code is a lie about what the system does, and every future reader pays
