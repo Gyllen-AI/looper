@@ -112,7 +112,7 @@ export const PYTHON_RULES: readonly Rule[] = [
     category: "LOG",
     pass: "fast",
     bans:
-      "`print`, and writing to `sys.stdout` or `sys.stderr` directly, in a file that does not say it starts the program. A `print` whose destination the caller supplied — `print(line, file=out)` — is not this rule, because the caller chose where it went; `file=sys.stdout` and `file=sys.stderr` are, because the module chose",
+      "`print`, and writing to `sys.stdout` or `sys.stderr` directly, anywhere in a file that neither is named `__main__.py` nor holds an `if __name__ == \"__main__\":` block. A file holding that block is exempt **in full**, including code an importer can reach: the guard marks the file, not the lines it runs. A `print` whose destination the caller supplied — `print(line, file=out)` — is not this rule, because the caller chose where it went; `file=sys.stdout` and `file=sys.stderr` are, because the module chose",
     why:
       "what a program prints is its output, and it belongs to whoever ran it. A module that prints has made that decision for every caller it will ever have, including the one piping the output into something else, the one running it as a library inside a web service, and the one who wanted the failure raised rather than described. It is also the most common way a value nobody meant to publish reaches a log file, because printing is how you look at something while you are working and nothing removes it afterwards",
     instead: [
@@ -121,6 +121,7 @@ export const PYTHON_RULES: readonly Rule[] = [
       "a failure is raised, not described: `raise CouldNotSave(order) from error`",
       "printing belongs where the program starts, and this rule steps aside in any file that says so — under `if __name__ == \"__main__\":`, or in a `__main__.py`",
       "take the destination as an argument and the choice returns to the caller: `def dump(rows, file): print(rows, file=file)`",
+      "a file that both starts a program and is imported as a library is two files: the printing belongs in the one nobody imports",
     ],
     valve: { kind: "none" },
   },
