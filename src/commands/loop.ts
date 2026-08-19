@@ -1,6 +1,8 @@
 import type { Out } from "../out.ts";
 import { here } from "../session.ts";
+import { whereTheUserLives } from "../config.ts";
 import { LOOP_FILE, declaredIn } from "../loop/checks.ts";
+import { keep } from "../loop/cache.ts";
 import { ask, tallyOf, type Seen } from "../loop/run.ts";
 
 const PATIENCE_SECONDS = 30;
@@ -38,6 +40,13 @@ export function loop(argv: readonly string[], out: Out): number {
   const seen: Seen[] = [];
   for (const check of declared.checks) seen.push(ask(check, root, PATIENCE_SECONDS));
   const tally = tallyOf(seen);
+  keep(root, whereTheUserLives(), {
+    at: new Date().toISOString(),
+    ok: tally.ok,
+    broken: tally.broken,
+    blind: tally.blind,
+    failing: tally.failing,
+  });
 
   if (terse) {
     if (tally.broken === 0 && tally.blind === 0) return 0;

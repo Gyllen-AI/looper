@@ -15,15 +15,17 @@ class Speaker implements Capability {
   readonly name: string;
   readonly priority: number;
   readonly body: string;
+  readonly must: boolean;
 
-  constructor(name: string, priority: number, body: string) {
+  constructor(name: string, priority: number, body: string, must: boolean) {
     this.name = name;
     this.priority = priority;
     this.body = body;
+    this.must = must;
   }
 
   inject(): readonly Injection[] {
-    return [{ source: this.name, priority: this.priority, text: this.body }];
+    return [{ source: this.name, priority: this.priority, text: this.body, required: this.must }];
   }
 
   hooks(): readonly HookEvent[] {
@@ -71,7 +73,7 @@ const CONTEXT = { root: "/nowhere", budget: 100 };
 
 test("priority decides the order, not registration", () => {
   const run = allocate(
-    [new Speaker("second", 5, "BBB"), new Speaker("first", 0, "AAA")],
+    [new Speaker("second", 5, "BBB", true), new Speaker("first", 0, "AAA", true)],
     CONTEXT,
   );
 
@@ -80,33 +82,33 @@ test("priority decides the order, not registration", () => {
 });
 
 test("a capability with nothing to say costs nothing", () => {
-  const run = allocate([new Silent(), new Speaker("router", 0, "AAA")], CONTEXT);
+  const run = allocate([new Silent(), new Speaker("router", 0, "AAA", true)], CONTEXT);
 
   assert.deepEqual([...run.allocation.contributors], ["router"]);
   assert.equal(run.allocation.text, "AAA");
 });
 
-test("overflow is dropped and the drop is visible", () => {
+test("overflow is dropped and the drop is visible, for what may be dropped", () => {
   const run = allocate(
-    [new Speaker("first", 0, "A".repeat(90)), new Speaker("second", 1, "B".repeat(90))],
+    [new Speaker("first", 0, "A".repeat(90), true), new Speaker("second", 1, "B".repeat(90), false)],
     CONTEXT,
   );
 
   assert.deepEqual([...run.allocation.contributors], ["first"]);
-  assert.deepEqual([...run.allocation.dropped], ["second"]);
+  assert.deepEqual(run.allocation.dropped.map((one) => one.source), ["second"]);
   assert.ok(run.allocation.text.includes("dropped for budget"));
   assert.ok(run.allocation.text.includes("second"));
 });
 
 test("the first contributor is never dropped, and says so when it overflows", () => {
-  const run = allocate([new Speaker("router", 0, "A".repeat(500))], CONTEXT);
+  const run = allocate([new Speaker("router", 0, "A".repeat(500), true)], CONTEXT);
 
   assert.deepEqual([...run.allocation.contributors], ["router"]);
   assert.equal(run.allocation.overflowed, true);
 });
 
 test("a capability that throws is skipped and complained about, never fatal", () => {
-  const run = allocate([new Broken(), new Speaker("router", 1, "AAA")], CONTEXT);
+  const run = allocate([new Broken(), new Speaker("router", 1, "AAA", true)], CONTEXT);
 
   assert.deepEqual([...run.allocation.contributors], ["router"]);
   assert.equal(run.complaints.length, 1);
@@ -114,13 +116,13 @@ test("a capability that throws is skipped and complained about, never fatal", ()
 });
 
 test("the cost is reported in characters", () => {
-  const run = allocate([new Speaker("router", 0, "AAAAA")], CONTEXT);
+  const run = allocate([new Speaker("router", 0, "AAAAA", true)], CONTEXT);
   assert.equal(run.allocation.chars, 5);
 });
 
 test("what each rule set cost is reported, because the author cannot cut what they cannot see", () => {
   const run = allocate(
-    [new Speaker("first", 0, "a".repeat(100)), new Speaker("second", 10, "b".repeat(250))],
+    [new Speaker("first", 0, "a".repeat(100), true), new Speaker("second", 10, "b".repeat(250), true)],
     { root: ".", budget: 9800 },
   );
 

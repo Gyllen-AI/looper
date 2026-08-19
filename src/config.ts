@@ -40,6 +40,12 @@ export const BRANCH_PRIORITY = 10;
 
 export const BASELINE_PRIORITY = 20;
 
+export const LOOP_PRIORITY = 20;
+
+export const STALL_PRIORITY = 30;
+
+export const LOOP_IS_OLD_AFTER_MINUTES = 60;
+
 export const MAP_PATH = ".looper/doctrine/map.toml";
 
 export const DOCTRINE_DIR = ".looper/doctrine";

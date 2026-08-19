@@ -13,6 +13,7 @@ export type Injection = {
   readonly source: string;
   readonly priority: number;
   readonly text: string;
+  readonly required: boolean;
 };
 
 export type Outcome =
