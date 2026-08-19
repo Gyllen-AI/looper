@@ -1,13 +1,33 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
+import { execFileSync } from "node:child_process";
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 
 import { CSHARP_CASES } from "../audit/csharp-cases.ts";
 import { judgeCsharp } from "../src/law/csharp/drive.ts";
+import { reasonFrom } from "../src/fields.ts";
 
 const LOOPER = join(import.meta.dirname, "..");
+
+const SDK_TIMEOUT_MS = 60_000;
+
+function whyTheSdkIsMissing(): string | undefined {
+  try {
+    execFileSync("dotnet", ["--version"], {
+      stdio: ["ignore", "ignore", "ignore"],
+      timeout: SDK_TIMEOUT_MS,
+    });
+    return undefined;
+  } catch (cause) {
+    return `no .NET SDK on this machine, so these say nothing either way (${reasonFrom(cause)})`;
+  }
+}
+
+const MISSING = whyTheSdkIsMissing();
+
+const WITHOUT_DOTNET = MISSING === undefined ? {} : { skip: MISSING };
 
 function firedOn(code: string, named: string | undefined): readonly string[] {
   const root = mkdtempSync(join(tmpdir(), "looper-cs-"));
@@ -23,7 +43,7 @@ function firedOn(code: string, named: string | undefined): readonly string[] {
   }
 }
 
-test("the C# reader answers at all, and says why when it does not", () => {
+test("the C# reader answers at all, and says why when it does not", WITHOUT_DOTNET, () => {
   const root = mkdtempSync(join(tmpdir(), "looper-cs-"));
   try {
     const path = join(root, "Held.cs");
@@ -39,7 +59,7 @@ test("the C# reader answers at all, and says why when it does not", () => {
   }
 });
 
-test("every C# case agrees with the rule it was written from", () => {
+test("every C# case agrees with the rule it was written from", WITHOUT_DOTNET, () => {
   const wrong: string[] = [];
   for (const held of CSHARP_CASES) {
     const fired = firedOn(held.code, held.file).includes(held.rule);
@@ -50,7 +70,7 @@ test("every C# case agrees with the rule it was written from", () => {
   assert.deepEqual(wrong, [], `${wrong.length} of ${CSHARP_CASES.length} cases disagree with their rule`);
 });
 
-test("a line number points at the line somebody has to open", () => {
+test("a line number points at the line somebody has to open", WITHOUT_DOTNET, () => {
   const root = mkdtempSync(join(tmpdir(), "looper-cs-"));
   try {
     const path = join(root, "Held.cs");
@@ -67,7 +87,7 @@ test("a line number points at the line somebody has to open", () => {
   }
 });
 
-test("a Razor line number counts from the top of the Razor file, not the code block", () => {
+test("a Razor line number counts from the top of the Razor file, not the code block", WITHOUT_DOTNET, () => {
   const root = mkdtempSync(join(tmpdir(), "looper-cs-"));
   try {
     const path = join(root, "Held.razor");
@@ -87,7 +107,7 @@ test("a Razor line number counts from the top of the Razor file, not the code bl
   }
 });
 
-test("a line number for async void points at the method, not at its attribute", () => {
+test("a line number for async void points at the method, not at its attribute", WITHOUT_DOTNET, () => {
   const root = mkdtempSync(join(tmpdir(), "looper-cs-"));
   try {
     const path = join(root, "Held.cs");
@@ -107,7 +127,7 @@ test("a line number for async void points at the method, not at its attribute", 
   }
 });
 
-test("a file that will not parse is named rather than passed as clean", () => {
+test("a file that will not parse is named rather than passed as clean", WITHOUT_DOTNET, () => {
   const root = mkdtempSync(join(tmpdir(), "looper-cs-"));
   try {
     const path = join(root, "Held.cs");

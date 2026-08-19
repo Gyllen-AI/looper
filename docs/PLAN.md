@@ -4632,6 +4632,38 @@ and `looper law` says so before it reports anything. `looper init` now names the
 file among the things to commit, which nothing did before: not the README, not
 CONTRIBUTING, not the doctrine.
 
+
+
+### The C# cases failed on a machine with no .NET, which said the wrong thing
+
+#105's own log records `npm test: 511 pass, 6 fail — the six C# cases needing the
+.NET SDK, absent here`. Six red tests on a maintainer's machine, from a
+contribution that had been green in CI, because CI installs the SDK and a laptop
+does not.
+
+Six failures say *these rules are wrong*. The truth was *nothing was asked*. That
+is the same confusion `looper law` had in #96 — the reassuring answer given by
+the command a person actually runs — pointed the other way.
+
+The rule everywhere else here is that a missing engine is named and passes rather
+than reporting every file as clean. `tests/csharp-cases.test.ts` now probes
+`dotnet --version` once when it loads and skips all six with the reason attached
+to each line:
+
+```
+﹣ every C# case agrees with the rule it was written from # no .NET SDK on this
+  machine, so these say nothing either way (spawnSync dotnet ENOENT)
+```
+
+Checked both ways on 2026-08-19: with the SDK, 519 pass and 0 skipped; with
+`dotnet` off `PATH`, 513 pass, 0 fail and 6 skipped.
+
+**It does not hide a broken engine.** The probe asks whether `dotnet` runs at
+all, not whether the reader works. If the SDK is present and the engine will not
+build, the six run and fail as before. The Rust cases have the same shape and
+have never shown it, because `cargo` is on the machine of anyone working here and
+`dotnet` is not.
+
 ### The README said seven Python rules and never mentioned C#
 
 Rewritten 2026-08-19. Three of its claims had gone stale: *"Python, seven rules"*
@@ -4657,4 +4689,3 @@ letters. Box-drawing and block characters are *ambiguous width* in Unicode — s
 fonts render them at two cells, some at one — so a frame's right edge cannot be
 made to line up for every reader, and a frame that is off by one drags the letters
 down with it. The letters alone have no edge to misalign. No frame.
-
