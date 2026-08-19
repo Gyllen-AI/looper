@@ -221,3 +221,79 @@ test("the prescription is named at a path that is actually there", () => {
     rmSync(root, { recursive: true, force: true });
   }
 });
+
+function halved(backend: readonly string[], frontend: readonly string[]): string {
+  const rows = (languages: readonly string[]): string =>
+    languages.length === 0
+      ? "_Nothing found._\n"
+      : `| language | how looper knows |\n|---|---|\n${languages.map((l) => `| ${l} | measured |`).join("\n")}\n`;
+  return `# What this project is built from\n\n## Backend\n\n${rows(backend)}\n## Frontend\n\n${rows(frontend)}`;
+}
+
+test("a language listed only for the backend does not license the interface", () => {
+  const root = project();
+  try {
+    writeFileSync(join(root, STACK_PATH), halved(["TypeScript"], []));
+
+    assert.equal(
+      judged(root, "web/app/page.tsx"),
+      1,
+      "the document says this project has no interface, and an interface file just appeared. A language listed under one half is not a decision about the other: that is how a front end gets built by an agent that only checked whether the language was mentioned somewhere.",
+    );
+    assert.equal(
+      judged(root, "api/src/server.ts"),
+      0,
+      "the same language, in the half that does list it, is the decision the document records",
+    );
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test("a language listed for the half the file is in is allowed", () => {
+  const root = project();
+  try {
+    writeFileSync(join(root, STACK_PATH), halved(["TypeScript"], ["TypeScript"]));
+    assert.equal(judged(root, "web/app/page.tsx"), 0);
+    assert.equal(judged(root, "api/src/server.ts"), 0);
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test("a language listed only for the interface does not license the backend", () => {
+  const root = project();
+  try {
+    writeFileSync(join(root, STACK_PATH), halved([], ["TypeScript"]));
+    assert.equal(judged(root, "api/src/server.ts"), 1);
+    assert.equal(judged(root, "web/app/page.tsx"), 0);
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test("a document with no halves in it still governs both, because somebody wrote it by hand", () => {
+  const root = project();
+  try {
+    writeFileSync(join(root, STACK_PATH), "| language | how looper knows |\n|---|---|\n| TypeScript | ours |\n");
+    assert.equal(judged(root, "api/src/server.ts"), 0);
+    assert.equal(
+      judged(root, "web/app/page.tsx"),
+      0,
+      "a document written before halves existed cannot be read as refusing a half it never mentioned",
+    );
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test("a file in no language is not a claim about either half", () => {
+  const root = project();
+  try {
+    writeFileSync(join(root, STACK_PATH), halved(["TypeScript"], []));
+    assert.equal(judged(root, "web/app/globals.css"), 0);
+    assert.equal(judged(root, "web/index.html"), 0);
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});
