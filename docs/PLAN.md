@@ -4934,3 +4934,45 @@ treats as a placeholder: a real key with slashes splits into parts of 12, 10 and
 18 — all under the 24-character floor, none flagged — while a path still has a
 28-character part that is. It lets the key through *and* keeps the false positive.
 
+### PY-ERROR:2 and TS-ERROR:3 do not disagree, and the text said they might
+
+Adopter issue #119 reported that `PY-ERROR:2` rejects a shape `TS-ERROR:3` allows —
+a handler returning the same answer the normal path already returns — and that the
+Python rule's own `instead` text recommends what it refuses. It framed the choice
+as a decision about what the rule means rather than a defect, and gave the argument
+both ways.
+
+**Measured, and both halves of the report are wrong in the same useful way.**
+2026-08-19, five shapes through each checker:
+
+| shape | Python | TypeScript |
+|---|---|---|
+| the default returned **inside** the `try` | silent | silent |
+| the default returned **before** the `try` | fires | fires |
+| bare `return None` | fires | fires |
+| logged, error not carried | fires | fires |
+| logged, error carried | silent | silent |
+
+**The two languages agree exactly.** The case in `audit/cases.ts` that the report
+quotes as the TypeScript allowance has its `return false` *inside* the `try`; the
+Python code it was compared against returns the default from a check *before* it.
+Different shapes, judged the same way by both rules.
+
+**So the rule does not recommend what it rejects — but the sentence was ambiguous
+enough to read that way**, and that is the real defect. It said *"return it from the
+`try` as well, so the handler is not the only place it appears"*. The second clause
+invites exactly the reading that any other appearance counts. The implementation is
+narrower and deliberate: `answersAlreadyGiven` is passed the try block, so the value
+must already be returned from inside it.
+
+Both texts now say that, and say why the narrower rule is the right one — a value on
+the success path is visibly the answer, while a value in a pre-check is only visibly
+a guard. `TS-ERROR:3` never mentioned this allowance at all, so a TypeScript reader
+who hit it had no hint the legal spelling existed; it has the line now too.
+
+Four cases pin it: the inside-the-`try` form silent and the before-the-`try` form
+firing, in both languages. No checker changed.
+
+**What the reporter actually needed** was one line moved, not a concession and not a
+rule change. Their 43 fixes stand.
+

@@ -150,6 +150,8 @@ export const CASES: readonly Case[] = [
     code: `async function send(): Promise<"ok" | "timed out" | "error"> { try { return "ok"; } catch (error) { if (error instanceof Error && error.name === "AbortError") { return "timed out"; } return "error"; } }` },
   { rule: "TS-ERROR:3", name: "the same answer the normal path gives is allowed", expect: "silent",
     code: `function supported(): boolean { try { if (typeof globalThis.localStorage !== "object") { return false; } return true; } catch (e) { return false; } }` },
+  { rule: "TS-ERROR:3", name: "a default returned before the try is still the handler's own", expect: "fires",
+    code: `function toNumber(v): number { if (v === null) { return 0; } try { return Number(v); } catch (e) { return 0; } }` },
   { rule: "TS-ERROR:3", name: "a value invented only for the failure still fires", expect: "fires",
     code: `function find(id: string) { try { return db.get(id); } catch { return null; } }` },
   { rule: "TS-ERROR:3", name: "the made-up value kept outside the catch", expect: "fires",

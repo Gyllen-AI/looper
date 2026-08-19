@@ -16,6 +16,7 @@ export const STUB_VALUE: Rule = {
     "throw new NotFound(id)",
     "catch (cause) { throw new CouldNotRead(path, cause) }",
     "catch (cause) { logger.warn({ cause }, 'cache unreadable, counting again'); return count(source) }",
+    "if the handler's answer is one the `try` already returns, return it from inside the `try` too — a check before the `try` does not count, because the value has to stand on the success path for a reader to see it is the answer rather than a patch over the failure",
   ],
   valve: { kind: "none" },
 };
