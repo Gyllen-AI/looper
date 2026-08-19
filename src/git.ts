@@ -167,14 +167,14 @@ export type Touched =
   | { readonly kind: "unknown"; readonly why: string }
   | { readonly kind: "lines"; readonly lines: ReadonlySet<number> };
 
-export type Against = "index" | "commit";
+export type Against = "index" | "commit" | "head";
 
 export function stagedLines(root: string, path: string): Touched {
   return changedLines(root, path, "index");
 }
 
 export function changedLines(root: string, path: string, against: Against): Touched {
-  const scope = against === "index" ? ["--cached"] : [];
+  const scope = against === "index" ? ["--cached"] : against === "head" ? ["HEAD"] : [];
   try {
     const diff = ask(root, ["diff", ...scope, "-U0", "--", path]);
     const lines = new Set<number>();

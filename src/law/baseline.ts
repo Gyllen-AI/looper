@@ -7,6 +7,7 @@ import { writeAtomically } from "../atomic.ts";
 import {
   BASELINE_PATH,
 } from "../config.ts";
+import { changedLines, type Touched } from "../git.ts";
 import { parseToml, tableIn } from "../toml.ts";
 import type { Violation } from "./rule.ts";
 
@@ -64,17 +65,44 @@ export type Carried = {
   readonly older: readonly Violation[];
 };
 
+export type LinesYouTouched = (file: string) => Touched;
+
+export const NOTHING_TOUCHED: LinesYouTouched = () => ({
+  kind: "unknown",
+  why: "nobody asked which lines changed",
+});
+
 export function againstBaseline(
   baseline: Baseline,
   violations: readonly Violation[],
+  touched: LinesYouTouched,
 ): Carried {
   const yours: Violation[] = [];
   const older: Violation[] = [];
   for (const violation of violations) {
-    if (isRecorded(baseline, violation.file, violation.rule.id)) older.push(violation);
-    else yours.push(violation);
+    if (!isRecorded(baseline, violation.file, violation.rule.id)) {
+      yours.push(violation);
+      continue;
+    }
+    const changed = touched(violation.file);
+    if (changed.kind === "lines" && changed.lines.has(violation.line)) {
+      yours.push(violation);
+      continue;
+    }
+    older.push(violation);
   }
   return { yours, older };
+}
+
+export function linesChangedSinceHead(root: string): LinesYouTouched {
+  const seen = new Map<string, Touched>();
+  return (file: string): Touched => {
+    const held = seen.get(file);
+    if (held !== undefined) return held;
+    const asked = changedLines(root, file, "head");
+    seen.set(file, asked);
+    return asked;
+  };
 }
 
 export function render(baseline: Baseline): string {
