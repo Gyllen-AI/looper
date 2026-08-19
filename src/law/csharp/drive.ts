@@ -1,5 +1,5 @@
 import { execFileSync } from "node:child_process";
-import { existsSync, readdirSync, statSync } from "node:fs";
+import { existsSync } from "node:fs";
 import { join } from "node:path";
 
 import {
@@ -10,6 +10,7 @@ import {
   CSHARP_TIMEOUT_MS,
 } from "../../config.ts";
 import { fieldAt, reasonFrom } from "../../fields.ts";
+import { freshnessOf } from "../engine-age.ts";
 
 export type CsharpHit = {
   readonly rule: string;
@@ -31,61 +32,22 @@ export type Judged =
       readonly unreadable: readonly Unreadable[];
     };
 
-function builtAt(looperRoot: string): string {
-  return join(looperRoot, CSHARP_ENGINE_DIR, "bin", "Release", "net10.0", CSHARP_ENGINE_NAME);
-}
-
-function newestUnder(at: string): number {
-  let newest = 0;
-  let entries: readonly string[] = [];
-  try {
-    entries = readdirSync(at);
-  } catch {
-    return newest;
-  }
-  for (const entry of entries) {
-    const here = join(at, entry);
-    let held;
-    try {
-      held = statSync(here);
-    } catch {
-      continue;
-    }
-    if (held.isDirectory()) {
-      newest = Math.max(newest, newestUnder(here));
-      continue;
-    }
-    newest = Math.max(newest, held.mtimeMs);
-  }
-  return newest;
-}
-
-function engineWrittenAt(looperRoot: string): number {
-  const engine = join(looperRoot, CSHARP_ENGINE_DIR);
-  let newest = newestUnder(join(engine, "src"));
-  try {
-    newest = Math.max(newest, statSync(join(engine, CSHARP_ENGINE_PROJECT)).mtimeMs);
-  } catch {
-    return newest;
-  }
-  return newest;
-}
-
 export function engineIsHere(looperRoot: string): boolean {
   return existsSync(join(looperRoot, CSHARP_ENGINE_DIR, CSHARP_ENGINE_PROJECT));
 }
 
 export function engineIsBuilt(looperRoot: string): boolean {
-  const binary = builtAt(looperRoot);
-  if (!existsSync(binary)) return false;
-  let standing;
-  try {
-    standing = statSync(binary);
-  } catch {
-    return false;
-  }
-  return standing.mtimeMs >= engineWrittenAt(looperRoot);
+  const engine = join(looperRoot, CSHARP_ENGINE_DIR);
+  return (
+    freshnessOf(builtAt(looperRoot), [join(engine, "src")], [join(engine, CSHARP_ENGINE_PROJECT)])
+      .kind === "current"
+  );
 }
+
+function builtAt(looperRoot: string): string {
+  return join(looperRoot, CSHARP_ENGINE_DIR, "bin", "Release", "net10.0", CSHARP_ENGINE_NAME);
+}
+
 
 export function buildEngine(looperRoot: string): Judged {
   try {

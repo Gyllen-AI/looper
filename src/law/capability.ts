@@ -2,7 +2,7 @@ import { NOT_A_WAY_THROUGH, PYTHON_EXTENSION, RUST_EXTENSION, STACK_PATH } from 
 import { writeAtomically } from "../atomic.ts";
 import { stackOf } from "../stack/read.ts";
 import { stackDocument } from "../stack/write.ts";
-import { isCsharp, judgeCsharpIn, judgePythonIn, judgeRustIn } from "./project.ts";
+import { isCsharp, judgeCsharpIn, judgePythonIn, judgeRustIn } from "./readers.ts";
 import { rustRuleFor } from "./rust/rules.ts";
 import { roleOf, shapeOf } from "./shape.ts";
 import { existsSync, readFileSync } from "node:fs";

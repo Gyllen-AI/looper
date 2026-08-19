@@ -109,6 +109,11 @@ export const CSHARP_RULES: readonly Rule[] = [
   },
 ];
 
-export function csharpRuleFor(id: string): Rule | undefined {
-  return CSHARP_RULES.find((one) => one.id === id);
+export type Known =
+  | { readonly kind: "known"; readonly rule: Rule }
+  | { readonly kind: "unknown" };
+
+export function csharpRuleFor(id: string): Known {
+  const held = CSHARP_RULES.find((one) => one.id === id);
+  return held === undefined ? { kind: "unknown" } : { kind: "known", rule: held };
 }
