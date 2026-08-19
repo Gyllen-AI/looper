@@ -21,6 +21,7 @@ export const USAGE: readonly string[] = [
   "  looper status           what looper injects, and what it costs per turn",
   "  looper serve            the MCP server, on stdin and stdout",
   "  looper law [path...]    judge every file, or only what is under these paths",
+  "  looper loop [--terse]   run this project's checks, one verdict each",
   "  looper adopt            propose a rule this project should follow",
   "  looper report           say a looper rule is wrong, without sending anything",
 ];

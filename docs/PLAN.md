@@ -168,6 +168,207 @@ but infrequent", "this is the ecosystem convention", "a beginner would find this
 harsh". None of those is an argument. There is no rule budget, convention is not
 evidence, and severity is paid by the agent.
 
+## The loop: what a project cannot see about itself, and what that costs
+
+A governed project is a chain of parts that hand work to each other. Each part
+logs to itself, and nothing joins them, so the question "is it working" is
+answered by reading several places and guessing. That is expensive for a human
+and ruinous for a model, which pays for every line it reads and cannot skim.
+
+**Internal and external, and the difference is not cosmetic.** An internal check
+is answerable from the checkout alone: does it build, does it type-check, is the
+law clean, is the branch level with its remote. It can fail but it can never be
+`blind`, because nothing it needs can be unreachable. An external check has to
+reach something that can be down: a host, a database, a deployed service, a
+running process. It can be `blind`, and that is information rather than an error.
+
+Keeping them apart is what stops one poisoning the other. A project with a
+network it cannot reach must still be told, precisely, that its own build is
+fine. Reporting `13 checks, 4 failed` when four of them merely could not be asked
+is the report that made somebody stop reading these.
+
+Two metrics, and they measure different things: one internal to the session, one
+external to it.
+
+**The external metric, the loop: can this project be seen at all.** Four numbers, and the last
+is the one that matters.
+
+| number | what it says |
+|---|---|
+| `ok` | checks that answered and passed |
+| `broken` | checks that answered and failed |
+| `blind` | checks that could not be asked at all |
+| `whole for` | how long since the last break |
+
+`blind` is the deepest of the four because it is the one that masquerades as
+health. A check that cannot reach the thing it checks returns nothing, and
+nothing reads like silence, and silence reads like fine. **A verdict is `ok`,
+`broken` or `unknown`, and `unknown` is never `ok`.** A project whose loop is
+`9 ok, 0 broken, 4 blind` is not healthy; it is a project that can see two thirds
+of itself.
+
+**The internal metric: output over input.** Not code against not-code, which
+counts the wrong things. Input is everything taken in to decide: files read, logs
+tailed, command output, search results. Output is everything produced: code,
+documents, commit messages, the plan itself.
+
+**It is how looper is judged**, not a statistic about a project. A session that
+reads two hundred thousand tokens to produce two is worse than one that reads
+twenty for the same two, and no measure of time spent typing can tell those
+apart. Context is the scarce thing, and input is what spends it.
+
+**The enemy it names precisely is input that produced no new information.** Not
+input as such: reading an unfamiliar system carefully is the work. Reading the
+same file eleven times with different filters is eleven times the input for one
+answer, and it is the second kind the fingerprints already catch. So the target
+is never "read less". It is "never read the same thing twice to learn one fact",
+which is also why the answer to a stall is a capability rather than a discipline.
+
+**The guard, without which this metric teaches the wrong lesson: the target is
+the least input per unit of certainty, never the least input.** Guessing has an
+input cost near zero and is the worst available outcome. Every serious error in
+the session that produced this document came from too little input rather than
+too much: claiming what had not been checked, reading a stale process as the
+current one, treating silence as an answer. A score that rewards reading less
+rewards all three.
+
+So the instruction is not "read less". It is "make one read enough". A verdict
+line that settles a question beats a thousand-line log, and it also beats the
+guess that would have skipped both. Where the two readings conflict, the stricter
+one wins, as everywhere else in this document: read again rather than assert.
+
+It resists the obvious gaming for the same reason. Output produced on too little
+input is wrong, and wrong work returns as diagnosis, which is input, and lands in
+the denominator with interest. The ratio can only be raised honestly by making
+each unit of output need less input to be right the first time, which is the
+whole point of every capability listed below. Time writing
+code as a fraction of time working at all. A long stall is not a fact about the
+problem, it is a fact about the environment, and the environment is fixable.
+
+This one needs no self-report, which matters because self-reporting is precisely
+what would be wrong. The hooks already see every tool call, and the fingerprints
+of being stuck are mechanical:
+
+| fingerprint | what it means |
+|---|---|
+| one command shape repeated N times in a window | no single call answers the question |
+| one file read repeatedly with different filters | it is a dump where a view was needed |
+| an edit reverted or rewritten within minutes | acting on a guess, because looking was too expensive |
+| a long run of reads with no write between them | diagnosing rather than building |
+
+**Both metrics rise on their own, which is the point.** A repeat cluster that
+crosses the threshold is not a scolding; it names a shape, and the answer to that
+shape is one more check. The set of checks grows where the stalls actually
+happened rather than where somebody guessed they would, so the same stall does
+not happen twice.
+
+**The scanner is one sweep, not a drawer of tools.** A model asked to run six
+commands runs four. One sweep reports every layer at once, in labels, and every
+label is unique in the project so a single search lands on the check, its output
+and its documentation together.
+
+**Which half is looper's.** Every internal check is looper's, because they are
+true of every project it governs and it can run them with nothing declared. Every
+external check is the project's, because what a chain is made of is the one thing
+looper must not assume. The mechanism is: the sweep, the verdict vocabulary,
+the two metrics, the stall fingerprints, and the injection. A project that declares nothing still gets
+its full internal report, and an external count of zero rather than a silence.
+
+**It must be injected, and it is not yet.** By the principle already stated
+above, a check that fires when somebody remembers to run it is a check that does
+not fire, so the failing labels and the two numbers belong where the reader
+already is, beside the baseline count. `looper loop` is built and injection is
+not, deliberately, because the two requirements pull against each other and the
+second one has to be argued rather than assumed.
+
+The conflict is real and worth stating: a declared check is a shell line from the
+project's own `.looper/loop.toml`, and running it on a hook would mean a session
+starting is enough to execute a file somebody committed. That is a different
+posture from anything else here, where the only things looper starts are its own
+drivers on its own tree. `tests/invariants.test.ts` holds both halves: the runner
+is named among the files that may start a process, and a second test refuses to
+let the registry reach it, so a hook cannot run a project's line today.
+
+What would close it, when it is built: run declared checks only from an explicit
+invocation, cache the last result with its age, and inject **the cached result**
+rather than running anything. The reader gets the fact where they already are,
+and nothing a project wrote runs because a session opened.
+
+**The stall metric is design only.** Nothing reads the hook stream for repeat
+clusters yet, and no fingerprint is implemented.
+
+## What is missing, ranked by what its absence costs
+
+**None of this is built.** It is a list of capabilities an agent asked for after
+an evening in which each absence was paid for, and it is here so the next
+argument starts from evidence rather than from taste. Each entry carries the cost
+that produced it.
+
+**The investment reflex this list exists to serve.** A tool that only reports is
+half a tool. The other half is knowing when to stop reporting and spend an hour:
+a stall shape seen nine times in one session, or three times a week, is worth
+more than the capability that would end it. That is a calculation, not a feeling,
+and the numbers for it are the ones the stall metric already collects. So the
+same mechanism that names a recurring shape should be able to say **this has cost
+you four hours this month and the thing that ends it is an afternoon**, and say it
+unprompted. An agent will not propose spending an hour on tooling while it is
+being asked for a feature; it needs the arithmetic handed to it.
+
+### 1. The shape of the code, not only its text
+
+The out-of-scope list below excludes a code navigator, and the reason given is
+that the languages have editor tooling that answers location. **That reason is
+about humans. An agent has no editor.**
+
+What the absence costs, measured on 2026-08-19: fifteen minutes establishing
+which of two configuration functions a binary actually called, when both existed
+and both read the same environment variables. A type defined twice because the
+generated one could not be found. A removal that missed two of its own call sites
+across six files, one of which shipped and had to be taken out again the same
+evening.
+
+"Who calls this, and what breaks if I delete it" is the question an agent asks
+most and answers worst, with search and luck.
+
+### 2. Cost, which the law has no opinion about
+
+Every rule here judges correctness. Nothing judges what a thing costs, and waste
+is invisible at the moment it is written, which is the only cheap moment to fix
+it.
+
+Measured the same day: an asset tree holding 44.5 MiB of decoded image to draw
+marks nineteen pixels wide, source art thirty times its drawn size; a poll every
+sixty milliseconds making sixteen round trips a second to learn nothing had
+changed. All of it compiles, type-checks and passes every rule in this document.
+An image whose source is thirty times its draw size is as checkable as a
+swallowed exception, and cheaper to check.
+
+### 3. What can reach what
+
+A content security policy left unset from the commit that created an application
+until somebody went looking. A flag exposing an entire command surface to page
+script, read by nothing. A stored preference that could be neither written nor
+read because one arm of a conversion was never added.
+
+Three findings, one question: **what crosses this boundary, and what is on the
+other side.** Security work is mostly that question, and it is answered today by
+reading files until tired. The edges are declarable and the answer is checkable.
+
+### 4. Evidence produced and thrown away
+
+A `catch {}` is refused here because it deletes evidence. **A log line nobody will
+ever read is the same failure with more steps**, and nothing refuses it. A
+diagnostic written into a process on an end user's machine, reaching no collector
+and no operator, is a swallowed exception that took longer and looked responsible.
+
+### 5. Looking without touching
+
+The seer can see a window and cannot act in it. An agent that needs one control
+toggled to distinguish two hypotheses must ask a person and wait, and the round
+trip costs more than the observation was worth. Whether the answer is letting it
+act is a consent question this document is not ready to settle; the asymmetry is
+recorded because it is paid for regularly.
+
 ## Deliberately out of scope
 
 - **A code navigator.** No AST index, no call graph, no `find`/`callers`/
@@ -1809,6 +2010,33 @@ write, and it costs nothing to collect.
 It also closes a sentence this plan already contains and could not honour: *a
 violation the agent cannot discharge is our defect, recorded as one.* Recorded
 where? Here.
+
+**The same argument reaches what is absent, not only what misfires.** A rule that
+fires wrongly is one kind of defect. A capability that is not there is the other,
+and it is the larger one, because nothing announces it. A human adopter never
+files "a search over this would have saved me an hour"; they spend the hour, and
+the hour leaves no trace. The agent's version of that hour does leave one, in the
+shape the stall metric already reads: one command shape run nine times in forty
+minutes, one file read eleven times with different filters, a test rerun three
+times before it produced data at all. Those are not complaints. Each one names a
+question the toolbox could not answer in a single call, which is a far better
+capability request than a feature wish, because it arrives with the evidence
+attached and the cost already counted.
+
+So a stall cluster that crosses the threshold becomes a proposal, on the same
+route a rule proposal already takes: written down where the adopter can read it
+before anything leaves, and sent only on purpose. What travels is the shape and
+the count, never the project's own material: the shape is "one process-listing
+command, nine times, forty minutes, no write between them" and never the command
+line, the paths or what was being built. A capability the tool lacks is
+discoverable from the shape alone, and the shape is the part that generalises.
+
+Two consequences worth stating. It means the toolbox grows from where adopters
+actually stalled rather than from where anyone guessed they would, which is the
+same evidence discipline the rule set already runs on. And it means an adopter
+who fixes their own stall locally has produced something worth sending, so the
+project half of the loop is not a private workaround but a draft of the next
+capability.
 
 **An agent that cannot commit will ask its human to type the command instead.
 Observed 2026-08-18.** An agent working in a project that had adopted looper hit
@@ -4563,7 +4791,7 @@ excluded: a vendored directory is by definition full of words nobody here wrote.
 
 Verified against the incident itself. A repository whose only prose is *"The
 engine reads the staged text and refuses a key"*, then a commit adding *"Rolled
-out across Base.API, BaseWeb and Base.Shared this week"*:
+out across Contoso.Api, ContosoWeb and Contoso.Widgets this week"*:
 
 ```
 looper: 7 word(s) in what you are about to push appear
@@ -4571,7 +4799,7 @@ nowhere else in this repository as origin/main has it.
 
   Base     docs/plan.md:2
   API      docs/plan.md:2
-  BaseWeb  docs/plan.md:2
+  ContosoWeb  docs/plan.md:2
   Shared   docs/plan.md:2
 ```
 
@@ -4975,4 +5203,59 @@ firing, in both languages. No checker changed.
 
 **What the reporter actually needed** was one line moved, not a concession and not a
 rule change. Their 43 fixes stand.
+
+### `looper loop` shipped, and four things it said about itself
+
+`#122` built the command the loop design proposed. Reviewed by running it, and
+four defects came out — three that `looper law` named, and one the command found
+by lying about itself on its first demonstration.
+
+**A check that never answered reported `ok`.** The first run of a four-check demo
+printed `ok  loop.timeout  spawnSync sh ETIMEDOUT` — a check killed by its own
+patience, counted as healthy, by the command whose whole argument is that
+*unknown is never ok*. `spawnSync` can set `error` and a zero `status` together
+when a process exits at the same moment the timeout fires, and `verdictOf` read
+only the status. It now takes whether the check answered at all, and an
+unanswered check is `blind` when external and `broken` when internal, whatever
+exit code came with it. `verdictOf` is exported so that decision is tested
+directly rather than by racing a process.
+
+**An unreadable `loop.toml` read as a project that declared nothing.** Same class,
+one layer up, in the same pull request: `catch { return no checks }`. A file that
+is absent and a file that cannot be read are different answers, and only one of
+them means *nothing to do*.
+
+**A check that said nothing did not say why.** `${stdout ?? ""}${stderr ?? ""}`
+turned a timeout, a missing shell and a buffer overflow all into `no detail`.
+
+**And the fifth megabyte cap, through the door the check for it did not cover.**
+`#113` added an invariant after that defect was found in four places. It looked
+for `execFileSync` only, and this command uses `spawnSync`. Worse, it asked
+whether a call *reads* stdout by looking for an explicit `stdio` array, and
+`spawnSync` here relies on the default — so even naming `spawnSync` would not
+have caught it. The check is inverted now: a subprocess reads stdout unless it
+says otherwise, across `execFileSync`, `spawnSync` and `execSync`. Run against the
+uncapped call first, where it names `src/loop/run.ts:55`.
+
+### An adopter's own path was on main, and the check for it never runs on a merge
+
+Found while merging `main` into `#122`: `tests/secrets.test.ts` carried a real
+file path from an adopting organisation's C# codebase — a real namespace and a
+real class name — as the fixture for the very test proving a path is not a key. It
+arrived with `#116` and was merged here without anyone noticing. Two of this
+repository's own documents carried three more of that organisation's names, and
+those were written here, quoting what `#97` had itself published.
+
+All of them are replaced with invented names of the same shape. The tests never
+needed the real ones: 535 pass either way. The canon is one line — *nothing
+belonging to any adopting organisation enters this repo* — and it was broken four
+times in one day, twice by the person enforcing it.
+
+**The systemic half is worse than the instances.** `#105` built the check for
+exactly this: at push time, every word in the outgoing commits that appears
+nowhere else in the repository is named. It runs on `git push` from a machine. **A
+pull request merged through GitHub never pushes**, so the one check built to catch
+this class cannot see the route that most changes take. Recorded rather than
+built: the fix is not another local check but a gate on the merge itself, and that
+is a different piece of work with its own evidence to gather.
 

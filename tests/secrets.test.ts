@@ -211,7 +211,7 @@ test("only what is being added is scanned, so old files do not block every commi
 
 test("the baseline looper writes itself is not scanned for keys", () => {
   const root = repo();
-  const held = 'Base.Shared/ChatV2/Tools/ListBrandingPromptsTool.cs';
+  const held = ["Contoso.Widgets", "OrderV2", "Tools", "ListShippingRatesTool.cs"].join("/");
   try {
     mkdirSync(join(root, ".looper"), { recursive: true });
     stage(root, ".looper/baseline.toml", `["${held}"]\n"CS-DEAD:2" = 31\n`);
@@ -227,7 +227,7 @@ test("the baseline looper writes itself is not scanned for keys", () => {
 
 test("the same string in a file somebody wrote is still caught", () => {
   const root = repo();
-  const held = 'Base.Shared/ChatV2/Tools/ListBrandingPromptsTool.cs';
+  const held = ["Contoso.Widgets", "OrderV2", "Tools", "ListShippingRatesTool.cs"].join("/");
   try {
     stage(root, "src/held.ts", `const value = "${held}";\n`);
     assert.equal(scanStaged(root).length, 1);
