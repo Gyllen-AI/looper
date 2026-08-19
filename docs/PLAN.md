@@ -4521,3 +4521,76 @@ every other walk here does. `toolNamed` answered an unparseable payload with an
 empty string, which `TS-ERROR:3` refuses; it returns a named absence and the
 existing `targetOf` path reports the reason, so nothing is lost.
 
+### A word nobody thought of leaves with the push, and now gets named
+
+Adopter issue #97. Before pushing six commits to a public repository, a check
+grepped the diff for the company name and the machine's username and reported
+clean. Two lines in `docs/PLAN.md` named three project directories from a private
+repository. The grep did not look for those, because nobody had thought of them —
+they were found four commits later by a person asking, not by the check.
+
+**A denylist answers one question: does this contain a word I already know is bad.
+Every word nobody thought of passes,** and the list is written by the same person
+who is about to be surprised. `looper report` already has the inverse in
+`leaksInShape`: every word must prove it is safe, and anything unproven is a leak.
+That is why that file can promise it carries nothing of yours.
+
+**The proposal was `looper strangers <range>`, and the trigger is wrong.** A
+command somebody has to remember is the same shape as the grep that failed — it
+depends on a person thinking of it, and the canon has a rule against it by name:
+*the only input is a sentence*. And a commit does not leave the machine. A push
+does. looper already reads `git commit` out of a Bash command line at
+`PreToolUse`; `git push` is the same read.
+
+So it runs at push time, prints once, blocks nothing.
+
+**Measured before building, because the issue was filed without a denominator on
+purpose.** Every word in a merge's added lines that appears nowhere in the
+repository as it stood before, 2026-08-19:
+
+| merged | added lines | strangers |
+|---|---|---|
+| #85 ban text | 44 | 17 |
+| #90 REACT:2 reads types | 183 | 17 |
+| #96 looper law decides like the gate | 156 | 17 |
+| #104 Bash edits are judged | 323 | 30 |
+| #91 vendoring, `vendor/` excluded | 140 | 35 |
+| #91 vendoring, nothing excluded | 330,146 | **15,590** |
+
+Seventeen to thirty words is a five-second read. **Vendoring somebody else's tree
+is the one thing that breaks it**, so `vendor` and `package-lock.json` are
+excluded: a vendored directory is by definition full of words nobody here wrote.
+
+Verified against the incident itself. A repository whose only prose is *"The
+engine reads the staged text and refuses a key"*, then a commit adding *"Rolled
+out across Base.API, BaseWeb and Base.Shared this week"*:
+
+```
+looper: 7 word(s) in what you are about to push appear
+nowhere else in this repository as origin/main has it.
+
+  Base     docs/plan.md:2
+  API      docs/plan.md:2
+  BaseWeb  docs/plan.md:2
+  Shared   docs/plan.md:2
+```
+
+The other three are ordinary English new to a four-line repository — the honest
+caveat is that the noise falls as the vocabulary grows, and looper's own is 7,617
+words at `HEAD`.
+
+**The before-vocabulary is one subprocess.** `git grep -h -o -E` over a revision
+returns every word in that tree: 7,617 words in **57 ms**. The first draft read
+each file with `git show`, which is a subprocess per file.
+
+It lives in the secrets capability rather than a new one, because *what must not
+leave this machine* is already that capability's subject. It mentions and never
+blocks: a new name is usually just new, and a gate that stops a push over a new
+identifier would be switched off within a week.
+
+Two things caught in the writing. A second diff parser was written before noticing
+`stagedAdditions` already had one; there is now `additionsAgainst` beside it and
+both call the same `additionsIn`. And a duplicated type name made `src/git.ts`
+unparseable — `TS-ERROR:8`, caught by looper on the next run rather than by a test,
+which is the rule that #99 and #102 were about doing its job here.
+

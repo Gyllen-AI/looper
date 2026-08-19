@@ -4,10 +4,13 @@ const GIT = "git";
 
 const COMMIT = "commit";
 
+const PUSH = "push";
+
 const TAKES_A_VALUE: readonly string[] = ["-C", "-c", "--git-dir", "--work-tree"];
 
 export type Intent =
   | { readonly kind: "other" }
+  | { readonly kind: "push" }
   | { readonly kind: "commit" };
 
 function words(segment: string): readonly string[] {
@@ -57,6 +60,9 @@ function skipsTheHook(segment: string): boolean {
 export function intentOf(command: string): Intent {
   for (const segment of command.split(SEPARATORS)) {
     if (subcommandOf(segment) === COMMIT) return { kind: "commit" };
+  }
+  for (const segment of command.split(SEPARATORS)) {
+    if (subcommandOf(segment) === PUSH) return { kind: "push" };
   }
   if (words(command).includes(SKIPS_THE_HOOK)) return { kind: "commit" };
   for (const segment of command.split(SEPARATORS)) {
