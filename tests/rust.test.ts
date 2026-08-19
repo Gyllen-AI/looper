@@ -13,13 +13,21 @@ import { bansTheEngineDeclares } from "../src/law/rust/engine-words.ts";
 import { crossingsIn } from "../src/law/rust/boundary.ts";
 import { answeringFor } from "../src/law/project.ts";
 import { engineIsBuilt } from "../src/law/rust/drive.ts";
+import { NO_RUST_ENGINE, WITHOUT_THE_RUST_ENGINE } from "./rust-engine.ts";
 
 const LOOPER_ROOT = join(import.meta.dirname, "..");
 
-test("the Rust half is built, because nothing below judges a line of Rust without it", () => {
+test("the Rust half is built, because nothing below judges a line of Rust without it", WITHOUT_THE_RUST_ENGINE, () => {
   assert.ok(
     engineIsBuilt(LOOPER_ROOT),
-    "vendor/rust-law/target/release/looper-rust is missing or older than vendor/rust-law/src, so every Rust verdict below is the absence of an engine, or a law that has been replaced, rather than the absence of a violation. An ordinary looper run rebuilds it; `npm test` does not, so run one first.",
+    "vendor/rust-law/target/release/looper-rust is missing or older than vendor/rust-law/src, so every Rust verdict below is the absence of an engine, or a law that has been replaced, rather than the absence of a violation.",
+  );
+});
+
+test("a stale engine is built or said out loud, never reported as a wrong rule", () => {
+  assert.ok(
+    engineIsBuilt(LOOPER_ROOT) || NO_RUST_ENGINE !== undefined,
+    "the Rust engine is neither current nor explained, so the tests below are about to fail as though thirty rules were wrong when nothing was asked of them",
   );
 });
 
@@ -82,7 +90,7 @@ test("a Tauri repo is read as a Rust backend with a TypeScript interface", () =>
   }
 });
 
-test("the two halves are judged by their own law and never by each other's", () => {
+test("the two halves are judged by their own law and never by each other's", WITHOUT_THE_RUST_ENGINE, () => {
   const root = tauriProject();
   try {
     const survey = surveyProject(root, "everything", EVERYTHING);
@@ -225,7 +233,7 @@ test("invoke that did not come from tauri is somebody else's function", () => {
   assert.deepEqual([...crossingsIn("src/a.ts", mine, new Set())], []);
 });
 
-test("the boundary is judged across both halves of a real project", () => {
+test("the boundary is judged across both halves of a real project", WITHOUT_THE_RUST_ENGINE, () => {
   const root = tauriProject();
   try {
     writeFileSync(join(root, "src-tauri", "src", "main.rs"), COMMANDS);
@@ -259,7 +267,7 @@ function judgeEditOf(root: string, file: string) {
   });
 }
 
-test("editing a Rust file is judged by the Rust law, not told it is not TypeScript", () => {
+test("editing a Rust file is judged by the Rust law, not told it is not TypeScript", WITHOUT_THE_RUST_ENGINE, () => {
   const root = rustCrate(GUILTY_ONE_LINER);
   try {
     const result = judgeEditOf(root, "src/a.rs");
@@ -312,7 +320,7 @@ test("a Tauri app inside a cargo workspace is still a Tauri app", () => {
   }
 });
 
-test("the boundary and the split both work on a nested layout", () => {
+test("the boundary and the split both work on a nested layout", WITHOUT_THE_RUST_ENGINE, () => {
   const root = workspaceTauri();
   try {
     const survey = surveyProject(root, "everything", EVERYTHING);
@@ -332,7 +340,7 @@ test("the boundary and the split both work on a nested layout", () => {
   }
 });
 
-test("one file that will not parse does not make its whole crate report clean", () => {
+test("one file that will not parse does not make its whole crate report clean", WITHOUT_THE_RUST_ENGINE, () => {
   const root = rustCrate(GUILTY_ONE_LINER);
   try {
     const before = surveyProject(root, "everything", EVERYTHING).violations.map((held) => held.rule.id);

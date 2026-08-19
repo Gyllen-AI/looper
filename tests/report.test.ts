@@ -6,6 +6,7 @@ import { join } from "node:path";
 
 import { buildReport, leaksInShape, wordsIn, withoutComments } from "../src/report/write.ts";
 import { render, shapeAt } from "../src/report/skeleton.ts";
+import { WITHOUT_THE_RUST_ENGINE } from "./rust-engine.ts";
 
 const PRIVATE = `import { acmeBillingGateway } from "@acme/billing-internal";
 
@@ -221,7 +222,7 @@ function rustProject(): string {
   return root;
 }
 
-test("a Rust file gets a report, because the Rust half is judged by rules that can be wrong too", () => {
+test("a Rust file gets a report, because the Rust half is judged by rules that can be wrong too", WITHOUT_THE_RUST_ENGINE, () => {
   const root = rustProject();
   try {
     const written = buildReport({

@@ -9,6 +9,7 @@ import { preCommitScript } from "../src/config.ts";
 import { gitIn as git } from "./helpers.ts";
 import { runInit } from "../src/init.ts";
 import { INSTALLED } from "../src/config.ts";
+import { WITHOUT_THE_RUST_ENGINE } from "./rust-engine.ts";
 
 const NO_PATH: readonly string[] = [];
 
@@ -148,7 +149,7 @@ function startedRust(): string {
   return root;
 }
 
-test("a Rust file at the commit gate is judged as Rust, not as unreadable TypeScript", () => {
+test("a Rust file at the commit gate is judged as Rust, not as unreadable TypeScript", WITHOUT_THE_RUST_ENGINE, () => {
   const root = startedRust();
   try {
     writeFileSync(join(root, "src/b.rs"), CLEAN_RUST);
@@ -172,7 +173,7 @@ test("a Rust file at the commit gate is judged as Rust, not as unreadable TypeSc
 
 const UNPARSEABLE_RUST = "pub fn wrong( -> u8 {\n    let x = ;\n}\n";
 
-test("a crate the Rust half cannot read is said out loud, not passed in silence", () => {
+test("a crate the Rust half cannot read is said out loud, not passed in silence", WITHOUT_THE_RUST_ENGINE, () => {
   const root = startedRust();
   try {
     writeFileSync(join(root, "src/broken.rs"), UNPARSEABLE_RUST);

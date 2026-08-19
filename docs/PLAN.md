@@ -4714,4 +4714,51 @@ The check announced this itself rather than passing quietly, which is the only
 reason it was found within an hour of shipping — fail open, never fail silent,
 earning its place.
 
+### The Rust guard was right to fire and said the wrong thing
+
+Found by #107, which recorded a suite that failed once and was clean after and
+said plainly that it could not explain it. Three sightings across two people. It
+reproduces:
+
+```
+$ touch vendor/rust-law/src/lib.rs
+$ npm test    ->  512 pass, 1 fail
+$ npm test    ->  513 pass, 0 fail
+```
+
+The one failure is `tests/rust.test.ts:19`, a guard asserting the Rust binary is
+newer than `vendor/rust-law/src`. **It is right to exist**: without it a stale
+binary means all thirty Rust rules are tested against the law they replaced and
+every one passes. Anything that moves those mtimes trips it — an edit, or a branch
+checkout.
+
+**It is the verdict that was wrong.** A failure says *these rules are wrong*. The
+truth was *nothing was built*. That is exactly #107's own complaint one layer up,
+and the guard's message admitted the gap in its last sentence: *"an ordinary
+looper run rebuilds it; `npm test` does not, so run one first"* — a step nobody
+knows to take, which is the thing this project's canon names by name.
+
+Skipping, the answer #107 took for C#, is wrong here. The .NET SDK is genuinely
+absent on a machine without it and nothing can be done; `cargo` is present on any
+machine that judges Rust at all, and the fix is one command. Skipping when you
+could simply do it means the largest rule family goes untested after every Rust
+edit.
+
+So `tests/rust-engine.ts` builds it. If the engine is stale it runs the same build
+an ordinary looper run does, and only if *that* fails does it skip, with the
+reason on every line. Measured 2026-08-19: an incremental rebuild after touching
+one source file is **9.14s**, against a suite that otherwise takes about four —
+paid only when the source actually changed.
+
+Nine tests across five files needed the engine and would have failed rather than
+skipped without it. Checked by moving the binary aside and running with `cargo`
+off `PATH`: **five failures left, and all five are seer tests failing for an
+unrelated reason in that artificial environment** — they pass on an ordinary
+machine, and are not touched here.
+
+| | pass | fail | skipped |
+|---|---|---|---|
+| ordinary machine | 515 | 0 | 6 |
+| straight after touching the Rust source | 515 | 0 | 6 |
+| no `cargo`, no binary | 496 | 5 seer only | 20 |
 
