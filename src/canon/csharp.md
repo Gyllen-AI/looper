@@ -22,3 +22,4 @@ in a Razor file, the half of the code the tooling barely looks at.
   takes to be wrong.
 - No comments, for the reason every language here has: names, types and tests
   cannot drift out of date, and prose can.
+- **Logging is `observe/logging`.** Same rules in every language, kept in one place.
