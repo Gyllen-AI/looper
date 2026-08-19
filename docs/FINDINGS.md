@@ -22,7 +22,16 @@ is a suspicion and belongs in the notes at the bottom, not in the list.
 
 ## Open
 
-_Empty. Findings 41 to 105 are closed._
+_Empty._
+
+**All 105 are accounted for, checked 2026-08-19.** 101 entries carry a number;
+the four that do not are explained rather than missing. **26 and 27** were folded
+into finding 30 and cleared with it. **18 and 19** were never written — no commit
+ever added them, so the numbering skips two and nothing is lost. Every other
+finding is marked cleared, except two pairs that are decisions rather than open
+work: **21 and 22**, the startup cost, measured with neither fix paying for
+itself; and **33 and 36**, the vendored-engine gaps, which were reopened as ours
+and then closed by finding 70.
 
 ### 105 · `wrong` — init could add a hook but never repair its own — cleared
 
@@ -2087,7 +2096,7 @@ check now compares what each row *says* against what the rule it names *does*,
 not merely that both exist. It caught a missing row the moment the old table was
 deleted.
 
-### 36 and 33 · gaps in the vendored engine — reopened as ours, 2026-08-18
+### 36 and 33 · gaps in the vendored engine — reopened as ours 2026-08-18, cleared by finding 70
 
 Five known misses, all in code we did not write:
 `Err(_) => "".to_string()`, `panic!("not implemented yet")`, `Option::unwrap`
