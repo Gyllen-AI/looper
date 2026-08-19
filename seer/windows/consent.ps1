@@ -10,7 +10,9 @@ $runspace.Open()
 $runspace.SessionStateProxy.SetVariable('state', $state)
 $pipe.Runspace = $runspace
 [void]$pipe.AddScript({
+    $ErrorActionPreference = 'Continue'
     while ($true) {
+      try {
         $server = New-Object System.IO.Pipes.NamedPipeServerStream(
             'looper-seer', [System.IO.Pipes.PipeDirection]::InOut, 1)
         $server.WaitForConnection()
@@ -18,13 +20,25 @@ $pipe.Runspace = $runspace
             $reader = New-Object System.IO.StreamReader($server)
             $writer = New-Object System.IO.StreamWriter($server)
             $asked = $reader.ReadLine()
-            $answer = 'no'
-            if ($asked -and $state.Armed.Contains($asked)) { $answer = 'yes' }
+            if ($asked -eq 'armed?') {
+                $open = @(Get-Process |
+                    Where-Object { $_.MainWindowTitle -ne '' } |
+                    ForEach-Object { $_.MainWindowTitle } |
+                    Sort-Object -Unique)
+                $answer = @{ armed = @($state.Armed); open = $open } |
+                    ConvertTo-Json -Depth 3 -Compress
+            } else {
+                $answer = 'no'
+                if ($asked -and $state.Armed.Contains($asked)) { $answer = 'yes' }
+            }
             $writer.WriteLine($answer)
             $writer.Flush()
         } finally {
             $server.Dispose()
         }
+      } catch {
+        Start-Sleep -Milliseconds 200
+      }
     }
 })
 [void]$pipe.BeginInvoke()

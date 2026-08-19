@@ -1,4 +1,4 @@
-import { existsSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { delimiter, dirname, join } from "node:path";
 import type { HookSpec } from "./types.ts";
 
@@ -105,7 +105,21 @@ export const COMMIT_GATE_TIMEOUT_SECONDS = 300;
 
 export const SEER_DIR = "vendor/seer";
 
-export const SEER_NAME = "looper-seer";
+export const SEER_CAPTURE = "windows/capture.ps1";
+
+export const WINDOWS_SHELL = "powershell.exe";
+
+const KERNEL_NAMED = "/proc/version";
+
+const WSL_DISTRO = "WSL_DISTRO_NAME";
+
+export function underWsl(): boolean {
+  if (process.platform !== "linux") return false;
+  const named = process.env[WSL_DISTRO];
+  if (named !== undefined && named.length > 0) return true;
+  if (!existsSync(KERNEL_NAMED)) return false;
+  return readFileSync(KERNEL_NAMED, "utf8").toLowerCase().includes("microsoft");
+}
 
 export const SEER_TOOL = "see";
 

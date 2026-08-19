@@ -2,7 +2,14 @@ import { execFileSync } from "node:child_process";
 import { existsSync } from "node:fs";
 import { join } from "node:path";
 
-import { SEER_DIR, SEER_MAX_OUTPUT, SEER_NAME, SEER_TIMEOUT_MS } from "../config.ts";
+import {
+  SEER_CAPTURE,
+  SEER_DIR,
+  SEER_MAX_OUTPUT,
+  SEER_TIMEOUT_MS,
+  WINDOWS_SHELL,
+  underWsl,
+} from "../config.ts";
 import { fieldAt, reasonFrom } from "../fields.ts";
 
 export type State = "rendering" | "minimised" | "blank" | "unknown";
@@ -26,20 +33,87 @@ function stateFrom(said: unknown): State {
 export type Shot =
   | { readonly kind: "not-installed"; readonly platform: string }
   | { readonly kind: "unavailable"; readonly detail: string }
+  | { readonly kind: "unreachable" }
   | { readonly kind: "disarmed" }
   | { readonly kind: "not-found"; readonly named: string }
   | { readonly kind: "seen"; readonly images: readonly Image[]; readonly missing: readonly string[] };
+
+export type Standing =
+  | { readonly kind: "not-installed"; readonly platform: string }
+  | { readonly kind: "unavailable"; readonly detail: string }
+  | { readonly kind: "unreachable" }
+  | { readonly kind: "too-old" }
+  | { readonly kind: "reachable"; readonly armed: readonly string[]; readonly open: readonly string[] };
 
 const DISARMED = 5;
 
 const NOT_FOUND = 3;
 
+const UNREACHABLE = 6;
+
+const TOO_OLD = 7;
+
 export function seerAt(looperRoot: string): string {
-  return join(looperRoot, SEER_DIR, process.platform, SEER_NAME);
+  return join(looperRoot, SEER_DIR, SEER_CAPTURE);
+}
+
+export function looksAtWindows(): boolean {
+  return process.platform === "win32" || underWsl();
 }
 
 export function seerIsInstalled(looperRoot: string): boolean {
-  return existsSync(seerAt(looperRoot));
+  return looksAtWindows() && existsSync(seerAt(looperRoot));
+}
+
+function scriptFor(looperRoot: string): string {
+  const path = seerAt(looperRoot);
+  if (!underWsl()) return path;
+  return execFileSync("wslpath", ["-w", path], { encoding: "utf8" }).trim();
+}
+
+function askedOf(shell: string, looperRoot: string, args: readonly string[]): string {
+  const asked = ["-NoProfile", "-ExecutionPolicy", "Bypass", "-File", scriptFor(looperRoot), ...args];
+  return execFileSync(shell, asked, {
+    encoding: "utf8",
+    timeout: SEER_TIMEOUT_MS,
+    maxBuffer: SEER_MAX_OUTPUT,
+    stdio: ["ignore", "pipe", "ignore"],
+  });
+}
+
+function titlesIn(payload: unknown, field: string): readonly string[] {
+  const held = fieldAt(payload, field);
+  if (!Array.isArray(held)) return [];
+  return held.filter((one) => typeof one === "string");
+}
+
+export function standingWith(shell: string, looperRoot: string): Standing {
+  if (!existsSync(seerAt(looperRoot))) {
+    return { kind: "not-installed", platform: process.platform };
+  }
+  let output = "";
+  try {
+    output = askedOf(shell, looperRoot, ["-Status"]);
+  } catch (cause) {
+    const status = fieldAt(cause, "status");
+    if (status === UNREACHABLE) return { kind: "unreachable" };
+    if (status === TOO_OLD) return { kind: "too-old" };
+    return { kind: "unavailable", detail: reasonFrom(cause) };
+  }
+  let payload: unknown;
+  try {
+    payload = JSON.parse(output);
+  } catch (cause) {
+    return { kind: "unavailable", detail: `it did not answer in JSON (${reasonFrom(cause)})` };
+  }
+  return { kind: "reachable", armed: titlesIn(payload, "armed"), open: titlesIn(payload, "open") };
+}
+
+export function standing(looperRoot: string): Standing {
+  if (!seerIsInstalled(looperRoot)) {
+    return { kind: "not-installed", platform: process.platform };
+  }
+  return standingWith(WINDOWS_SHELL, looperRoot);
 }
 
 function imagesFrom(payload: unknown): readonly Image[] {
@@ -74,25 +148,28 @@ function readAnswer(output: string): Shot {
   return { kind: "seen", images: imagesFrom(payload), missing: missingFrom(payload) };
 }
 
-export function capture(looperRoot: string, window: string): Shot {
-  if (!seerIsInstalled(looperRoot)) {
+export function captureWith(shell: string, looperRoot: string, window: string): Shot {
+  if (!existsSync(seerAt(looperRoot))) {
     return { kind: "not-installed", platform: process.platform };
   }
 
   let output = "";
   try {
-    output = execFileSync(seerAt(looperRoot), ["--window", window], {
-      encoding: "utf8",
-      timeout: SEER_TIMEOUT_MS,
-      maxBuffer: SEER_MAX_OUTPUT,
-      stdio: ["ignore", "pipe", "ignore"],
-    });
+    output = askedOf(shell, looperRoot, ["-Window", window]);
   } catch (cause) {
     const status = fieldAt(cause, "status");
     if (status === DISARMED) return { kind: "disarmed" };
     if (status === NOT_FOUND) return { kind: "not-found", named: window };
+    if (status === UNREACHABLE) return { kind: "unreachable" };
     return { kind: "unavailable", detail: reasonFrom(cause) };
   }
 
   return readAnswer(output);
+}
+
+export function capture(looperRoot: string, window: string): Shot {
+  if (!seerIsInstalled(looperRoot)) {
+    return { kind: "not-installed", platform: process.platform };
+  }
+  return captureWith(WINDOWS_SHELL, looperRoot, window);
 }

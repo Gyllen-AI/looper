@@ -18,26 +18,33 @@ writing the agent's prompts.
 
 **`windows/capture.ps1` — asks yours before every capture.** It connects to the
 consent window over a local pipe, sends the title it was asked for, and stops
-with exit code 5 if the answer is anything but yes. Only then does it capture,
+with exit code 5 if the answer is anything but yes, or 6 if the consent window is
+not running at all. Those are two different facts and an agent that cannot tell
+them apart will tell somebody to tick a box they have already ticked. It also
+answers `armed?`, which returns what is ticked and every window title open, so
+the agent can read the state instead of guessing at it. Only then does it capture,
 and it says beside the picture whether the window was actually rendering:
 `rendering`, `minimised`, or `blank` when the window drew nothing because it
 paints on the graphics card. looper repeats that to the agent, because a picture
 of a minimised window is honest and useless, and an agent will reason from it.
 
-**`linux/looper-seer`** is the shim looper runs when it is running inside WSL and
-the windows are on the Windows side. It passes the title through to
-`capture.ps1` and nothing else.
+There is no third program and no Linux one. The seer looks at Windows windows,
+so it is installed under `windows/` whether looper itself is running on Windows
+or inside WSL beside it; looper reaches PowerShell directly in both cases. A
+shell shim used to sit under `linux/` and translated exit codes on the way back,
+which is exactly where "the consent window is not running" became
+indistinguishable from "that window is not ticked". It is gone.
 
 ## Installing it, on the machine whose screen it is
 
 ```sh
-mkdir -p vendor/seer/linux
-cp seer/linux/looper-seer seer/windows/capture.ps1 vendor/seer/linux/
-chmod +x vendor/seer/linux/looper-seer
+mkdir -p vendor/seer/windows
+cp seer/windows/capture.ps1 vendor/seer/windows/
 ```
 
-looper looks for `vendor/seer/<platform>/looper-seer` and offers its `see` tool
-only when that file exists. Delete it and the tool disappears again.
+looper looks for `vendor/seer/windows/capture.ps1` and offers its `see` tool only
+when that file exists and it is running on Windows or under WSL. Delete it and
+the tool disappears again.
 
 Then start the consent window, and leave it where you can see it:
 
