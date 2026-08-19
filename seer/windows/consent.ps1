@@ -10,7 +10,9 @@ $runspace.Open()
 $runspace.SessionStateProxy.SetVariable('state', $state)
 $pipe.Runspace = $runspace
 [void]$pipe.AddScript({
+    $ErrorActionPreference = 'Continue'
     while ($true) {
+      try {
         $server = New-Object System.IO.Pipes.NamedPipeServerStream(
             'looper-seer', [System.IO.Pipes.PipeDirection]::InOut, 1)
         $server.WaitForConnection()
@@ -34,6 +36,9 @@ $pipe.Runspace = $runspace
         } finally {
             $server.Dispose()
         }
+      } catch {
+        Start-Sleep -Milliseconds 200
+      }
     }
 })
 [void]$pipe.BeginInvoke()
