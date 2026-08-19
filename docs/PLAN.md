@@ -3368,6 +3368,37 @@ test refuses any budget at or above it, because truncation the agent performs is
 truncation looper cannot mark. **So the canon cannot grow. It can only be
 chosen.**
 
+**Measured on 2026-08-20 against Claude Code 2.1.236, because a number this
+load-bearing should not rest on a document.** A `UserPromptSubmit` hook was made
+to emit exactly N characters with a sentinel at each end, and the agent was asked
+to quote the last thirty:
+
+| characters emitted | what arrived |
+|---|---|
+| 500 | whole, both sentinels |
+| 9,999 | whole, both sentinels |
+| 10,000 | whole, both sentinels |
+| 10,001 | **persisted to a file**, 2,000-character preview |
+| 16,001 | persisted to a file |
+| 30,000 | persisted to a file |
+
+**The ceiling is exactly 10,000 and it is real.** `HOOK_OUTPUT_CEILING` is right.
+
+What was not known is what crossing it costs, and it is far worse than
+truncation. The output is not trimmed: it is written to a file and replaced with
+a 2,000-character preview and a path — `k2r=2000` in the binary, the same
+`persisted-output` machinery tool results use. **Overflow is near-total loss, not
+a lost tail.** A constitution of 24,000 characters would have reached the agent
+as 2,000 characters of itself.
+
+So the ceiling was never enforced anywhere. `HOOK_OUTPUT_CEILING` existed only as
+a constant a test compared the budget against, while the allocator emitted
+required contributions whatever their size — and the constitution is required.
+**An adopter whose constitution ran past the budget would have had it silently
+replaced by a preview of itself, by the tool that exists to deliver it.** The
+allocator now cuts to the ceiling itself and says so with the count, because
+9,700 characters and a stated cut beat 2,000 characters and a file path.
+
 Adding 1,050 characters meant finding 1,050 to remove, and the trade is the
 record of what stopped earning its place:
 

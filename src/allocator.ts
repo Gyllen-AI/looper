@@ -1,4 +1,4 @@
-import { INJECTION_SEPARATOR } from "./config.ts";
+import { HOOK_OUTPUT_CEILING, HOOK_PREVIEW_CHARS, INJECTION_SEPARATOR } from "./config.ts";
 import type { Capability, InjectContext, Injection } from "./capability.ts";
 import { reasonFrom } from "./fields.ts";
 
@@ -55,6 +55,24 @@ function overBudgetMarker(chars: number, budget: number): string {
     `budget is ${budget}. Every one of them is below anyway, because a rule that never`,
     `arrived reads exactly like a rule that was followed. Nothing was silently cut.]`,
   ].join(" ");
+}
+
+function clampedMarker(cut: number): string {
+  return [
+    `[looper: ${cut} characters were cut here to stay under the ${HOOK_OUTPUT_CEILING}-character`,
+    `ceiling the hook itself has. Past that ceiling nothing arrives at all but a`,
+    `${HOOK_PREVIEW_CHARS}-character preview and a path to a file, so a cut that is stated keeps`,
+    `far more than one that is not. Ask the doctrine tool for a rule set by name.]`,
+  ].join(" ");
+}
+
+function clamp(text: string): string {
+  if (text.length <= HOOK_OUTPUT_CEILING) return text;
+  const widest = clampedMarker(text.length).length;
+  const room = HOOK_OUTPUT_CEILING - widest - INJECTION_SEPARATOR.length;
+  if (room <= 0) return clampedMarker(text.length).slice(0, HOOK_OUTPUT_CEILING);
+  const kept = text.slice(0, room);
+  return [kept, clampedMarker(text.length - kept.length)].join(INJECTION_SEPARATOR);
 }
 
 export function allocate(
@@ -114,7 +132,7 @@ export function allocate(
   if (dropped.length > 0) parts.push(droppedMarker(dropped));
   if (requiredAlone) parts.push(overBudgetMarker(used, context.budget));
 
-  const text = parts.join(INJECTION_SEPARATOR);
+  const text = clamp(parts.join(INJECTION_SEPARATOR));
   return {
     allocation: {
       text,
