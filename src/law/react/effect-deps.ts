@@ -1,6 +1,6 @@
 import type { Check, Finding, Subject } from "../engine.ts";
 import type { Rule } from "../rule.ts";
-import { lineOfNode, parseSource, walk, type Node } from "../ts/parse.ts";
+import { isNode, lineOfNode, parseSource, walk, type Node } from "../ts/parse.ts";
 import { fieldAt } from "../../fields.ts";
 
 export const LYING_DEPENDENCIES: Rule = {
@@ -35,7 +35,15 @@ function watcherName(node: Node): string | null {
   return typeof name === "string" && WATCHING.includes(name) ? name : null;
 }
 
+const A_TYPE_NOT_A_VALUE: readonly string[] = [
+  "typeAnnotation",
+  "typeParameters",
+  "typeArguments",
+  "returnType",
+];
+
 function skipped(node: unknown, key: string): boolean {
+  if (A_TYPE_NOT_A_VALUE.includes(key)) return true;
   const type = fieldAt(node, "type");
   if (type === "MemberExpression" || type === "OptionalMemberExpression") {
     return key === "property" && fieldAt(node, "computed") !== true;
@@ -74,6 +82,10 @@ function declaredWithin(body: unknown): ReadonlySet<string> {
   walk(body, (held) => {
     if (held.type === "VariableDeclarator") {
       gather(held["id"], found);
+      return;
+    }
+    if (held.type === "CatchClause") {
+      gather(held["param"], found);
       return;
     }
     if (!HOLDS_A_FUNCTION.includes(held.type)) return;
@@ -128,7 +140,33 @@ function boundInThisFile(root: Node): ReadonlySet<string> {
   return found;
 }
 
-function declaredAtModuleScope(root: Node): ReadonlySet<string> {
+function collectStoppingAtFunctions(node: unknown, into: Set<string>): void {
+  if (node === null || typeof node !== "object") return;
+  if (Array.isArray(node)) {
+    for (const held of node) collectStoppingAtFunctions(held, into);
+    return;
+  }
+  if (!isNode(node)) return;
+  if (HOLDS_A_FUNCTION.includes(node.type)) {
+    gather(node["id"], into);
+    return;
+  }
+  if (node.type === "VariableDeclarator") gather(node["id"], into);
+  if (node.type === "CatchClause") gather(node["param"], into);
+  for (const key of Object.keys(node)) {
+    if (key === "loc") continue;
+    collectStoppingAtFunctions(node[key], into);
+  }
+}
+
+function declaredDirectlyIn(node: Node): ReadonlySet<string> {
+  const found = new Set<string>();
+  gather(node["params"], found);
+  collectStoppingAtFunctions(node["body"], found);
+  return found;
+}
+
+function reassignableAtModuleScope(root: Node): ReadonlySet<string> {
   const found = new Set<string>();
   const body = root["body"];
   if (!Array.isArray(body)) return found;
@@ -136,7 +174,7 @@ function declaredAtModuleScope(root: Node): ReadonlySet<string> {
     const exported = fieldAt(statement, "type") === "ExportNamedDeclaration";
     const held = exported ? fieldAt(statement, "declaration") : statement;
     if (fieldAt(held, "type") !== "VariableDeclaration") continue;
-    if (fieldAt(held, "kind") !== "const") continue;
+    if (fieldAt(held, "kind") === "const") continue;
     const declarations = fieldAt(held, "declarations");
     if (!Array.isArray(declarations)) continue;
     for (const one of declarations) gather(fieldAt(one, "id"), found);
@@ -144,23 +182,50 @@ function declaredAtModuleScope(root: Node): ReadonlySet<string> {
   return found;
 }
 
-function boundInsideAFunction(root: Node): ReadonlySet<string> {
-  const found = new Set<string>();
-  walk(root, (node) => {
-    if (!HOLDS_A_FUNCTION.includes(node.type)) return;
-    for (const name of declaredWithin(node)) found.add(name);
-  });
-  return found;
+function leftOutOf(
+  node: Node,
+  visible: ReadonlySet<string>,
+  stable: ReadonlySet<string>,
+): string | null {
+  const args = node["arguments"];
+  if (!Array.isArray(args) || args.length < 2) return null;
+
+  const listed = namesIn(args[1]);
+  const inner = declaredWithin(args[0]);
+
+  for (const used of namesIn(args[0])) {
+    if (listed.has(used) || inner.has(used) || stable.has(used)) continue;
+    if (visible.has(used)) return used;
+  }
+  return null;
 }
 
-function madeOnceForTheWholeFile(root: Node): ReadonlySet<string> {
-  const inside = boundInsideAFunction(root);
-  const found = new Set<string>();
-  for (const name of declaredAtModuleScope(root)) {
-    if (inside.has(name)) continue;
-    found.add(name);
+function judge(
+  node: unknown,
+  visible: ReadonlySet<string>,
+  stable: ReadonlySet<string>,
+  found: Finding[],
+): void {
+  if (node === null || typeof node !== "object") return;
+  if (Array.isArray(node)) {
+    for (const held of node) judge(held, visible, stable, found);
+    return;
   }
-  return found;
+  if (!isNode(node)) return;
+
+  const missing = watcherName(node) === null ? null : leftOutOf(node, visible, stable);
+  if (missing !== null) {
+    found.push({ line: lineOfNode(node), said: missing });
+  }
+
+  const deeper = HOLDS_A_FUNCTION.includes(node.type)
+    ? new Set([...visible, ...declaredDirectlyIn(node)])
+    : visible;
+
+  for (const key of Object.keys(node)) {
+    if (key === "loc") continue;
+    judge(node[key], deeper, stable, found);
+  }
 }
 
 export const lyingDependenciesCheck: Check = {
@@ -170,29 +235,8 @@ export const lyingDependenciesCheck: Check = {
     const parsed = parseSource(subject.file, subject.text);
     if (parsed.kind === "unreadable") return [];
 
-    const bound = boundInThisFile(parsed.root);
-    const stable = stableNames(parsed.root);
-    const madeOnce = madeOnceForTheWholeFile(parsed.root);
     const found: Finding[] = [];
-
-    walk(parsed.root, (node) => {
-      if (watcherName(node) === null) return;
-      const args = node["arguments"];
-      if (!Array.isArray(args) || args.length < 2) return;
-
-      const listed = namesIn(args[1]);
-      const inner = declaredWithin(args[0]);
-      const parameters = namesIn(fieldAt(args[0], "params"));
-
-      for (const used of namesIn(args[0])) {
-        if (listed.has(used) || inner.has(used) || parameters.has(used)) continue;
-        if (stable.has(used) || madeOnce.has(used)) continue;
-        if (!bound.has(used)) continue;
-        found.push({ line: lineOfNode(node) });
-        return;
-      }
-    });
-
+    judge(parsed.root, reassignableAtModuleScope(parsed.root), stableNames(parsed.root), found);
     return found;
   },
 };
