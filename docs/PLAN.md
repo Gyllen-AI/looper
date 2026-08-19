@@ -4406,3 +4406,65 @@ the only reason it was caught immediately, and it is finding 74's fix earning it
 place a second time.
 
 ||||||| parent of b4af769 (C# has no comments either)
+
+### Calibrated against four codebases nobody here wrote
+
+Adopter issue #100, measured 2026-08-19 with looper at `c0f7eb2`. `looper law`
+over zod `3c9ca1d`, excalidraw `e160ff7`, tanstack-query `b8e3559`, VS Code
+`0dac2a8d`, and this repository. Tests included in both line and problem counts.
+
+| | zod | excalidraw | tanstack | vscode | ours |
+|---|---|---|---|---|---|
+| lines of TypeScript | 79,636 | 190,487 | 157,039 | 2,613,789 | 10,765 |
+| problems per 1,000 lines | 128.7 | 67.2 | 45.2 | 47.4 | 20.1 |
+| without `TS-DEAD:2` | 43.4 | 24.4 | 17.8 | 16.2 | 19.9 |
+
+**`TS-DEAD:2` is 61–66% of every problem found in all four**, and 1% of ours only
+because a day was spent moving 1,554 comments into documents beside the code. It
+is the whole distance between this project and every professional TypeScript
+codebase measured. Every other rule can be adopted incrementally; this one cannot
+be adopted at all without a mass strip first, and an adopter should hear that from
+us rather than discover it. That is not a defect — it is what a house rule costs,
+in the sense #101 records.
+
+**Well calibrated**: `TS-DECOMPOSITION:1` lands between 0.28 and 0.54 per 1,000
+lines in all five, including a 2.6-million-line editor. A cap that means the same
+thing at every size is the strongest thing that can be said for a number that was
+picked. `TS-ERROR:3`, `TS-TYPE:5`, `DATA:2` and `TS-LAYER:2` are low everywhere.
+
+**Rules where following them beats the best code in the sample**: `TS-TYPE:3`
+(ours 4.1, zod 19.2, vscode 7.0), `TS-TYPE:4` (ours 0, zod 6.9), `TS-DEAD:1`
+(ours 0, zod 2.5) and `TS-DEAD:4` (ours 0, zod 3.2).
+
+**Where we are the worst in the sample: `TS-TRUTH:1`.** Ours 14.4 per 1,000 lines
+against tanstack 3.2 and VS Code 3.7 across 2.6 million lines. That is not a rule
+problem and it is not being softened: it is achievable at enormous scale and we
+are behind, on 135 lines of ours of which 43 are default parameters. Recorded as
+ours to fix.
+
+**A refinement measured and declined.** The proposal was to exempt `/** */` on an
+exported declaration, on the ground that a machine reads it — editor hover,
+generated documentation — so it is a different object from a `//` note. From the
+issue's own counts it removes 97 of 6,031 comments in zod, 293 of 7,772 in
+excalidraw and 209 of 3,409 in tanstack: **1.6%, 3.8% and 6.1% of the rule.** zod
+goes from 128.7 problems per 1,000 lines to about 127.3.
+
+It is declined because the canon's one existing exception is conjunctive and this
+meets half of it. `looper:allow-secret` is allowed because the commit gate reads
+it on every commit *and so it cannot quietly stop being true*. A JSDoc is read by
+a machine and nothing fails when it drifts — and a stale doc on an export is worse
+than a stale note, because it is shown to callers who cannot check it. The
+refinement costs the rule its one-line statement and buys between 1.6% and 6.1% of
+one rule.
+
+**Two suspicions the reporter tried to falsify and could not.** Both were about
+`TS-TRUTH:1` over-firing: `||` between booleans, classified with the TypeScript
+type checker at **5 of 135 distinct sites (3%)**, and the two-spread clause the
+ban text already calls wider than the harm at **6 of 135 (4%)**. Also found in the
+attempt: looper already ignores `||` used as a condition, which the reporter had
+assumed it did not. Recorded because a rule that survived an attempt to break it
+is worth more than one nobody tried.
+
+The VS Code column was measured over 71% of that codebase — 2,425 of its 8,319
+files could not be parsed at all, which #102 fixed after this was filed.
+
