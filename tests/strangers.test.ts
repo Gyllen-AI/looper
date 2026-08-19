@@ -97,3 +97,34 @@ test("a repository with nothing to compare against says so rather than staying q
     rmSync(root, { recursive: true, force: true });
   }
 });
+
+test("a branch with no upstream still has something to compare against", () => {
+  const bare = mkdtempSync(join(tmpdir(), "looper-remote-"));
+  git(bare, "init", "-q", "--bare");
+  const root = mkdtempSync(join(tmpdir(), "looper-noupstream-"));
+  try {
+    mkdirSync(join(root, "docs"), { recursive: true });
+    git(root, "init", "-q");
+    git(root, "config", "user.email", "t@example.com");
+    git(root, "config", "user.name", "t");
+    writeFileSync(join(root, "docs/plan.md"), "The gate reads the staged text.\n");
+    git(root, "add", "-A");
+    git(root, "commit", "-qm", "first");
+    git(root, "remote", "add", "origin", bare);
+    git(root, "push", "-q", "origin", "HEAD:main");
+    git(root, "checkout", "-q", "-b", "work");
+
+    writeFileSync(join(root, "docs/plan.md"), "The gate reads Base.API and BaseWeb.\n");
+    git(root, "add", "-A");
+    git(root, "commit", "-qm", "second");
+
+    const spoken = said(pushing(root));
+    assert.ok(
+      spoken.includes("BaseWeb"),
+      `a branch with no upstream is the ordinary case for a first push, and git only sets origin/HEAD on a fresh clone. Falling back to it alone means the check gives up exactly when somebody is pushing new work for the first time.\n${spoken}`,
+    );
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+    rmSync(bare, { recursive: true, force: true });
+  }
+});

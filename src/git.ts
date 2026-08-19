@@ -207,6 +207,8 @@ export type Ahead =
 const WHAT_THE_REMOTE_HAS: readonly (readonly string[])[] = [
   ["rev-parse", "--abbrev-ref", "--symbolic-full-name", "@{upstream}"],
   ["rev-parse", "--abbrev-ref", "origin/HEAD"],
+  ["rev-parse", "--abbrev-ref", "origin/main"],
+  ["rev-parse", "--abbrev-ref", "origin/master"],
 ];
 
 export function whatTheRemoteAlreadyHas(root: string): Ahead {
