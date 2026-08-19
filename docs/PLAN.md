@@ -5628,6 +5628,32 @@ that will not parse says the same; a cache that will not read says so and names
 the command that would refresh it. `looper law` caught all three while they were
 being written.
 
+### The ranking was written where nobody reads it
+
+`#127` established that impossible beats gated beats told, and put all 38 lines
+of it in this file. `docs/PLAN.md` is the design record: read on demand, never
+injected. So the finding governed nothing, and the proof is that the canon
+constitution went on saying nothing about it.
+
+The predecessor this tool replaced had the rule in the file read on every single
+message: *"A rule states intent; it does not stop anything. What truly must not
+happen belongs in a gate (lawkeeper, secrets, the config direction rule), never
+in a line here."* Its parenthetical named that project's own gates, which is what
+made it act rather than sound good, and it is the part that cannot be copied.
+
+This canon has exactly three gates, and the line now names them by what they
+refuse: the law refuses the edit (`src/law/capability.ts`, on PostToolUse and on
+commit), the secrets check refuses the commit and the commit message
+(`src/secrets/capability.ts`), the freshness gate refuses a commit that changed
+code a branch governs and left the branch behind (`src/router.ts:91`).
+
+**The cap made it cost a deletion.** `tests/budget.test.ts` allows 14 rules across
+both halves of the always-on tier, and the new line made 15. What paid for it was
+a contradiction already in the file: the writing rule ends "This is the only rule
+about how to write", and two further bullets were also about how to write.
+"Short" is now inside it, whole, one bullet instead of two. That is the cap doing
+the job it was built for, on the author of the line.
+
 ### Two corrections to what merged tonight, one of them to #125
 
 **The adopter was locked out of the tree it was given.** `#128` shipped 22 nested
