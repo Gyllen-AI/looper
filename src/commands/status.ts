@@ -2,7 +2,7 @@ import type { Out } from "../out.ts";
 import { DEV, INJECTION_BUDGET, namedProject, projectRoot, searchPath, whereTheUserLives, type Invocation } from "../config.ts";
 import { NO_SESSION_EVER, lastRun, noteRun, sayWhenHooksRan, worthSayingAtCommit } from "../seen.ts";
 import { AFTER_INIT, USAGE, costLines, describeStep, mapComplaints } from "../announce.ts";
-import { totalIn, readBaseline, againstBaseline } from "../law/baseline.ts";
+import { totalIn, readBaseline } from "../law/baseline.ts";
 import { surveyProject } from "../law/project.ts";
 import { here, currentAllocation } from "../session.ts";
 

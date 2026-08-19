@@ -6,6 +6,7 @@ import { join } from "node:path";
 
 import { countsOf, readBaseline, shrinkToward, totalIn } from "../src/law/baseline.ts";
 import { Law } from "../src/law/capability.ts";
+import { law } from "../src/commands/law.ts";
 import { gitIn as git, first } from "./helpers.ts";
 import { INSTALLED } from "../src/config.ts";
 
@@ -149,6 +150,63 @@ test("a clean project gets no baseline file at all", () => {
     assert.ok(report.steps.some((step) => step.kind === "surveyed-clean"));
     assert.equal(totalIn(readBaseline(root)), 0);
   } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test("looper law and the commit gate answer the same question the same way", () => {
+  const root = legacyRepo();
+  const wasIn = process.cwd();
+  try {
+    const before = readBaseline(root).get("src/orders.ts");
+    const recorded = before === undefined ? undefined : before.get("TS-TRUTH:2");
+    assert.ok(
+      recorded !== undefined && recorded > 0,
+      `the probe needs a rule the file already has recorded, or a second rule masks the result: ${JSON.stringify(before === undefined ? [] : [...before])}`,
+    );
+
+    writeFileSync(join(root, "src/orders.ts"), `const probeOne = process.env.PROBE;\n${LEGACY}`);
+    process.chdir(root);
+
+    const out: string[] = [];
+    const said = law(NO_PATH, { say: (line) => out.push(line), warn: (line) => out.push(line) });
+
+    assert.equal(
+      said,
+      2,
+      `adopter issue #94: a problem written one minute ago on a line that did not exist before reads as pre-existing, because looper law asked only whether the rule is recorded for the file while the gate also asks whether you touched the line. The command a person runs to check their own work must not give the reassuring answer the gate will contradict.\n${out.join("\n")}`,
+    );
+    assert.ok(
+      !out.join("\n").includes("All "),
+      `the count line still claims every problem is older:\n${out.join("\n")}`,
+    );
+  } finally {
+    process.chdir(wasIn);
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test("a recorded count larger than what is in the file changes no verdict", () => {
+  const root = legacyRepo();
+  const wasIn = process.cwd();
+  try {
+    const recorded = readFileSync(join(root, ".looper/baseline.toml"), "utf8");
+    assert.ok(recorded.includes('"TS-TRUTH:2" = 1'), `the fixture stopped recording it: ${recorded}`);
+    writeFileSync(
+      join(root, ".looper/baseline.toml"),
+      `${recorded.replace('"TS-TRUTH:2" = 1', '"TS-TRUTH:2" = 13')}"TS-DECOMPOSITION:1" = 1\n`,
+    );
+    writeFileSync(join(root, "src/orders.ts"), `const probeOne = process.env.PROBE;\n${LEGACY}`);
+    process.chdir(root);
+
+    const out: string[] = [];
+    assert.equal(
+      law(NO_PATH, { say: (line) => out.push(line), warn: (line) => out.push(line) }),
+      2,
+      `adopter issue #94 reported twelve spare slots left behind by obeying TS-DECOMPOSITION:1, and read them as what absorbed the new problem. They are not: the decision asks whether you touched the line, so a surplus grants nothing.\n${out.join("\n")}`,
+    );
+  } finally {
+    process.chdir(wasIn);
     rmSync(root, { recursive: true, force: true });
   }
 });
