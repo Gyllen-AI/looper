@@ -3302,6 +3302,41 @@ Python nobody here wrote before it counted as done. Naming all seven up front wa
 not a promise to build all seven; it was so the gap stayed visible while it was
 open. It was open for a few hours, and the record of each is below.
 
+**`TS-TRUTH:1`'s spread clause is wider than its reason, and three narrowings
+were measured and thrown away. 2026-08-19, adopter issue #84.** The ban text said
+"a spread merge over a defaults object". The code fires on any object literal with
+two or more spreads, whatever is being spread, so `{ ...current, ...patch }` — the
+immutable-update idiom, where neither operand is a defaults source — is refused.
+Reproduced here from their probe.
+
+**Told, not seen:** the 456 sites they were clearing, and that a settings read
+falling back to `{}` was the worst thing that cleanup found. What was seen is the
+probe rerun on this machine and the three attempts below.
+
+Their suggestion is the obvious one — a defaults object is a constant or a literal
+spread first, and spreading a parameter or a local is a copy. Each version of it
+was measured against 1,122 files of npm's own JavaScript, where `main` reports
+4,280:
+
+| what was excused | hits | what it broke |
+|---|---|---|
+| the first spread names anything born inside a function | 4,231 | silenced `{ ...defaults, ...filtered }`, `{ ...defaultOptions, ...sanityCheckOptions }`, `{ ...config.defaultConfig, ...config }` |
+| the same, but member expressions still fire | 4,235 | still silenced local `defaults` |
+| only a parameter is excused | 4,269 | still silenced `{ ...defaultOptions, ...options }` and `{ ...defaultFS, ...fsOption }` |
+
+Every one traded a false positive for a false negative **on the exact pattern the
+rule exists for**. The last failed because a parameter-name set gathered across a
+whole file is not a scope: one function taking `options` silences every
+`{ ...options, … }` in the file. Doing it properly needs real scope resolution,
+which this rule does not have and which is a different piece of work.
+
+So the code is unchanged and the text is. The ban now says any object literal
+spreading two or more things, and says plainly that this is wider than the harm
+because looper cannot tell a defaults source from a copy. `instead` gains the
+field-by-field spelling their own report landed on, and names `[exempt]` for a
+file that is mostly copy-and-patch — one file, one rule, one line, which is what
+that valve is for.
+
 **What `PY-LOG:1`'s guard actually exempts, said out loud. Corrected 2026-08-19,
 adopter issue #80.** The ban text read "in a file that does not say it starts the
 program", which sounds like a claim about the file's role. It is a claim about one
