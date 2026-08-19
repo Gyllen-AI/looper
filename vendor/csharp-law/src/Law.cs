@@ -12,8 +12,28 @@ public static class Law
 
     private static readonly string[] MadeUpAnswers = ["null", "default", "0", "false", "\"\"", "string.Empty"];
 
-    public static IEnumerable<Violation> Judge(string file, SyntaxNode root, bool startsTheProgram)
+    private static readonly string[] CommentKinds = [];
+
+    private const string AllowMarker = "looper:allow-secret";
+
+    private static readonly System.Text.RegularExpressions.Regex ALicence =
+        new("copyright|SPDX|licen[cs]e", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+
+    public static IEnumerable<Violation> Judge(string file, SyntaxNode root, bool startsTheProgram, bool aProgramWroteIt)
     {
+        if (!aProgramWroteIt)
+        {
+            var text = root.SyntaxTree.GetText();
+            foreach (var trivia in root.DescendantTrivia(descendIntoTrivia: true))
+            {
+                if (!IsAComment(trivia)) continue;
+                var at = trivia.GetLocation().GetLineSpan().StartLinePosition;
+                if (at.Line == 0 && ALicence.IsMatch(trivia.ToFullString())) continue;
+                if (IsTheAllowance(trivia, text, at.Character)) continue;
+                yield return At("CS-DEAD:2", file, trivia.GetLocation());
+            }
+        }
+
         foreach (var node in root.DescendantNodes())
         {
             switch (node)
@@ -44,6 +64,21 @@ public static class Law
                     break;
             }
         }
+    }
+
+    private static bool IsAComment(SyntaxTrivia trivia) =>
+        trivia.IsKind(SyntaxKind.SingleLineCommentTrivia)
+        || trivia.IsKind(SyntaxKind.MultiLineCommentTrivia)
+        || trivia.IsKind(SyntaxKind.SingleLineDocumentationCommentTrivia)
+        || trivia.IsKind(SyntaxKind.MultiLineDocumentationCommentTrivia);
+
+    private static bool IsTheAllowance(SyntaxTrivia trivia, Microsoft.CodeAnalysis.Text.SourceText text, int column)
+    {
+        if (!trivia.IsKind(SyntaxKind.SingleLineCommentTrivia)) return false;
+        var written = trivia.ToFullString().TrimStart('/').Trim();
+        if (written != AllowMarker) return false;
+        var line = text.Lines[trivia.GetLocation().GetLineSpan().StartLinePosition.Line].ToString();
+        return line[..Math.Min(column, line.Length)].Trim().Length > 0;
     }
 
     private static Violation At(string rule, string file, SyntaxNode node) => At(rule, file, node.GetLocation());
