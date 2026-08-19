@@ -65,13 +65,36 @@ test("an ordinary function called in a condition is not a hook", () => {
 });
 
 test("an effect that leaves something out is caught", () => {
-  const lying = `const userId = 1;
-function P() {
+  const lying = `function P({ userId }) {
   useEffect(() => {
     load(userId);
   }, []);
 }`;
   assert.equal(count(lyingDependenciesCheck, lying), 1);
+});
+
+test("a module constant is not something an effect can be stale about", () => {
+  const constant = `const userId = 1;
+function P() {
+  useEffect(() => {
+    load(userId);
+  }, []);
+}`;
+  assert.equal(
+    count(lyingDependenciesCheck, constant),
+    0,
+    "this file asserted the opposite until adopter issue #87. A const at module scope is made once for the life of the module, so it cannot change between renders and cannot make an effect stale, which is the whole harm the rule names. Listing it changes nothing at runtime, and this is the rule whose wrong fix hangs the page",
+  );
+});
+
+test("a module let can be reassigned, so it is still something to be stale about", () => {
+  const changeable = `let userId = 1;
+function P() {
+  useEffect(() => {
+    load(userId);
+  }, []);
+}`;
+  assert.equal(count(lyingDependenciesCheck, changeable), 1);
 });
 
 test("an effect that lists what it reads passes", () => {
@@ -95,8 +118,7 @@ test("something the effect makes itself is not something it depends on", () => {
 });
 
 test("useMemo and useCallback are held to the same promise", () => {
-  const lying = `const rate = 0.2;
-function P() {
+  const lying = `function P({ rate }) {
   const total = useMemo(() => price * rate, []);
   return total;
 }`;
