@@ -590,6 +590,31 @@ and costs nothing new, because the parse has happened either way. A file with a
 lock in it should raise `runtime/concurrency`; no path expression will ever say
 that.
 
+**The drop marker is that index already, for the part being dropped.** A
+contribution may carry a `summary`, one line saying what it holds, and the
+allocator prints it beside the size of anything it could not fit:
+
+```
+[looper: 8 contribution(s) dropped for budget. Each is listed with what it holds,
+so this is an index and not a silence:
+  doctrine:data/indexing (1118 chars): Making a query fast before it is slow.
+  doctrine:work/deploy (3997 chars): Getting a change onto the machine that runs it.
+```
+
+The line costs nothing to write: every canon branch already opens with a sentence
+saying what it is for, so the index entry was written the day the branch was. The
+router skips the heading `assembleBranch` prepends, which names the branch a
+second time and says nothing.
+
+This is what pays for making branches droppable. `#125` was right that a rule
+which never arrived reads exactly like a rule that was followed, and a size in
+bytes does not fix that, because a reader cannot tell from `1118 chars` whether
+they needed it. A rule offered by name **and by subject**, with a tool that
+fetches it, is a choice the reader makes. That difference is why the reversal is
+written in `.looper/decisions.md` rather than simply taken, and the entry names
+what has to be true for it to expire: pushing an index and pulling bodies, so
+that nothing is dropped at all.
+
 **Push an index, pull the body.** The constitution already instructs the reader
 to pull the branches their task touches, so pushing whole branches is the
 fallback that spends the budget. Inverted, the per-turn cost stops growing with
@@ -3384,6 +3409,11 @@ to quote the last thirty:
 
 **The ceiling is exactly 10,000 and it is real.** `HOOK_OUTPUT_CEILING` is right.
 
+**The limit is on what the hook writes in total, and a trailing newline is part
+of it.** 9,999 characters followed by a newline is 10,000 bytes and arrives;
+10,000 characters followed by a newline is 10,001 and does not. A hook that
+prints its payload with `echo` spends one of the ten thousand on the newline.
+
 What was not known is what crossing it costs, and it is far worse than
 truncation. The output is not trimmed: it is written to a file and replaced with
 a 2,000-character preview and a path — `k2r=2000` in the binary, the same
@@ -5704,3 +5734,51 @@ Both commits carried their reasoning in code comments, which `TS-DEAD:2` refused
 on the first run here. The reasoning is above instead, which is what that rule's
 own `instead` list says to do.
 
+
+## NODE:1 read a regular expression as a shell
+
+Found by looper refusing its own commit. `A_SENTENCE.exec(gathered.join(" "))`
+in `src/router.ts` was reported as *building a command for the operating system
+by pasting values into it* — the callee is named `exec`, and `.join()` counts as
+pasting, so a regular expression matching a wrapped line looked exactly like a
+shell call.
+
+**Run over 1,068 JavaScript files nobody here wrote** — every `.js`, `.mjs` and
+`.cjs` under the machine's global `node_modules`, `.min.js` excluded — the rule
+fired three times, and **all three were the same false positive**:
+
+```
+ip-address/dist/ipv6.js:116  const subnet = constants6.RE_SUBNET_STRING.exec(address);
+ip-address/dist/ipv6.js:131  const zone = constants6.RE_ZONE_STRING.exec(address);
+ip-address/dist/ipv4.js:59   const subnet = constants.RE_SUBNET_STRING.exec(address);
+```
+
+Zero true positives. A security rule that fires only on innocent code teaches the
+reader to skip it, which is the failure this repo calls *judge a rule on
+precision, never severity*.
+
+**The first fix was not enough and the corpus said so.** Tracing the receiver to
+a `RegExpLiteral` catches `AT_END.exec(...)`, but the three real hits keep their
+regular expression behind a namespace, so the receiver is `constants6.RE_SUBNET_
+STRING` and there is nothing in the file to trace.
+
+What holds without naming a module: a call to `exec` or `execSync` through a
+member reaches a shell only when the receiver is a plain identifier that does not
+resolve to a regular expression. A module is bound to one name — `cp.exec`,
+`childProcess.exec` — while a regular expression is very often two deep.
+
+Checking provenance directly was tried first and abandoned: it needs the literal
+`"node:child_process"`, and `tests/invariants.test.ts` refuses any file
+containing it that is not one of the six allowed to start a process. That guard
+is right, and a rule about shells is not a file that should be starting one.
+
+After: **0 hits in the same 1,068 files**, 0 in looper's own 176. Both real
+shapes still fire and both regular expressions stay silent:
+
+```
+a.ts:4  exec("ls " + dir);
+a.ts:5  childProcess.exec(`ls ${dir}`);
+```
+
+Four cases in `audit/cases.ts` hold it, one of them the nested-namespace shape
+the corpus supplied.

@@ -84,3 +84,34 @@ test("everything fits, and nothing is said about budget at all", () => {
   assert.equal(said.overflowed, false);
   assert.doesNotMatch(said.text, /budget/i);
 });
+
+test("a branch the router could not fit is offered by name and by what it holds", () => {
+  const branches = ["alpha", "beta", "gamma", "delta"];
+  const said = allocate(
+    [
+      speaking([
+        { source: "router", priority: 0, text: "c".repeat(80), required: true },
+        ...branches.map((name, at) => ({
+          source: `doctrine:${name}`,
+          priority: 10 + at,
+          text: "b".repeat(400),
+          required: false,
+          summary: `what ${name} is for`,
+        })),
+      ]),
+    ],
+    { root: "/nowhere", budget: 600 },
+  ).allocation;
+
+  assert.ok(said.dropped.length > 0, "four branches of 400 chars fit in 600 and nothing was dropped");
+  for (const one of said.dropped) {
+    assert.ok(
+      said.text.includes(one.source),
+      `${one.source} was dropped and its name never reached the reader`,
+    );
+    assert.ok(
+      one.summary === undefined || said.text.includes(one.summary),
+      `${one.source} was dropped with a summary that never reached the reader. PR #124 counted doctrine:frontend going over the side 32 times in one session: a branch offered by name and by what it holds is a choice, a branch that vanishes is the failure that test names`,
+    );
+  }
+});

@@ -3,7 +3,7 @@ import type { Rule } from "../rule.ts";
 import { lineOfNode, parseSource, walk, type Node } from "../ts/parse.ts";
 import { isCallTo } from "../ts/nodes.ts";
 import { fieldAt } from "../../fields.ts";
-import { anyTraced, valuesBoundIn, type Bindings } from "../ts/bindings.ts";
+import { anyTraced, tracedFrom, valuesBoundIn, type Bindings } from "../ts/bindings.ts";
 
 export const BUILT_COMMAND: Rule = {
   id: "NODE:1",
@@ -21,6 +21,20 @@ export const BUILT_COMMAND: Rule = {
 };
 
 const SHELLING: readonly string[] = ["exec", "execSync"];
+
+function isARegExp(held: unknown): boolean {
+  const type = fieldAt(held, "type");
+  if (type === "RegExpLiteral") return true;
+  return type === "NewExpression" && fieldAt(fieldAt(held, "callee"), "name") === "RegExp";
+}
+
+function reachesAShell(node: Node, bindings: Bindings): boolean {
+  const callee = fieldAt(node, "callee");
+  if (fieldAt(callee, "type") !== "MemberExpression") return true;
+  const object = fieldAt(callee, "object");
+  if (fieldAt(object, "type") !== "Identifier") return false;
+  return !tracedFrom(object, bindings).some(isARegExp);
+}
 
 const SPAWNING: readonly string[] = ["spawn", "spawnSync", "execFile", "execFileSync"];
 
@@ -98,6 +112,7 @@ export const builtCommandCheck: Check = {
     walk(parsed.root, (node) => {
       const shelling = isCallTo(node, SHELLING);
       if (!shelling && !isCallTo(node, SPAWNING)) return;
+      if (shelling && !reachesAShell(node, bindings)) return;
       const args = node["arguments"];
       if (!Array.isArray(args)) return;
       const spawningAShell = !shelling && isAShell(args[0]);
