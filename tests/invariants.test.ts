@@ -61,6 +61,7 @@ const MAY_SPAWN: readonly string[] = [
   "law/python/drive.ts",
   "law/csharp/drive.ts",
   "seer/drive.ts",
+  "loop/run.ts",
 ];
 
 test("only the named files may start another process, and each says what it starts", () => {
@@ -72,6 +73,19 @@ test("only the named files may start another process, and each says what it star
       `${file} can start another process and is not on the list. Starting a process is only as safe as the thing being started, so every one lives in a named file and the list is short enough to read: ${MAY_SPAWN.join(", ")}.`,
     );
   }
+});
+
+test("the loop runner starts only what this project declared, and never on a hook", () => {
+  const text = readFileSync(join(ROOT, "src", "loop", "run.ts"), "utf8");
+  assert.ok(
+    text.includes("check.run"),
+    "the loop runner must start the project's own declared line and nothing it composed itself",
+  );
+  const wiring = readFileSync(join(ROOT, "src", "registry.ts"), "utf8");
+  assert.ok(
+    !wiring.includes("loop/run.ts") && !wiring.includes("commands/loop.ts"),
+    "the loop runner is not reachable from a hook: a project's file may not be run because a session started",
+  );
 });
 
 test("the seer starts a shell, and only ever hands it looper's own script", () => {

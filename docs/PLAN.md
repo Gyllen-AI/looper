@@ -240,10 +240,28 @@ looper must not assume. The mechanism is: the sweep, the verdict vocabulary,
 the two metrics, the stall fingerprints, and the injection. A project that declares nothing still gets
 its full internal report, and an external count of zero rather than a silence.
 
-**It is injected, never only a command.** By the principle already stated above,
-a check that fires when somebody remembers to run it is a check that does not
-fire. The failing labels and the two numbers arrive where the reader already is,
-the way the baseline count and the stale rule set warning already do.
+**It must be injected, and it is not yet.** By the principle already stated
+above, a check that fires when somebody remembers to run it is a check that does
+not fire, so the failing labels and the two numbers belong where the reader
+already is, beside the baseline count. `looper loop` is built and injection is
+not, deliberately, because the two requirements pull against each other and the
+second one has to be argued rather than assumed.
+
+The conflict is real and worth stating: a declared check is a shell line from the
+project's own `.looper/loop.toml`, and running it on a hook would mean a session
+starting is enough to execute a file somebody committed. That is a different
+posture from anything else here, where the only things looper starts are its own
+drivers on its own tree. `tests/invariants.test.ts` holds both halves: the runner
+is named among the files that may start a process, and a second test refuses to
+let the registry reach it, so a hook cannot run a project's line today.
+
+What would close it, when it is built: run declared checks only from an explicit
+invocation, cache the last result with its age, and inject **the cached result**
+rather than running anything. The reader gets the fact where they already are,
+and nothing a project wrote runs because a session opened.
+
+**The stall metric is design only.** Nothing reads the hook stream for repeat
+clusters yet, and no fingerprint is implemented.
 
 ## Deliberately out of scope
 

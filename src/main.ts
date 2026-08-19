@@ -5,6 +5,7 @@ import { hook } from "./commands/hook.ts";
 import { init } from "./commands/init.ts";
 import { inject } from "./commands/inject.ts";
 import { law } from "./commands/law.ts";
+import { loop } from "./commands/loop.ts";
 import { report } from "./commands/report.ts";
 import { serve } from "./commands/serve.ts";
 import { status } from "./commands/status.ts";
@@ -28,6 +29,7 @@ function run(argv: readonly string[]): number {
   if (command === "status") return status(out);
   if (command === "serve") return serve(out);
   if (command === "law") return law(rest, out);
+  if (command === "loop") return loop(rest, out);
   if (command === "adopt") return adopt(rest, out);
   if (command === "report") return report(rest, out);
   usage();
