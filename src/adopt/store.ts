@@ -1,8 +1,12 @@
+import { ADOPTED_HEADER } from "../stubs.ts";
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 
 import { writeAtomically } from "../atomic.ts";
-import { ADOPTED_HEADER, ADOPTED_PATH, ADOPTING_PATH } from "../config.ts";
+import {
+  ADOPTED_PATH,
+  ADOPTING_PATH,
+} from "../config.ts";
 import { parseToml, stringsAt, tableIn } from "../toml.ts";
 import { isShape, type Adopted } from "./shapes.ts";
 

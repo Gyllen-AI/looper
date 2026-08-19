@@ -77,6 +77,69 @@ export const PYTHON_RULES: readonly Rule[] = [
     valve: { kind: "none" },
   },
   {
+    id: "PY-SECURITY:1",
+    category: "SECURITY",
+    pass: "fast",
+    bans:
+      "handing the operating system a command built by pasting values into it — `os.system`, `os.popen`, `subprocess.getoutput` and `getstatusoutput`, and `subprocess` called with `shell=True`",
+    why:
+      "the text goes to a shell, and a shell reads punctuation as instructions. A value holding a semicolon stops being a filename and becomes a second command, running with everything your program may do. It does not take an attacker: a file somebody named `report;rm -rf ~.csv` is enough. Python makes this the path of least resistance, because `shell=True` is one keyword away and the argument-list form needs the command split up",
+    instead: [
+      "`subprocess.run([\"convert\", source, target], check=True)` — the arguments stay arguments and are never read as instructions",
+      "a pipeline is two `Popen` calls joined by `stdout`, not one string with a `|` in it",
+      "if a shell feature is genuinely needed, build the line only from words you wrote, never from one that arrived",
+      "`shlex.quote` is a repair for a design that already went wrong; an argument list needs no quoting at all",
+    ],
+    valve: { kind: "none" },
+  },
+  {
+    id: "PY-SECURITY:2",
+    category: "SECURITY",
+    pass: "fast",
+    bans:
+      "building a database query by pasting values into the text of it — an f-string, a `+`, a `%` or `.format(...)` handed to `execute`, `executemany`, `executescript` or `text`",
+    why:
+      "whatever the value contains becomes part of the instruction. Somebody typing the right thing into a search box can read your whole database, or empty it. This is the single most exploited mistake in software and has been for twenty-five years. Every Python database driver already does this safely, and the safe spelling is shorter than the unsafe one",
+    instead: [
+      "`cursor.execute(\"SELECT * FROM orders WHERE id = ?\", (wanted,))` — the driver keeps the value out of the instruction",
+      "with psycopg the placeholder is `%s` and the values are a tuple, which is not the same as `%` formatting: `cursor.execute(\"... id = %s\", (wanted,))`",
+      "a table or column name cannot be a parameter, so choose it from a list you wrote rather than pasting one that arrived",
+      "with SQLAlchemy: `session.execute(text(\"... id = :id\"), {\"id\": wanted})`",    ],
+    valve: { kind: "none" },
+  },
+  {
+    id: "PY-LOG:1",
+    category: "LOG",
+    pass: "fast",
+    bans:
+      "`print`, and writing to `sys.stdout` or `sys.stderr` directly, in a file that does not say it starts the program. A `print` whose destination the caller supplied — `print(line, file=out)` — is not this rule, because the caller chose where it went; `file=sys.stdout` and `file=sys.stderr` are, because the module chose",
+    why:
+      "what a program prints is its output, and it belongs to whoever ran it. A module that prints has made that decision for every caller it will ever have, including the one piping the output into something else, the one running it as a library inside a web service, and the one who wanted the failure raised rather than described. It is also the most common way a value nobody meant to publish reaches a log file, because printing is how you look at something while you are working and nothing removes it afterwards",
+    instead: [
+      "`logger = logging.getLogger(__name__)` at the top, then `logger.info(\"saving %s\", order)` — the caller decides where it goes and whether it goes anywhere",
+      "hand the words back and let the caller print them: `return f\"saved {order}\"`",
+      "a failure is raised, not described: `raise CouldNotSave(order) from error`",
+      "printing belongs where the program starts, and this rule steps aside in any file that says so — under `if __name__ == \"__main__\":`, or in a `__main__.py`",
+      "take the destination as an argument and the choice returns to the caller: `def dump(rows, file): print(rows, file=file)`",
+    ],
+    valve: { kind: "none" },
+  },
+  {
+    id: "PY-LOG:3",
+    category: "LOG",
+    pass: "fast",
+    bans:
+      "a value baked into a log message instead of carried beside it — an f-string, a `%`, a `.format()` or a concatenation handed to a logger, in a file that imports `logging` or `structlog`. `logger.info(\"saved %s\", order)` is not this rule: the standard library defers that formatting and the value stays a separate argument",
+    why:
+      "a message with the value inside it is a sentence, and every line is a different sentence. The only way to find them later is to guess the wording, and the value cannot be filtered, counted or grouped by anything. Formatting eagerly also does the work even when the level is off, which is the second cost and the smaller one",
+    instead: [
+      "`logger.info(\"saved\", extra={\"order\": order})` — the message is a constant and the value is a field",
+      "`logger.info(\"saved %s\", order)` — the standard library's own lazy form, formatted only if something is listening",
+      "a value nobody will ever query does not need to be in the line at all",
+    ],
+    valve: { kind: "none" },
+  },
+  {
     id: "PY-LAYER:1",
     category: "LAYER",
     pass: "fast",

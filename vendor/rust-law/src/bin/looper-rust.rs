@@ -53,7 +53,13 @@ fn print_shape(path: &Path, line: usize, depth: usize) {
         }
     };
     match shape_at(&source, line, depth) {
-        Ok(shape) => println!("{{\"shape\":{}}}", shape_as_json(&shape)),
+        Ok(located) => {
+            let began = match located.starts_at {
+                Some(line) => format!(",\"startsAt\":{line}"),
+                None => String::new(),
+            };
+            println!("{{\"shape\":{}{}}}", shape_as_json(&located.shape), began)
+        }
         Err(error) => println!("{{\"error\":\"{}\"}}", escape(&said(&error))),
     }
 }

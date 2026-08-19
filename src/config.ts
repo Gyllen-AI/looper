@@ -52,76 +52,20 @@ export const GOVERNS_SECTION = "governs";
 
 export const DOCTRINE_README_PATH = ".looper/doctrine/README.md";
 
-export const CONSTITUTION_STUB = "";
-
-export const MAP_STUB = `# Ties each doctrine branch to the code it governs. A branch is injected only
-# when the files this session has touched land in its area, which is what lets a
-# large doctrine stay affordable.
-#
-# The name on the left is the branch: a file called <name>.md beside this one.
-# The canon ships its own half under the same names, and yours is added to it.
-#
-# looper already knows its own: the TypeScript law arrives when you touch a .ts
-# file, the Rust law when you touch a .rs file, the Python law when you touch a
-# .py file, and these doctrine rules when you edit this folder. Naming a branch here replaces what looper knows for that one
-# branch, and leaves the rest alone.
-#
-# [governs]
-# law = ["src/**/*.ts"]
-# frontend = ["ui/**", "components/**"]
-
-[governs]
-`;
-
-export const DOCTRINE_README_STUB = `# Your project's doctrine
-
-looper injects \`constitution.md\` from this folder on every prompt, after the
-rules it ships with. Branch files beside it load only when you touch the area
-they govern, per \`map.toml\`.
-
-**This README is never injected. Every other file here is, exactly as written,**
-so nothing in them is free and there are no comments to hide notes in. Notes
-belong here.
-
-## constitution.md
-
-The constitution is the rules that hold **no matter what you are working on**.
-That is what the name means here, and it is why it is not named after a subject
-the way the other files are: everything else in this folder loads only when you
-touch the area it covers, and this one is read on every single message.
-
-It starts empty on purpose, and empty costs nothing. looper already carries the
-rules that are true for any project, so this file is only for what is true for
-*yours*.
-
-looper ships rules about writing rules, and they arrive whenever you edit this
-folder — read them before adding a line here. The shortest of them: **a new line
-has to say what it replaces.** A line earns its place if the model would not
-already do it. Good lines sound like:
-
-    Money amounts are integers of the smallest unit. Never a float.
-    Ask before changing anything a customer can see.
-
-Lines that restate what it already does make it hedge more, not less:
-
-    Write clean code.
-    Be thorough.
-
-Keep it short. Ten lines is a lot.
-
-## Branch files
-
-When a rule only matters while doing one kind of work, put it in a branch
-instead, and map that branch to the files it governs. Name the file after the
-branch: \`frontend.md\` for the \`frontend\` entry in \`map.toml\`.
-
-A rule anchored to something that actually went wrong, with the date, is
-followed. The same rule as a general principle is skimmed.
-`;
-
 export const LAW_PATH = "law.toml";
 
-export const JUDGED_EXTENSIONS: readonly string[] = [".ts", ".tsx", ".mts", ".cts", ".rs", ".py"];
+export const JUDGED_EXTENSIONS: readonly string[] = [
+  ".ts",
+  ".tsx",
+  ".mts",
+  ".cts",
+  ".js",
+  ".jsx",
+  ".mjs",
+  ".cjs",
+  ".rs",
+  ".py",
+];
 
 export const RUST_EXTENSION = ".rs";
 
@@ -155,7 +99,6 @@ export const PYTHON_TIMEOUT_MS = 60_000;
 
 export const STACK_PATH = "CURRENTSTACK.md";
 
-
 export const HOOK_TIMEOUT_SECONDS = 30;
 
 export const COMMIT_GATE_TIMEOUT_SECONDS = 300;
@@ -180,14 +123,11 @@ export const ADOPTED_PATH = ".looper/adopted.toml";
 
 export const ADOPTING_PATH = ".looper/adopting.toml";
 
-export const ADOPTED_HEADER = `# Rules this project adopted, and the evidence that earned each one.
-#
-# Nothing here was approved by opinion. A rule only landed once it caught real
-# code in this project, every place it caught was rewritten, and the project
-# still worked afterwards. The lines under evidence are where it used to happen.
-#
-# Delete an entry to drop the rule. It only ever blocked new code, so dropping
-# one costs nothing already written.`;
+export const DECISIONS_PATH = ".looper/decisions.md";
+
+export const DECISIONS_TOOL = "decisions";
+
+export const DECISIONS_PRIORITY = 30;
 
 export const RECALL_PATH = ".looper/recall.md";
 
@@ -195,27 +135,9 @@ export const RECALL_TOOL = "recall";
 
 export const RECALL_PRIORITY = 30;
 
-export const RECALL_HEADER = `# What this project has learned
-
-Written by the agent, read by every future session. Committed on purpose: a note
-nobody else can see is a note nobody can correct, and a wrong one is worse than
-none because it is believed.
-
-Delete an entry the moment it stops being true.`;
-
 export const SECRETS_ALLOW_PATH = ".looper/secrets.allow";
 
 export const ALLOW_MARKER = "looper:allow-secret";
-
-export const SECRETS_ALLOW_STUB = `# Values looper is allowed to see in this repository, one per line, each with the
-# reason above it. This file is the review: adding a line here is a decision
-# somebody can read in a diff, which is why there is no flag to skip the check.
-#
-# It starts empty, and empty is the right size. A value belongs here only when it
-# is genuinely safe to publish — a documented example key, a fixture that was
-# never issued. A real credential is taken out of the file and changed at whoever
-# issued it, because every clone already has the old one.
-`;
 
 export const SKIP_SUFFIXES: readonly string[] = [
   ".png", ".jpg", ".jpeg", ".gif", ".webp", ".ico", ".pdf", ".woff", ".woff2",
@@ -251,9 +173,9 @@ export function commitMessageScript(entry: string): string {
 export const HOOK_MARKER = "looper hook PreCommit";
 
 export function gitHookEntryFor(invocation: Invocation): string {
-  if (invocation.kind === "dev") return "node ./src/main.ts";
+  if (invocation.kind === "dev") return `node ${fromRoot(DEV_ENTRY)}`;
   if (invocation.kind === "local") return LOCAL_FROM_ROOT;
-  if (invocation.kind === "inside") return `node ./${scriptUnder(invocation.at)}`;
+  if (invocation.kind === "inside") return `node ${fromRoot(scriptUnder(invocation.at))}`;
   return INSTALLED_ENTRY;
 }
 
@@ -274,13 +196,6 @@ export function preCommitScript(entry: string): string {
     "",
   ].join("\n");
 }
-
-export const BASELINE_HEADER = `# Problems that were already here when looper arrived. They are not forgiven and
-# they are not exceptions: they are a list of work outstanding, and it can only
-# get shorter. looper refuses any new problem, and any problem on a line you
-# touch, so this shrinks wherever anyone does anything.
-#
-# Delete a line here once you have fixed it, or let looper shrink it for you.`;
 
 export const NOT_A_WAY_THROUGH = `Asking a person to run this command instead is not a way through: the same rules apply to their commit. If the rule is wrong here, run \`looper report\` — it writes the case for changing it, and CONTRIBUTING.md has the three routes out.`;
 
@@ -325,13 +240,13 @@ export type Launch = { readonly command: string; readonly args: readonly string[
 
 export function launchFor(invocation: Invocation): Launch {
   if (invocation.kind === "dev") {
-    return { command: "node", args: [`${DEV_SCRIPT}`] };
+    return { command: "node", args: [fromRoot(DEV_ENTRY)] };
   }
   if (invocation.kind === "local") {
     return { command: LOCAL_FROM_ROOT, args: [] };
   }
   if (invocation.kind === "inside") {
-    return { command: "node", args: [`$CLAUDE_PROJECT_DIR/${scriptUnder(invocation.at)}`] };
+    return { command: "node", args: [fromRoot(scriptUnder(invocation.at))] };
   }
   return { command: INSTALLED_ENTRY, args: [] };
 }
@@ -378,8 +293,6 @@ export const DEV: Invocation = { kind: "dev" };
 export function inside(at: string): Invocation {
   return { kind: "inside", at };
 }
-
-const DEV_SCRIPT = "$CLAUDE_PROJECT_DIR/src/main.ts";
 
 const INSTALLED_ENTRY = "looper";
 
@@ -438,8 +351,14 @@ export const LOCAL_BIN = "node_modules/.bin/looper";
 
 export const SHIM = "bin/looper.js";
 
+const DEV_SCRIPT = `$CLAUDE_PROJECT_DIR/${SHIM}`;
+
 export function scriptUnder(at: string): string {
   return `${at}/${SHIM}`;
+}
+
+function fromRoot(relative: string): string {
+  return `./${relative}`;
 }
 
 export function entryFor(invocation: Invocation): string {

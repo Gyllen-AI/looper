@@ -16,6 +16,7 @@ itself — so this is what the rule can see rather than every file on disk.
 | language | how looper knows |
 |---|---|
 | TypeScript | package.json, and 140 file(s) |
+| JavaScript | package.json, and 1 file(s) — `bin/looper.js`, the shim that starts looper before its TypeScript can be read |
 | Python | 1 file(s) on disk |
 
 ## Frontend

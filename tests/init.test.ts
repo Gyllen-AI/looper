@@ -152,6 +152,84 @@ test("a project with its own .mcp.json gets looper's server added to it", () => 
   }
 });
 
+test("an entry looper wrote with a path that no longer works is corrected, not called wired", () => {
+  const root = scratch();
+  try {
+    writeFileSync(
+      join(root, ".mcp.json"),
+      JSON.stringify(
+        {
+          mcpServers: {
+            theirs: { command: "their-server" },
+            looper: {
+              type: "stdio",
+              command: "node",
+              args: ["$CLAUDE_PROJECT_DIR/vendor/looper/bin/looper.js", "serve"],
+              env: { THEIRS: "kept" },
+            },
+          },
+        },
+        null,
+        2,
+      ),
+    );
+
+    const report = runInit(root, LOCAL, NO_PATH);
+    const held: unknown = JSON.parse(readFileSync(join(root, ".mcp.json"), "utf8"));
+    const servers = Object.getOwnPropertyDescriptor(held, "mcpServers")?.value;
+    const mine = Object.getOwnPropertyDescriptor(servers, "looper")?.value;
+
+    assert.deepEqual(
+      Object.getOwnPropertyDescriptor(mine, "args")?.value,
+      [...launchFor(LOCAL).args, "serve"],
+      "looper left its own stale entry in place, so the tools stay missing and init reports success",
+    );
+    assert.equal(
+      Object.getOwnPropertyDescriptor(mine, "command")?.value,
+      launchFor(LOCAL).command,
+    );
+    assert.deepEqual(
+      Object.getOwnPropertyDescriptor(mine, "env")?.value,
+      { THEIRS: "kept" },
+      "looper owns how it is launched and nothing else in its entry",
+    );
+    assert.ok(
+      Object.getOwnPropertyDescriptor(servers, "theirs") !== undefined,
+      "another project's server was dropped by a repair that should not have touched it",
+    );
+    assert.equal(
+      report.steps.filter((step) => step.kind === "mcp-corrected").length,
+      1,
+      "the repair happened without being reported, which is the same silence the stale entry had",
+    );
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test("an entry that already launches what looper would write is left exactly alone", () => {
+  const root = scratch();
+  try {
+    const launch = launchFor(LOCAL);
+    writeFileSync(
+      join(root, ".mcp.json"),
+      JSON.stringify(
+        { mcpServers: { looper: { type: "stdio", command: launch.command, args: [...launch.args, "serve"] } } },
+        null,
+        2,
+      ),
+    );
+    const before = readFileSync(join(root, ".mcp.json"), "utf8");
+
+    const report = runInit(root, LOCAL, NO_PATH);
+
+    assert.equal(readFileSync(join(root, ".mcp.json"), "utf8"), before);
+    assert.equal(report.steps.filter((step) => step.kind === "mcp-corrected").length, 0);
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
 test("a command the hooks cannot reach is said out loud, not left looking wired", () => {
   const root = scratch();
   try {
@@ -160,6 +238,42 @@ test("a command the hooks cannot reach is said out loud, not left looking wired"
     assert.ok(
       report.steps.some((step) => step.kind === "entry-unreachable"),
       "the hooks name a command that is nowhere on PATH. They look right in the settings file and do nothing at all, which is the one outcome init exists to prevent.",
+    );
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test("the project that is looper is reached as its own source, not as a command that is not there", () => {
+  const root = scratch();
+  try {
+    mkdirSync(join(root, "bin"), { recursive: true });
+    writeFileSync(join(root, "bin", "looper.js"), "");
+    writeFileSync(join(root, "package.json"), JSON.stringify({ name: "looper" }, null, 2));
+    mkdirSync(join(root, "src"), { recursive: true });
+    writeFileSync(join(root, "src", "main.ts"), "");
+
+    const reached = reachedFrom(root);
+    assert.deepEqual(
+      reached,
+      DEV,
+      "looper's own project was reached as an installed command, which is not on PATH there, so its own tools never start",
+    );
+
+    const report = runInit(root, reached, NO_PATH);
+    const held: unknown = JSON.parse(readFileSync(join(root, ".mcp.json"), "utf8"));
+    const servers = Object.getOwnPropertyDescriptor(held, "mcpServers")?.value;
+    const mine = Object.getOwnPropertyDescriptor(servers, "looper")?.value;
+
+    assert.equal(Object.getOwnPropertyDescriptor(mine, "command")?.value, "node");
+    assert.deepEqual(
+      Object.getOwnPropertyDescriptor(mine, "args")?.value,
+      ["./src/main.ts", "serve"],
+      "the entry launches something other than the source sitting right there",
+    );
+    assert.ok(
+      !report.steps.some((step) => step.kind === "entry-unreachable"),
+      "init said the command it wrote cannot be found, in the one project where the source is certainly there",
     );
   } finally {
     rmSync(root, { recursive: true, force: true });

@@ -18,6 +18,38 @@ LAUNDERED_NAMESPACE = "PY-LAYER:1"
 
 UNNAMED_FAILURE = "PY-ERROR:3"
 
+PRINTS_ITS_OWN_OUTPUT = "PY-LOG:1"
+
+VALUE_IN_THE_MESSAGE = "PY-LOG:3"
+
+LOG_LEVELS = frozenset(
+    {"debug", "info", "warning", "warn", "error", "exception", "critical", "fatal", "log"}
+)
+
+LOGGING_MODULES = frozenset({"logging", "structlog"})
+
+A_BUILT_COMMAND = "PY-SECURITY:1"
+
+A_BUILT_QUERY = "PY-SECURITY:2"
+
+QUERYING = frozenset({"execute", "executemany", "executescript", "text"})
+
+NUMBERS = frozenset({"int", "float"})
+
+SQL_WORDS = frozenset(
+    {"select", "insert", "update", "delete", "drop", "from", "where", "into", "values"}
+)
+
+ALWAYS_A_SHELL = frozenset({"system", "popen", "getoutput", "getstatusoutput"})
+
+SHELL_ON_REQUEST = frozenset({"run", "call", "check_call", "check_output", "Popen"})
+
+PASTING_METHODS = frozenset({"format", "join"})
+
+TERMINAL_WRITES = frozenset({"write", "writelines"})
+
+TERMINAL_HANDLES = frozenset({"stdout", "stderr"})
+
 SAYS_NOTHING = frozenset({"Exception", "BaseException"})
 
 MUTABLE_BUILDERS = frozenset(
@@ -34,6 +66,179 @@ def does_nothing(body):
                 continue
         return False
     return True
+
+
+def destination_of(node):
+    for given in node.keywords:
+        if given.arg == "file":
+            return given.value
+    return None
+
+
+def is_a_terminal_handle(held):
+    if not isinstance(held, ast.Attribute) or held.attr not in TERMINAL_HANDLES:
+        return False
+    return isinstance(held.value, ast.Name) and held.value.id == "sys"
+
+
+def is_pasted(held):
+    if isinstance(held, ast.JoinedStr):
+        return any(isinstance(one, ast.FormattedValue) for one in held.values)
+    if isinstance(held, ast.BinOp):
+        return isinstance(held.op, (ast.Add, ast.Mod))
+    if isinstance(held, ast.Call) and isinstance(held.func, ast.Attribute):
+        return held.func.attr in PASTING_METHODS
+    return False
+
+
+def written_parts(held):
+    if isinstance(held, ast.Constant):
+        return held.value if isinstance(held.value, str) else ""
+    if isinstance(held, ast.JoinedStr):
+        return " ".join(written_parts(one) for one in held.values)
+    if isinstance(held, ast.BinOp):
+        return written_parts(held.left) + " " + written_parts(held.right)
+    if isinstance(held, ast.Call) and isinstance(held.func, ast.Attribute):
+        return written_parts(held.func.value)
+    return ""
+
+
+def looks_like_sql(text):
+    words = {one.strip(",;()").lower() for one in text.split()}
+    return len(words & SQL_WORDS) >= 2
+
+
+def is_a_number_again(held):
+    if not (isinstance(held, ast.Call) and isinstance(held.func, ast.Name)):
+        return False
+    if held.func.id != "str" or not held.args:
+        return False
+    inner = held.args[0]
+    return isinstance(inner, ast.Call) and isinstance(inner.func, ast.Name) and inner.func.id in NUMBERS
+
+
+def is_only_marks(held):
+    if isinstance(held, ast.List):
+        return bool(held.elts) and all(
+            isinstance(one, ast.Constant) and one.value == "?" for one in held.elts
+        )
+    if isinstance(held, ast.BinOp) and isinstance(held.op, ast.Mult):
+        return is_only_marks(held.left) or is_only_marks(held.right)
+    return False
+
+
+def carries_nothing_sayable(held):
+    if held is None:
+        return False
+    if isinstance(held, ast.Constant):
+        return not isinstance(held.value, str)
+    if is_a_number_again(held):
+        return True
+    if isinstance(held, ast.Call) and isinstance(held.func, ast.Attribute) and held.func.attr == "join":
+        joined = held.args[0] if held.args else None
+        if is_only_marks(joined):
+            return True
+        if isinstance(joined, (ast.GeneratorExp, ast.ListComp)):
+            return is_a_number_again(joined.elt)
+        return False
+    return False
+
+
+def varying_parts(held):
+    if isinstance(held, ast.JoinedStr):
+        return [one.value for one in held.values if isinstance(one, ast.FormattedValue)]
+    if isinstance(held, ast.BinOp):
+        return [one for one in (held.left, held.right) if not isinstance(one, ast.Constant)]
+    if isinstance(held, ast.Call):
+        return list(held.args)
+    return []
+
+
+def names_that_carry_nothing(tree):
+    said = {}
+    for node in ast.walk(tree):
+        if not isinstance(node, ast.Assign) or len(node.targets) != 1:
+            continue
+        target = node.targets[0]
+        if not isinstance(target, ast.Name):
+            continue
+        safe = carries_nothing_sayable(node.value)
+        said[target.id] = said.get(target.id, True) and safe
+    return {name for name, safe in said.items() if safe}
+
+
+def builds_a_query(node, settled):
+    if not isinstance(node.func, ast.Attribute) or node.func.attr not in QUERYING:
+        return False
+    given = node.args[0] if node.args else None
+    if not is_pasted(given):
+        return False
+    if not looks_like_sql(written_parts(given)):
+        return False
+    parts = varying_parts(given)
+    if not parts:
+        return False
+    return not all(
+        (isinstance(one, ast.Name) and one.id in settled) or carries_nothing_sayable(one)
+        for one in parts
+    )
+
+
+def asks_for_a_shell(node):
+    for given in node.keywords:
+        if given.arg != "shell":
+            continue
+        return not (isinstance(given.value, ast.Constant) and given.value.value is False)
+    return False
+
+
+def hands_the_system_a_line(node):
+    if not isinstance(node.func, ast.Attribute):
+        return False
+    called = node.func.attr
+    if called in ALWAYS_A_SHELL:
+        return True
+    if called not in SHELL_ON_REQUEST:
+        return False
+    return asks_for_a_shell(node)
+
+
+def builds_a_command(node):
+    if not hands_the_system_a_line(node):
+        return False
+    given = node.args[0] if node.args else None
+    return is_pasted(given)
+
+
+def writes_to_the_terminal(node):
+    if isinstance(node.func, ast.Name):
+        if node.func.id != "print":
+            return False
+        sent = destination_of(node)
+        return sent is None or is_a_terminal_handle(sent)
+    if not isinstance(node.func, ast.Attribute):
+        return False
+    if node.func.attr not in TERMINAL_WRITES:
+        return False
+    return is_a_terminal_handle(node.func.value)
+
+
+def says_it_starts_the_program(node):
+    if not isinstance(node, ast.If) or not isinstance(node.test, ast.Compare):
+        return False
+    test = node.test
+    if len(test.ops) != 1 or not isinstance(test.ops[0], ast.Eq):
+        return False
+    sides = [test.left, test.comparators[0]]
+    named = {one.id for one in sides if isinstance(one, ast.Name)}
+    values = {one.value for one in sides if isinstance(one, ast.Constant)}
+    return "__name__" in named and "__main__" in values
+
+
+def starts_the_program(tree, path):
+    if path.replace("\\", "/").split("/")[-1] == "__main__.py":
+        return True
+    return any(says_it_starts_the_program(node) for node in ast.walk(tree))
 
 
 def is_a_test_file(path):
@@ -124,9 +329,67 @@ def defaults_of(node):
     return given
 
 
-def violations_in(tree, in_a_test_file):
-    found = []
+def a_logger_is_imported(tree):
     for node in ast.walk(tree):
+        if isinstance(node, ast.Import):
+            if any(alias.name.split(".")[0] in LOGGING_MODULES for alias in node.names):
+                return True
+        if isinstance(node, ast.ImportFrom):
+            root = (node.module or "").split(".")[0]
+            if root in LOGGING_MODULES:
+                return True
+    return False
+
+
+def is_a_string(node):
+    return isinstance(node, ast.Constant) and isinstance(node.value, str)
+
+
+def value_baked_into(node):
+    if isinstance(node, ast.JoinedStr):
+        return any(isinstance(part, ast.FormattedValue) for part in node.values)
+    if isinstance(node, ast.BinOp) and isinstance(node.op, (ast.Mod, ast.Add)):
+        return is_a_string(node.left) or is_a_string(node.right)
+    if isinstance(node, ast.Call) and isinstance(node.func, ast.Attribute):
+        return node.func.attr == "format" and is_a_string(node.func.value)
+    return False
+
+
+def is_a_logger(held):
+    if isinstance(held, ast.Name):
+        return "log" in held.id.lower()
+    if isinstance(held, ast.Attribute):
+        return "log" in held.attr.lower()
+    if isinstance(held, ast.Call):
+        return is_a_logger(held.func)
+    return False
+
+
+def message_carries_a_value(node):
+    if not isinstance(node.func, ast.Attribute):
+        return False
+    if node.func.attr not in LOG_LEVELS:
+        return False
+    if not is_a_logger(node.func.value):
+        return False
+    return any(value_baked_into(given) for given in node.args)
+
+
+def violations_in(tree, in_a_test_file, is_where_it_starts):
+    settled = names_that_carry_nothing(tree)
+    found = []
+    a_logger_here = a_logger_is_imported(tree)
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Call):
+            if builds_a_query(node, settled):
+                found.append({"rule": A_BUILT_QUERY, "line": node.lineno})
+            if builds_a_command(node):
+                found.append({"rule": A_BUILT_COMMAND, "line": node.lineno})
+            if not is_where_it_starts and writes_to_the_terminal(node):
+                found.append({"rule": PRINTS_ITS_OWN_OUTPUT, "line": node.lineno})
+            if a_logger_here and message_carries_a_value(node):
+                found.append({"rule": VALUE_IN_THE_MESSAGE, "line": node.lineno})
+            continue
         if isinstance(node, ast.Raise):
             thrown = node.exc
             if isinstance(thrown, ast.Call):
@@ -189,7 +452,7 @@ def judge(path):
         tree = ast.parse(source, filename=path)
     except SyntaxError as error:
         return {"unreadable": {"file": path, "detail": f"line {error.lineno}: {error.msg}"}}
-    hits = list(violations_in(tree, is_a_test_file(path)))
+    hits = list(violations_in(tree, is_a_test_file(path), starts_the_program(tree, path)))
     for line in silenced_lines(source):
         hits.append({"rule": SILENCED_CHECKER, "line": line})
     return {"violations": [dict(hit, file=path) for hit in hits]}

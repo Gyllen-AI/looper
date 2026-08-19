@@ -22,7 +22,664 @@ is a suspicion and belongs in the notes at the bottom, not in the list.
 
 ## Open
 
-_Empty. Findings 41 to 92 are closed._
+_Empty. Findings 41 to 105 are closed._
+
+### 105 · `wrong` — init could add a hook but never repair its own — cleared
+
+2026-08-19, found by trying to apply finding 104's fix to this repo and watching
+it fail to arrive.
+
+Finding 104 moved every hook to `bin/looper.js`, the one entry that survives a
+broken import and can still tell the agent. That changed what `init` **writes**.
+It did nothing for a project already wired, and this repo is one: its
+`.claude/settings.json` still said
+
+```
+node "$CLAUDE_PROJECT_DIR/src/main.ts" hook PreToolUse
+```
+
+so the protection reached every future adopter and not the project that wrote it.
+The same session then broke its own imports again, and again only the human saw
+the hook errors.
+
+**Running `init` made it worse.** `mergeSettings` adds a hook beside whatever is
+already there and never over it, which is right for a hook the project wrote and
+wrong for a stale one of looper's own. Every event ended up with two:
+
+```
+PreToolUse: node ".../src/main.ts" hook PreToolUse
+            node ".../bin/looper.js" hook PreToolUse
+```
+
+looper ran twice on every tool call.
+
+This is finding 94 in a second place. That one taught `mergeMcp` that looper owns
+its own entry and nothing else; `mergeSettings` never learned it.
+
+**The fix.** looper recognises a hook it could have written — the same tail it
+writes, `inject` or `hook <Event>`, and a program ending in one of the four
+spellings it can produce, `bin/looper.js`, `src/main.ts`, `.bin/looper` or the
+bare `looper` — and replaces it. Anything else in that event is untouched, which
+the test checks by name.
+
+**And it says so**, because finding 94's other half was that a repair nobody is
+told about is the same silence as the stale entry:
+
+```
+merged .claude/settings.json (looper's own hooks were rewired; everything else was left alone)
+       wired  node ".../bin/looper.js" hook PreToolUse
+       replaced an older looper hook: node ".../src/main.ts" hook PreToolUse
+```
+
+One hook per event afterwards, verified by reading the file back.
+
+**A note on how it was found.** Writing the test pushed `tests/init.test.ts` to
+501 lines and the cap refused the commit — during a conversation about whether
+the cap earns its place. The tests for how looper wires itself moved to
+`tests/wiring.test.ts`, which is a subject of its own.
+
+### 104 · `missing` — a broken looper announced itself to the human and not to the agent — cleared
+
+2026-08-19, issue #74, and the agent that caused it was this one. A bad conflict
+resolution left `src/law/python/rules.ts` malformed. looper's hook imports it, so
+every `PreToolUse` invocation died before a line of looper ran:
+
+```
+PreToolUse:Bash hook error
+Failed with non-blocking status code: node:internal/modules/run_main:123
+```
+
+`non-blocking` is looper failing open, which is what the canon asks for: a broken
+looper must not wedge the session it watches. That half worked.
+
+**The other half did not. The agent never saw it.** The hook's failure goes to the
+human's terminal; the tool result the agent receives is unchanged. So it kept
+editing and kept committing, believing it was governed, for about a dozen commands
+until Richard asked why the errors were there. For a tool whose whole claim is
+*the reviewer who is not in the room*, the one reader who must know the reviewer
+has stopped reading is the agent, because it is the one still writing.
+
+**Why nothing downstream could report it.** A crashed program cannot announce
+itself. Every module in the import graph is gone before any code runs, so the
+announcement has to live somewhere that imports almost nothing — and there is
+exactly one such place, `bin/looper.js`, which imports `node:fs` and `node:module`
+and then loads the rest.
+
+**Two changes.** That load is now inside a `try`, and on failure the shim writes a
+real hook answer whose `additionalContext` says looper is not judging, what
+stopped it, and to treat every verdict as absent rather than clean —
+`additionalContext` being the channel the agent actually reads, the same one the
+constitution arrives through. It exits 0, because failing open is still right.
+
+And **every hook now goes through that one entry.** Three of the four invocation
+kinds already did; `dev` pointed straight at `src/main.ts`, which is this repo,
+which is why the blindness was found here rather than by an adopter.
+
+**Measured, by breaking it the same way again:**
+
+```
+$ echo '{"tool_name":"Bash",...}' | node bin/looper.js hook PreToolUse
+{"hookSpecificOutput":{"hookEventName":"PreToolUse","additionalContext":
+ "looper is not judging anything in this session: its own code could not be
+  loaded. Nothing is being checked — not the rules, not the edits, not the
+  commit — until that is fixed. ..."}}
+exit=0
+```
+
+Two tests: a checkout whose `src/main.ts` cannot parse still answers and exits 0,
+and `entryFor(DEV)` names the shim. Both fail before the change.
+
+### 103 · `noise` — a size cap had started deciding where facts live — cleared
+
+2026-08-18, issue #67, from reviewing the decisions capability in #65.
+`src/config.ts` was 497 lines against its own 500 cap, so that capability could
+not put its path beside every other project-visible path and kept it in its own
+module. It said so in the open and did not widen the cap, which was the right call
+— a cap widened to fit stops meaning anything. But the reason a fact lived
+somewhere had become "the other file was full", and that reason was invisible from
+either file.
+
+**The split, named in one sentence:** the prose looper writes into a project is
+not a setting. Eight stubs and headers moved to `src/stubs.ts`, and `config.ts`
+went from 497 lines to 402 with the cap untouched.
+
+**The sanctum stayed one file**, which is the constraint that made this worth care
+rather than a quick move: nothing that turns a missing value into a default went
+anywhere, so the canon's sentence about `src/config.ts` is still true.
+
+`DECISIONS_PATH`, `DECISIONS_TOOL` and `DECISIONS_PRIORITY` came back beside their
+siblings, and the re-export that briefly kept the old import path working went out
+with them — one home means one place to import from, or it is two homes wearing
+one name. That re-export was in the first version of this change and was taken out
+before it shipped.
+
+`npm test`: 472 pass, 0 fail. `looper law` on this repo: exit 0.
+### 102 · `wrong` — the commit gate judged by a different law than `looper law` — cleared
+
+2026-08-18, issue #56. Found while investigating finding 100 and deliberately not
+fixed with it, because it is a different defect and a fix without a failing test
+would only have agreed with itself.
+
+`judgeStaged` was the one judging path that never passed a role:
+
+```ts
+{ file: path, text: held.text }
+```
+
+The edit gate forty lines below passes `roleOf(shapeOf(root), relative)`, and so
+does the survey behind `looper law`. In `belongsHere`, `role === undefined` means
+**every** rule applies, including the ones scoped to one half of a project. Two
+rules declare `onlyFor: "backend"` — `NODE:1` and the injection rule — so on an
+interface file the commit gate applied them and `looper law` did not.
+
+The design says plainly that a rule about database queries never fires on a user
+interface that has no database. At commit time it did.
+
+**The fixture that was missing.** This went unfixed for a day because a faithful
+test needs a project where `roleOf` answers `interface`, and it was not obvious
+what makes one. `shapeOf` gives it: a `Cargo.toml` and a `package.json` whose
+dependencies declare no server framework reads as `mixed`, and a mixed project
+whose TypeScript declares no server is the interface.
+
+With that, the test states the invariant rather than the symptom — the gate and
+the survey reach the same rule ids for the same file — and it names what went
+wrong before the change:
+
+```
++   'NODE:1'
+```
+
+**The fix** passes the role, computing the shape once outside the loop rather than
+per file.
+
+### 101 · `blunt` — arguing with a rule was refused over a word in a comment — cleared
+
+2026-08-18, adopter issue #60, filed thirteen minutes after finding 100 shipped,
+by somebody who went straight back to using the route it had opened.
+
+`--tried` is the sentence the person types about what they tried. It is checked
+word by word against the project and refused if a word looks like a name from
+their code. Two things made it too tight.
+
+The rule's own id collides. Arguing with `TS-TRUTH:1` means writing about it, and
+`TRUTH` is in the id:
+
+```
+looper refused to write the report, because it would have carried something
+from your code: TRUTH.
+```
+
+And the match came from comment prose. In their project `TRUTH` is not an
+identifier anywhere — it appears in comments, in capitals, as an ordinary English
+word. So any word anybody ever wrote in a comment became unusable.
+
+**Told, not seen.** Everything in the paragraph above about their project — where
+`TRUTH` appears, that it is not an identifier, and that they are deleting every
+comment because `TS-DEAD:2` says to while those words keep blocking reports — comes
+from the issue they wrote. Their tree cannot be read from here and nothing of it
+may enter this repo. What was seen is below: the same situation rebuilt on a
+scratch project, and the measurements taken on it.
+
+**Reproduced here** on a scratch project holding one `?? 0` and one Python file
+whose only occurrence of `TRUTH` is a `#` comment. Same rule, same file, same
+line, only the sentence differing: the one naming `TRUTH` was refused and the one
+avoiding it was written.
+
+**The fix.** The reported rule's id is never a leak, because the report prints it
+in its own `rule:` field. And the vocabulary is built from each file with comments
+removed — `#` for Python, `//` and `/* */` elsewhere — with quotes tracked so a
+marker inside a string is not a comment.
+
+**Measured after, both directions:**
+
+| sentence | before | after |
+|---|---|---|
+| names `TRUTH`, which is only in a comment | refused | written |
+| names `tenantLedgerRef`, a real identifier | refused | refused |
+
+**The limit, deliberately.** String literals stay in the vocabulary: a secret in a
+string is exactly what this guard is for. A Python docstring is a string rather
+than a comment, so an ordinary word living only in a docstring is still refused —
+measured, with a rule id that does not cover it. That is the same line the
+adopter's own suggestion of "identifiers and string literals" would have drawn,
+and it is written down here rather than discovered.
+
+### 100 · `wrong` — the commit gate judged every staged file with its blank lines deleted — cleared
+
+2026-08-18, adopter issue #44, reported from a 3,749-line TSX file during a
+cleanup of a project with 2,391 baseline problems. The gate refused a commit and
+named lines that did not hold what the rule described; `looper law` on the
+byte-identical staged content named different lines, and those were right every
+time.
+
+**It was cracked by the artifact, not by reading.** The adopter ran `looper report`
+on one of the cited lines and sent back the anonymised shape:
+
+```
+VariableDeclaration (kind=const)
+  VariableDeclarator
+    ArrayPattern
+      Identifier (name1)
+      Identifier (name2)
+    CallExpression
+      Identifier (name3)
+      BooleanLiteral (value-removed)
+```
+
+That is `const [a, b] = f(<boolean>)`. `REPORT_DEPTH` is 6 and the tree is 4 deep,
+so it is the whole statement, not a truncated one. `TS-TRUTH:1` bans `??`, `||`,
+`??=` and `||=`, and there is no logical operator anywhere in it — so that verdict
+is impossible for that line. Checked here: `looper law` on that shape answers
+`nothing to fix`, and the rule reports the exact line of the operator rather than
+the line the statement starts on.
+
+**Told, not seen.** The 3,749-line file, the 2,391 baseline problems, the table of
+staged sizes against cited lines, and the shape above are all theirs, from the
+issue and a `looper report` they ran. Their tree cannot be read from here. What was
+seen is everything below: what that shape means, checked against the rules here,
+and the fixture the cause was measured on.
+
+**The cause.** `ask` in `src/git.ts` ended with
+
+```ts
+return output.split("\n").filter((line) => line.length > 0);
+```
+
+which is correct for everything it was written for — a config value, a list of
+paths, the lines of a diff. `stagedText` used it to read a file:
+
+```ts
+text: ask(root, ["show", `:${path}`]).join("\n")
+```
+
+So every blank line was deleted before judging, and every line below one was
+numbered wrong by the count of blanks above it. Measured on a nine-line fixture:
+
+```
+lines on disk:       9
+lines the gate sees: 4
+the ?? 0 is on line 5 on disk, and line 2 in what the gate judges
+```
+
+**Every symptom in the report follows.** The token stream was identical in all
+their measurements because blank lines produce no tokens. The offset was not
+constant because it is the number of blanks above each violation. The wrong lines
+shrank with the diff because a smaller diff promotes fewer baselined violations
+out of the baseline. And `looper law` was right every time because it reads the
+file from disk.
+
+One detail in the report is *not* explained by this and is probably a coincidence:
+they matched a cited 1020 to a `?? 0` at 1018. This mechanism cites a line lower
+than the real one, never higher, so that pair is a near-match by eye rather than
+the corresponding violation.
+
+**The fix.** Reading content and reading a list are two jobs and now have two
+helpers. Two tests, both failing before: the staged text equals the file on disk,
+and the gate names the line the problem is actually on.
+
+### 99 · `missing` — `looper report` refused the line it was most needed for — cleared
+
+2026-08-18. Found while trying to reproduce adopter issue #44, which could not be
+reproduced without the adopter's staged blob and baseline — neither of which may
+enter this repo. `looper report` is the mechanism that makes adopter evidence
+shareable at all, and the adopter had already reported that it refused them:
+
+```
+$ npx looper report --rule TS-TRUTH:1 --file .../operate.tsx --line 885 --tried "..."
+looper: no report written — nothing looked like a statement on line 885.
+```
+
+`shapeAt` required an enclosing node to **begin** on exactly the line given. Two
+ordinary lines fail that test: a continuation line of a multi-line expression,
+which begins nothing and is not a bug at all, and a line the tool named wrongly,
+which is the entire complaint in #44. The route the `law` rule set names as the
+only way to argue with a rule was open while looper was right about the line and
+shut when it was wrong about it.
+
+**Told, not seen.** The refusal above is the one they reported. What was seen is
+the reproduction below and the report it now writes.
+
+**The fix.** A shape lookup has three answers. Found, when something begins there.
+`around`, when nothing begins there but a statement contains it — the report is
+written against that statement and says which line it really begins on, because
+the distance between the named line and the real one is the evidence somebody
+needs. Not-found only when nothing contains the line, which is the one honest
+refusal, and there is a test for that too.
+
+**Measured, on the shape the adopter's command had:**
+
+```
+## Line 4 starts no statement
+
+Nothing begins on the line the rule named. The shape below is the statement
+that contains it, which begins at line 2.
+```
+
+**All three languages, the third finished later the same day.** TypeScript and
+Python went first, each with a test that failed before the change; Python's reader
+carries `startsAt` back through the payload.
+
+Rust took a different fix, which is why it was filed as issue #58 rather than
+rushed into the same change. `skeleton.rs` collects tokens that *start* on the
+line and refuses when there are none, so its cause was never "no node begins
+here". `shape_at` now asks `syn` which item contains the line, re-reads that
+item's own first line, and answers with `startsAt` set to it. The Rust binary
+carries the field out through its JSON, where `shapeFrom` already knew how to read
+it.
+
+Rust also has a different shape of line that begins nothing: a method chain
+continues with `.filter(...)`, which *does* start tokens, so it is a `found` and
+always was. The line that begins nothing in Rust is a blank one inside an item —
+which is what the test uses, and what the first version of that test got wrong.
+
+**Measured, on the command an adopter runs:**
+
+```
+$ looper report --rule RUST-TYPE:4 --file src/totals.rs --line 3 --tried "..."
+
+## Line 3 starts no statement
+Nothing begins on the line the rule named. The shape below is the statement
+that contains it, which begins at line 1.
+```
+
+The test fails without the change and passes with it, checked in both directions
+with the engine rebuilt each time: 18 pass 1 fail, then 19 pass 0 fail. A line
+beyond the end of the file is still refused, and that test is unchanged.
+
+### 98 · `missing` — JavaScript entered a governed project and nothing saw it — cleared
+
+2026-08-18, adopter issue #46. `looper law deploy/check.py deploy/check.mjs`
+answered `1 files, nothing to fix`. The `.mjs` was not judged clean; it was not
+judged. In the same project a `next.config.mjs` holding three `//` comments and a
+`/** */` block drew no verdict, while `TS-DEAD:2` accounts for 1,554 of that
+project's 2,391 baseline problems everywhere else.
+
+`STACK:1` was silent for the same reason and not a second one. It is handed the
+file list the survey walked, and the survey walks `JUDGED_EXTENSIONS`, which
+listed `.ts`, `.tsx`, `.mts`, `.cts`, `.rs`, `.py`. So the stack record silently
+stopped describing the project.
+
+**Told, not seen.** Their command and its answer, the `next.config.mjs`, and the
+1,554 of 2,391 are from the issue they wrote. What was seen is the two tests below
+and what the change found in this repo on its first run.
+
+**The fix is that list.** `.js`, `.jsx`, `.mjs` and `.cjs` are judged. Nothing
+else moved: `lawFor` already routes anything that is not Rust or Python to the
+TypeScript reader, and `languageOf` already knew those four extensions mean
+JavaScript. Two tests, one per half, both failing before.
+
+**What it found here, immediately.** looper's own `bin/looper.js` had never been
+read by looper. Four problems, and every one of them correct:
+
+| | |
+|---|---|
+| `TS-LOG:1` at 12, 19 | `console.error` in a library |
+| `TS-LAYER:2` at 43 | `await import("../src/main.ts")` partway down the file |
+| `STACK:1` at 1 | JavaScript is not in `CURRENTSTACK.md` |
+
+Both code rules name the same valve, `law.toml [entry] files`, and `bin/looper.js`
+is exactly what that valve is for — it is what `package.json` declares as `bin`,
+and the late import is the entry point deciding to load late, which is what
+`TS-LAYER:2`'s own advice says is allowed there. This repo's `law.toml` declares
+its entry files by hand, which overrides the `package.json` default, and the shim
+was missing from that list because nothing had ever judged it. It is declared now.
+
+`STACK:1` was right in the plainest way: looper ships a JavaScript file and its
+own stack document did not say so. `CURRENTSTACK.md` says so now.
+
+After both, `looper law` on this repo is back to 13 baseline problems and exit 0.
+
+### 97 · `missing` — the doctrine named `.catch(() => {})` twice and no rule caught it — cleared
+
+2026-08-18, adopter issue #45. The `law` rule set, injected on every turn in a
+TypeScript project, says an empty `catch` and a `.catch(() => {})` both delete the
+evidence, and names `.catch(() => 0)` beside it. `TS-ERROR:4` walked for
+`CatchClause` and nothing else, so the statement form fired and the method form
+did not. The adopter counted 19 in one console, 12 of them in a single file, in a
+file that reports 630 problems from other rules — so this was not a codebase
+looper was quiet about, it was this shape.
+
+**Told, not seen.** The 19 instances, the 12 in a single file, and the 630 problems
+that file reports are theirs, from the issue. What was seen is the boundary probe,
+the corpus below, and every hit in it.
+
+**The fix.** An inline `.catch(handler)` body is the same thing as a catch clause
+and faces the same two questions: does it observe the failure through a blessed
+logger, and does the failure escape it.
+
+**Two boundaries, both measured rather than assumed.**
+
+`.catch(handleIt)`, where the handler is a name, is not judged. The body is not
+there to read, and firing on it would be a verdict on code the rule cannot see.
+
+A handler whose only act is making up a value belongs to `TS-ERROR:3`. The issue
+reported `.catch(() => 0)` and `.catch(() => null)` as also unreported; that part
+is wrong, and the probe that shows it:
+
+```
+2  return work().catch(() => []);        TS-ERROR:3
+3  return work().catch(() => 0);         TS-ERROR:3
+4  return work().catch(() => null);      TS-ERROR:3
+5  return work().catch(() => ({}));      TS-ERROR:3
+6  work().catch(() => {});               TS-ERROR:4
+7  work().catch(() => { done(); });      TS-ERROR:4
+8  work().catch(() => other());          TS-ERROR:4
+9  work().catch((c) => { throw new W(c); })   silent in both
+```
+
+Without that boundary the first four carried two verdicts for one problem. No line
+carries two now.
+
+**Run over code nobody here wrote,** which is what this repo's own `node_modules`
+cannot supply: it holds 0 TypeScript sources outside declarations. The corpus is
+npm's own global install under Node 24.19.0 — 1,122 `.js` files across ten
+packages, all read, none unreadable. They were handed to the TypeScript reader
+because this shape is plain JavaScript and the parser accepts it; `.js` is not yet
+judged by an ordinary run, which is issue #46.
+
+| | before | after |
+|---|---|---|
+| violations, all rules | 28,496 | 28,543 |
+
+**47 newly reported, 0 lost.** Judged one at a time: every one is a `.catch`
+handler that takes no parameter, so not one of them could have looked at what
+failed. **No false positives.** 26 of the 47 are `lru-cache`, which ships eight
+build variants of the same source, and 13 of those land on minified one-line
+bundles where the line number names the file rather than a place in it — a real
+hit with a location that cannot be sharper on a bundle.
+
+Before the `TS-ERROR:3` boundary the same corpus gave 86, so 39 of those were the
+double-count.
+
+**On this repo:** 7 hits, all the pre-existing `catch {}` clause form already in
+the baseline, and no `.catch` handler anywhere in looper's own source.
+
+### 96 · `noise` — `looper law` exited 2 for problems it had just said do not block — cleared
+
+2026-08-18, adopter issue #47, from a project with 2,391 baseline problems across
+65 files. The command printed
+
+```
+All 2391 of these were already here before looper arrived ... They do not block a
+commit until you touch the line they are on.
+2
+```
+
+and the 2 is the same answer it gives when something is blocking, so nothing that
+reads an exit code can tell the two apart. The adopter wanted `looper law` in the
+single command their project runs before every commit and in CI beside the type
+check, and could not: it would be red from the first day of the cleanup until the
+last of 2,391 problems was gone, and a check that is always red is not a check.
+
+**Told, not seen.** The 2,391 problems across 65 files, the transcript above and
+the timings they credited are theirs, from the issue. What was seen is the
+measurement on this repo below.
+
+**The fix.** The exit code answers one question, *is anything blocking*. 0 when
+every problem found is in the baseline, 2 when one is not.
+
+The counts in the message were wrong in the same place and are corrected by the
+same change. They were `older = min(baseline total, found)` and `yours = found -
+older` — a subtraction over totals, which calls a new problem old whenever an old
+one in the same file was fixed in the same pass. Both now come from
+`againstBaseline`, which asks of each violation whether that file and that rule
+are recorded.
+
+**Measured on this repo**, which carries 13 baseline problems and nothing new:
+
+```
+$ node src/main.ts law > /dev/null ; echo $?
+0
+$ cp probe.ts src/probe-new.ts ; node src/main.ts law > /dev/null ; echo $?
+2
+```
+
+Two tests run the built command in a scratch adopted project and read its status.
+The first fails before the change.
+
+**Left alone deliberately.** The commit gate has its own `separate` in
+`src/law/capability.ts`, which is the same split plus the touched-lines rule. It
+keys on the path it was given rather than on each violation's own `file`, and the
+Rust and Python readers build their violations elsewhere, so whether the two keys
+always agree is unverified. Folding them together on that assumption is how a gate
+breaks quietly; the duplication stays until somebody measures it.
+
+### 95 · `missing` — looper's own project was reached as an installed command, so its tools never started — cleared
+
+2026-08-18. Found by running `looper init` in this repo the moment finding 94 was
+merged, to watch the repair work. It did repair the stale entry, and what it wrote
+in its place was
+
+```
+it was launching  node $CLAUDE_PROJECT_DIR/src/main.ts serve
+it now launches   looper serve
+```
+
+`looper` is not on PATH here and there is no `node_modules/.bin/looper`, so one
+launch that cannot run was replaced by another. The same run said the hooks'
+command could not be found; the `.mcp.json` line said `corrected` and nothing
+else.
+
+`reachedFrom` knew three shapes and not the fourth. `local` is a
+`node_modules/.bin` beside the project, `inside` is a checkout under it, and
+everything else is `INSTALLED`, the bare command. The project that **is** looper
+matched none of the first two and fell to the third. `DEV`, whose launch is the
+root-relative `./src/main.ts` that finding 93 measured as the spelling which
+connects, could only be reached by typing `--dev` — a step nobody knows exists,
+which is the input rule in one line.
+
+**The fix.** `reachedFrom` asks first whether the root is itself a looper
+checkout, using the same `isLooperCheckout` that `checkoutUnder` already applies
+to subfolders, and answers `DEV` when it is. One line, and no adopter can reach
+it: an adopting project's root is never a looper checkout.
+
+**Measured, not claimed.** With the entry it now writes, the server answers:
+
+```
+$ printf '…initialize…tools/list…' | node ./src/main.ts serve
+{"result":{"protocolVersion":"2025-06-18","serverInfo":{"name":"looper","version":"0.1.0"}}}
+{"result":{"tools":[{"name":"doctrine"…},{"name":"recall"…},{"name":"see"…}]}}
+```
+
+The test asserts the reach and the two fields of the entry, and fails on the
+previous `reachedFrom`.
+
+### 94 · `wrong` — init could add its server but never repair it, so finding 93's fix reached nobody — cleared
+
+2026-08-18. Found the moment finding 93 was pinned by the adopter who reported
+it: they bumped to the fixed commit, ran `looper init`, and it said
+
+```
+  already wired, nothing to change  /their/project/.mcp.json
+```
+
+with the broken `$CLAUDE_PROJECT_DIR` entry still in the file. `mergeMcp` tested
+`servers[SERVER_NAME] !== undefined` and nothing else, so the presence of the key
+was the whole check. Every project that ran init before the fix keeps the entry
+that does not work, for good, and is told it is wired.
+
+`mergeSettings`, ten lines below, had the right answer already: it compares the
+command it wants against the commands in the file (`carriesCommand`) and rewires
+when it is not there. The hooks could be repaired and the server could not.
+
+This is the failure this part of the plan names in its own words: reporting a gate
+as installed when it is not.
+
+**The fix, and the boundary it draws.** looper owns two fields of its own entry,
+`command` and `args`. Everything else in that entry, and every other server in the
+file, belongs to the project and is never touched. init compares those two fields
+with what it would write now: absent, it adds; equal, it says nothing; different,
+it replaces them, keeps the previous file beside it, and reports what the entry
+was launching and what it launches now. Three tests, one per branch, and the
+repair test fails on the previous `mergeMcp`.
+
+### 93 · `missing` — the `.mcp.json` entry was written with a shell variable, so the tools never appeared — cleared
+
+2026-08-18. From an adopter running looper as a submodule under `vendor/`. Their
+sessions had no `doctrine`, no `recall` and no `see`, and nothing anywhere said
+so: the injection hook ran, `looper status` reported its contributors and what it
+had dropped, and the tools were simply absent. Every session that project has ever
+run acted on whatever the router guessed, with no way to pull a rule set by name.
+
+Two things were wrong and only the second is looper's.
+
+`claude mcp get looper` answered `Status: ⏸ Pending approval`. A project-scoped
+server needs a trust answer before it is ever started, and that one is the
+adopter's to give.
+
+Once given, it still could not start. init had written
+
+```json
+{ "command": "node", "args": ["$CLAUDE_PROJECT_DIR/vendor/looper/bin/looper.js", "serve"] }
+```
+
+An argv entry is handed to the process exactly as written. There is no shell to
+expand `$CLAUDE_PROJECT_DIR`; the agent's own expansion is `${VAR}` read from the
+environment; and `CLAUDE_PROJECT_DIR` is not in the environment it reads, because
+the agent sets that variable for hooks and not for the config it expands.
+Measured, three projects holding the same server, one spelling each:
+
+| args | result |
+|---|---|
+| `$CLAUDE_PROJECT_DIR/vendor/looper/bin/looper.js` | `✘ Failed to connect — CONNECTION_CLOSED` |
+| `${CLAUDE_PROJECT_DIR}/vendor/looper/bin/looper.js` | `✘ Missing environment variables: CLAUDE_PROJECT_DIR` |
+| `vendor/looper/bin/looper.js` | `✔ Connected` |
+
+The server was never at fault. Run by hand it answers `initialize` and lists
+`doctrine`, `recall` and `see`.
+
+**This document already held the lesson, one context over.** *Only a real verdict
+refuses* records the git hook shipping with the agent hook's entry path, "which
+resolves through an environment variable Claude Code sets and a shell does not",
+so every commit was refused because node could not find a file. That was fixed for
+git in `gitHookEntryFor` and left standing in `launchFor`. `launchFor` even had the
+right answer for one of its four kinds: `local` is written `./node_modules/.bin/looper`,
+root-relative, while `dev` and `inside` carried the variable.
+
+**`entryReach` proved a path that nothing used.** Init checks that
+`vendor/looper/bin/looper.js` exists and then writes
+`$CLAUDE_PROJECT_DIR/vendor/looper/bin/looper.js` into the argv, which is a
+different filename. The check this document offers as the answer to adopter issue
+#8, that init checks the command it just wrote can actually be found, was true of
+the hooks and false of the MCP entry.
+
+**Why no test caught it.** `tests/launch.test.ts` already knew the category: it
+asserts that no argv entry carries a quote character, because "quoting belongs in
+a shell command line, never in an argument list". A variable is the same mistake
+one step further, and nothing asserted its absence.
+
+**The fix.** `launchFor` writes the root-relative path `gitHookEntryFor` already
+writes, for every kind. The path `entryReach` checks and the path written into
+`.mcp.json` are now the same string, and a test asserts that they are, so the two
+cannot drift apart again.
+
+**What it costs, said plainly.** A relative path resolves against the working
+directory the agent spawns the server in, which is where the agent was started.
+Started in a subdirectory, the server does not launch: same project, same file,
+run two levels down, `CONNECTION_CLOSED`. `local` has always had this and the git
+hook has it too, since git runs hooks from the repository root. An absolute path
+would close it and cannot be had, because `.mcp.json` is committed and shared and
+a machine-specific path in it breaks every other clone.
 
 ### 92 · `missing` — the escape hatch read one of the three languages — cleared
 

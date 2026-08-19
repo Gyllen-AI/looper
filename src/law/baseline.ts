@@ -1,9 +1,12 @@
+import { BASELINE_HEADER } from "../stubs.ts";
 import { countIn } from "../present.ts";
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 
 import { writeAtomically } from "../atomic.ts";
-import { BASELINE_HEADER, BASELINE_PATH } from "../config.ts";
+import {
+  BASELINE_PATH,
+} from "../config.ts";
 import { parseToml, tableIn } from "../toml.ts";
 import type { Violation } from "./rule.ts";
 
@@ -54,6 +57,24 @@ export function isRecorded(baseline: Baseline, file: string, ruleId: string): bo
   if (counts === undefined) return false;
   const held = counts.get(ruleId);
   return held !== undefined && held > 0;
+}
+
+export type Carried = {
+  readonly yours: readonly Violation[];
+  readonly older: readonly Violation[];
+};
+
+export function againstBaseline(
+  baseline: Baseline,
+  violations: readonly Violation[],
+): Carried {
+  const yours: Violation[] = [];
+  const older: Violation[] = [];
+  for (const violation of violations) {
+    if (isRecorded(baseline, violation.file, violation.rule.id)) older.push(violation);
+    else yours.push(violation);
+  }
+  return { yours, older };
 }
 
 export function render(baseline: Baseline): string {

@@ -128,8 +128,74 @@ function placedInGroups(
   return [...next, groupFor(spec)];
 }
 
+const OUR_ENTRY_ENDS: readonly string[] = [
+  "bin/looper.js",
+  "src/main.ts",
+  ".bin/looper",
+  "looper",
+];
+
+function tailOf(command: string): string {
+  const at = command.lastIndexOf('"');
+  return at === -1 ? command.slice(command.indexOf(" ") + 1) : command.slice(at + 1).trim();
+}
+
+function programOf(command: string): string {
+  const at = command.lastIndexOf('"');
+  if (at === -1) return command.split(" ")[0] === undefined ? "" : command.split(" ")[0];
+  const opened = command.indexOf('"');
+  return command.slice(opened + 1, at);
+}
+
+function isOneWeWrote(command: string, wanted: string): boolean {
+  if (tailOf(command) !== tailOf(wanted)) return false;
+  const program = programOf(command);
+  return OUR_ENTRY_ENDS.some((ending) => program.endsWith(ending));
+}
+
+function ourOlderHooksIn(groups: readonly JsonValue[], wanted: string): readonly string[] {
+  const found: string[] = [];
+  for (const group of groups) {
+    if (!isJsonObject(group)) continue;
+    const entries = group[HOOKS_KEY];
+    if (!isJsonArray(entries)) continue;
+    for (const entry of entries) {
+      if (!isJsonObject(entry)) continue;
+      const command = entry[COMMAND_KEY];
+      if (typeof command === "string" && command !== wanted && isOneWeWrote(command, wanted)) {
+        found.push(command);
+      }
+    }
+  }
+  return found;
+}
+
+function withoutOurOlderHooks(groups: readonly JsonValue[], wanted: string): readonly JsonValue[] {
+  const kept: JsonValue[] = [];
+  for (const group of groups) {
+    if (!isJsonObject(group)) {
+      kept.push(group);
+      continue;
+    }
+    const entries = group[HOOKS_KEY];
+    if (!isJsonArray(entries)) {
+      kept.push(group);
+      continue;
+    }
+    const held = entries.filter((entry) => {
+      if (!isJsonObject(entry)) return true;
+      const command = entry[COMMAND_KEY];
+      return !(typeof command === "string" && isOneWeWrote(command, wanted));
+    });
+    if (held.length === 0) continue;
+    kept.push({ ...group, [HOOKS_KEY]: held });
+  }
+  return kept;
+}
+
 function withHookWired(root: JsonObject, spec: HookSpec): JsonObject {
-  const groups = placedInGroups(eventGroups(root, spec.event), spec);
+  const standing = withoutOurOlderHooks(eventGroups(root, spec.event), spec.command);
+  const groups = placedInGroups(standing, spec);
   const existingHooks = root[HOOKS_KEY];
   const hooks: JsonObject = isJsonObject(existingHooks) ? existingHooks : {};
   return { ...root, hooks: { ...hooks, [spec.event]: groups } };
@@ -145,7 +211,38 @@ export type McpMerge =
   | { readonly kind: "unchanged" }
   | { readonly kind: "created"; readonly text: string }
   | { readonly kind: "merged"; readonly text: string }
+  | {
+      readonly kind: "corrected";
+      readonly text: string;
+      readonly was: WrittenLaunch;
+      readonly now: string;
+    }
   | { readonly kind: "unreadable"; readonly why: string };
+
+export type WrittenLaunch =
+  | { readonly kind: "unreadable" }
+  | { readonly kind: "read"; readonly line: string; readonly shape: string };
+
+function launchIn(value: unknown): WrittenLaunch {
+  if (!isJsonObject(value)) return { kind: "unreadable" };
+  const command = value["command"];
+  const args = value["args"];
+  if (typeof command !== "string" || !Array.isArray(args)) return { kind: "unreadable" };
+  const words = args.map((word) => String(word));
+  return {
+    kind: "read",
+    line: [command, ...words].join(" "),
+    shape: JSON.stringify([command, words]),
+  };
+}
+
+function looperOwns(kept: JsonObject, wanted: JsonObject): JsonObject {
+  const entry: JsonObject = { ...kept };
+  entry["type"] = wanted["type"];
+  entry["command"] = wanted["command"];
+  entry["args"] = wanted["args"];
+  return entry;
+}
 
 function serverEntry(launch: Launch): JsonObject {
   return {
@@ -172,11 +269,27 @@ export function mergeMcp(existing: Existing, launch: Launch): McpMerge {
   const root: JsonObject = { ...value };
   const written = root[SERVERS_KEY];
   const servers: JsonObject = isJsonObject(written) ? written : {};
-  if (servers[SERVER_NAME] !== undefined) return { kind: "unchanged" };
+  const wanted = serverEntry(launch);
+  const asked = launchIn(wanted);
+  const mine = servers[SERVER_NAME];
+  if (mine !== undefined && asked.kind === "read") {
+    const held = launchIn(mine);
+    if (held.kind === "read" && held.shape === asked.shape) return { kind: "unchanged" };
+    const kept: JsonObject = isJsonObject(mine) ? { ...mine } : {};
+    return {
+      kind: "corrected",
+      was: held,
+      now: asked.line,
+      text: serialise({
+        ...root,
+        [SERVERS_KEY]: { ...servers, [SERVER_NAME]: looperOwns(kept, wanted) },
+      }),
+    };
+  }
 
   return {
     kind: "merged",
-    text: serialise({ ...root, [SERVERS_KEY]: { ...servers, [SERVER_NAME]: serverEntry(launch) } }),
+    text: serialise({ ...root, [SERVERS_KEY]: { ...servers, [SERVER_NAME]: wanted } }),
   };
 }
 
@@ -188,13 +301,17 @@ export function mergeSettings(
   let root: JsonObject = startedEmpty ? {} : parseSettings(existing.text);
 
   const wired: string[] = [];
+  const rewired: string[] = [];
   for (const spec of wanted) {
     if (carriesCommand(eventGroups(root, spec.event), spec.command)) continue;
+    for (const older of ourOlderHooksIn(eventGroups(root, spec.event), spec.command)) {
+      rewired.push(older);
+    }
     root = withHookWired(root, spec);
     wired.push(spec.command);
   }
 
   if (wired.length === 0) return { kind: "unchanged" };
-  if (startedEmpty) return { kind: "created", text: serialise(root), wired };
-  return { kind: "merged", text: serialise(root), wired };
+  if (startedEmpty) return { kind: "created", text: serialise(root), wired, rewired };
+  return { kind: "merged", text: serialise(root), wired, rewired };
 }

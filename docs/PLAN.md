@@ -594,7 +594,7 @@ leaves the agent with nowhere to go.
 | `TS-ERROR:1` | a floating promise — a fallible call in statement position, never awaited | rewritten, and **not decidable from one file** — it runs on the slow pass, see below |
 | `TS-ERROR:2` | a discarded payload: `catch {}` binding nothing, `catch (e)` where `e` is never read, `.catch(() => …)` taking no parameter | rewritten — **not built yet** |
 | `TS-ERROR:3` | a catch arm fabricating a value: `catch { return null }`, `return []`, `return {}`, `.catch(() => [])` | carries in full, and it is **the highest-value rule in the set for TypeScript** — the dominant failure in agent-written code, and precisely syntax-decidable |
-| `TS-ERROR:4` | a caught error neither rethrown, propagated, nor observed | carries in full, with the provenance check on the blessed symbol: `logger.warn` / `logger.error` resolved through a real import of a real dependency in `package.json`, not shadowed by a local binding |
+| `TS-ERROR:4` | a caught error neither rethrown, propagated, nor observed, in a `catch` clause or in an inline `.catch(...)` handler | carries in full, with the provenance check on the blessed symbol: `logger.warn` / `logger.error` resolved through a real import of a real dependency in `package.json`, not shadowed by a local binding |
 | `TS-ERROR:5` | a project missing its deputy compiler options | rewritten, and it changes shape: the deputies are `tsconfig.json` settings rather than crate-root attributes, so the rule fires on the project, not on the file — **not built yet** |
 | `TS-ERROR:6` | an `async` callback passed to `forEach` | rewritten and narrowed. The ancestor's target (a fallible absorbed by iteration) has no TypeScript form, but `forEach(async …)` silently drops every promise it makes, is a guaranteed bug, and is decidable |
 | — | a caught unwind | moved to the `NODE` pack: the TypeScript form is `process.on('uncaughtException' \| 'unhandledRejection')` swallowing, which is server-side only |
@@ -1037,6 +1037,22 @@ The effect is that adoption is honest in both directions: the existing code is
 not pretended to be compliant, and the team is not asked to fix four hundred
 files before the tool does anything for them.
 
+**And the exit code has to be able to say that. Corrected 2026-08-18, from
+adopter issue #47, finding 96.** `looper law` printed, correctly, that the
+problems it listed were already here and blocked nothing, and then exited 2, which
+is the same answer it gives when something is blocking. A caller could not tell
+the two apart, so an adopter with 2,391 baselined problems could not put `looper
+law` in the one command their project runs before every commit: it would be red
+from the first day of the cleanup to the last, and a check that is always red is
+not a check.
+
+So the exit code answers exactly one question, *is anything blocking*: 0 when
+every problem found is recorded in the baseline, 2 when one is not. The counts in
+the message come from the same split, which also corrects them — they were
+`min(baseline total, found)` against `found - that`, a subtraction that calls a
+new problem old whenever an old one in the same file was fixed in the same pass.
+`againstBaseline` in `src/law/baseline.ts` is the one definition.
+
 ## How looper runs once it is installed, which is not how it runs here
 
 **Settled 2026-08-18, after the advertised install was found dead.** looper's own
@@ -1168,6 +1184,317 @@ under `mcpServers`, everything else untouched, the previous version kept beside
 it. Where the file cannot be parsed it is left exactly as it is and init prints
 the block to add, because a file we cannot read is not one we may rewrite.
 
+**Merging it in once is not the same as keeping it right. Corrected 2026-08-18,
+finding 94.** The merge above tested whether an entry named `looper` was present
+and stopped there, so the entry looper itself had written with a path that does
+not work was reported as `already wired, nothing to change` and stayed that way
+through the pin bump that fixed it. `mergeSettings` had never had this problem: it
+compares the command it wants against what the file holds and rewires when it is
+missing.
+
+So looper owns two fields of its own entry, `command` and `args`, and nothing
+else: every other key in that entry, and every other server in the file, is the
+project's. Absent, it is added. Equal, nothing is said. Different, those two
+fields are replaced, the previous file is kept beside it, and init prints what the
+entry was launching and what it launches now, because a repair nobody is told
+about is the same silence as the stale entry.
+
+### What the law defends, and which language answers it
+
+**Added 2026-08-18, from issue #63.** Three languages, sixty-three rules, and
+nothing said which of them defended the same thing. The only way to notice that
+Python cannot see a `print()` was to count rule ids by hand, which is how it was
+noticed.
+
+The row is **the harm**, never the spelling. A rule ports only when the harm
+exists in that language, and the harm can exist in a language the others do not
+have — `REACT:1` and `REACT:2` have no Rust or Python form and never will. So this
+is not Rust's list copied down twice. Half the work is asking what each language
+lets an agent do that the others do not.
+
+Every rule the engine loads appears exactly once below, and
+`tests/plan-is-true.test.ts` refuses the suite if one is added without a row.
+
+| what goes wrong | TypeScript | Rust | Python |
+|---|---|---|---|
+| a failure vanishes, and nobody hears it | `TS-ERROR:1` `TS-ERROR:4` `TS-ERROR:6` `TS-ERROR:7` `TS-ERROR:8` | `RUST-ERROR:1` `RUST-ERROR:2` `RUST-ERROR:4` `RUST-ERROR:6` `RUST-ERROR:8` `RUST-ERROR:9` | `PY-ERROR:1` `PY-TRUTH:2` |
+| a failure is answered with a made-up value | `TS-ERROR:3` `TS-TYPE:5` | `RUST-ERROR:3` `RUST-TYPE:5` | `PY-ERROR:2` |
+| the failure survives but names nothing | `TS-TYPE:2` | `RUST-TYPE:1` `RUST-TYPE:2` `RUST-TYPE:3` | `PY-ERROR:3` |
+| the checker is told to trust you | `TS-TYPE:3` `TS-TYPE:4` `TS-DEAD:1` | `RUST-TYPE:4` `RUST-DEAD:1` | `PY-TYPE:1` |
+| "what happens when nobody said" is answered in more than one place | `TS-TRUTH:1` `TS-TRUTH:2` | `RUST-TRUTH:1` `RUST-TRUTH:2` | `PY-TRUTH:1` |
+| output is taken from whoever ran the program | `TS-LOG:1` | `RUST-LOG:1` `RUST-LOG:2` | `PY-LOG:1` |
+| a log line cannot be asked a question, because the value is inside the sentence | `TS-LOG:3` | `RUST-LOG:3` | `PY-LOG:3` |
+| the shape of the code hides what it does | `TS-DECOMPOSITION:1` `TS-LAYER:2` `TS-DEAD:4` | `RUST-DECOMPOSITION:1` `RUST-DECOMPOSITION:2` `RUST-DECOMPOSITION:3` `RUST-LAYER:1` `RUST-LAYER:2` `RUST-LAYER:3` `RUST-DEAD:4` | `PY-LAYER:1`, and **open on purpose** — 500 does not port, measured below |
+| unfinished work reads as finished | `TS-DEAD:2` `TS-DEAD:3` | `RUST-DEAD:2` `RUST-DEAD:3` | **tried and not shippable**, measured 2026-08-18 — the argument is below |
+| the language's own guarantees are stepped around | none built | `RUST-ERROR:5` `RUST-ERROR:7` `RUST-TESTS:1` | none built |
+| something from outside is used as an instruction | `DATA:1` `DATA:2` `NODE:1` `NEXT:1` | none built | `PY-SECURITY:1` `PY-SECURITY:2` |
+| a framework's own contract is broken in silence | `REACT:1` `REACT:2` `TAURI:1` | — | — |
+| the project gains a language nobody chose | `STACK:1`, which reads the project rather than a file, so it answers for all three | | |
+
+**A cell that says `open` is a gap, not a decision.** A cell that says a harm does
+not exist in that language has to carry the argument, not the assertion, and none
+of them does yet — which is why the four blanks above say `open` instead.
+
+**The weight is in the wrong place and this table is what makes that visible.**
+The section below already argues that Python is the language where the law is
+worth most, because the language itself checks nothing.
+
+Counted from the table on 2026-08-18: TypeScript answers eleven of the twelve
+rows, Rust nine, Python eight — with twenty-six, twenty-nine and eight rules.
+**Corrected the same day.** The first version of this paragraph said Python
+answered eight rows and Rust eight, which was wrong on both counts and was written
+without counting. The numbers above were read off the rows.
+
+**How a cell gets filled**, in the order the seven Python rules already used:
+cases first from the ban text, then the reader, then run over real code in that
+language that nobody here wrote, every hit judged by hand and the count written
+down. That order is not a formality — a test written after the code can only
+agree with the code.
+
+**A comment names nothing, so it is not part of the vocabulary. Corrected
+2026-08-18, from adopter issue #60, finding 101.** The sentence somebody types
+under `--tried` is checked against every word in every judged file, and refused if
+a word looks like it came from their code. The vocabulary was built from the whole
+file text, comments included, so an ordinary English word written in a comment
+became a word nobody could use while arguing with a rule. The word that broke it
+was `TRUTH`, from `TS-TRUTH:1` — the one word that sentence cannot avoid.
+
+Two things. The reported rule's own id is never a leak, because the report already
+prints it in its `rule:` field. And the vocabulary is built from the file with its
+comments removed, per language: `#` for Python, `//` and `/* */` elsewhere, with
+quotes tracked so a marker inside a string is not a comment.
+
+**String literals stay in.** A secret in a string is exactly what this guard is
+for, so a Python docstring is a string rather than a comment and prose inside one
+still counts. That is the deliberate limit, and it is the same one the adopter's
+own suggestion of "identifiers and string literals" would have drawn.
+
+**Every judging path asks what the file is first. Corrected 2026-08-18, issue
+#56, finding 102.** The commit gate was the one path that judged without a role,
+so a rule scoped to the backend half of a project applied to an interface file
+there and nowhere else. Which rules run is part of asking what a file is before
+asking what is wrong with it, and a gate that answers it differently from the
+survey is two laws wearing one name. The shape is read once per commit rather than
+once per file.
+
+### The line cap, measured at last
+
+**2026-08-19.** `max_loc` has been 500 since the beginning, in `src/config.ts` and
+in every `law.toml`, and no line of this document ever said why. The doctrine here
+is explicit that a number inherited is a number unmeasured, so it was measured.
+
+**The cap this measurement argues for is `max_loc = 500`**, unchanged — not
+because 500 is right, but because changing it is a decision with a cost that
+belongs to whoever owns the repo, and this section exists so that decision can be
+made from numbers instead of habit.
+
+**This repo, 150 judged files** — every tracked `.ts`, `.tsx`, `.js`, `.py` and
+`.rs` outside `vendor/`:
+
+| | lines |
+|---|---|
+| median | 122 |
+| p90 | 288 |
+| p95 | 414 |
+| longest | 500 — `src/main.ts`, exactly on the cap |
+| over 500 | **0** |
+| over 400 | 9 |
+| over 300 | 15 |
+| over 200 | 27 |
+
+**Three corpora nobody here wrote**, the same measure:
+
+| corpus | files | median | p95 | over 500 |
+|---|---|---|---|---|
+| npm's own JavaScript, Node 24.19.0 | 1,122 | 65 | 551 | 5% |
+| Python's standard library | 167 | 468 | 2,699 | **47%** |
+| `/usr/lib/python3/dist-packages` | 3,217 | 139 | 1,279 | 18% |
+
+**Two things follow, and neither is comfortable.**
+
+**The cap is set above where this repo actually lives.** Median 122 and p95 414
+say the habit is well under it. The one file at the cap, `src/main.ts`, holds
+twenty-four top-level functions — `init`, `law`, `report`, `adopt`, `serve`,
+`hook`, `inject`, `status` and the rest. That is a dispatcher and six commands in
+one file, which is precisely the thing `TS-DECOMPOSITION:1` exists to name, and
+at 500 the rule permits it. A cap that only ever catches the worst file in the
+repo, after it has already become seven things, is a ratchet rather than a rule.
+
+Lowering it is a decision with a cost — nine files at 400, fifteen at 300, every
+one of them baselined rather than blocking — and that cost belongs to whoever owns
+the repo, not to this document. What this document can say is that 500 was never
+argued and the numbers above are what an argument would have to start from.
+
+**And 500 does not port to Python.** The standard library's median file is 468
+lines and 47% of it is over the cap, against 5% for JavaScript. That is not
+Python being worse; it is Python putting a module's whole subject in one file
+where TypeScript splits it. A cap copied across would fire on half of a language's
+own library on the first run, which is how a tool gets switched off in week one.
+
+So the Python cell in the table above stays open **on purpose**, with this
+measurement against it rather than the word "open". A Python cap needs a number
+measured on Python, and nobody has measured one.
+
+**A Python rule for the unfinished stub was built, measured, and thrown away.
+2026-08-18, from the table above.** Rust bans `todo!` and `unimplemented!`;
+TypeScript bans a named function that does nothing, and
+`throw new Error('not implemented')` with it. Python's spelling looked obvious: a
+body that is only `pass`, only `...`, only a docstring, or only
+`raise NotImplementedError`, with `@abstractmethod`, `@overload` and `Protocol`
+methods exempt, because those declare a shape on purpose.
+
+Twelve cases passed. Then 167 files of Python's own standard library gave **98
+hits, and reading them says the rule is blunt rather than strict.**
+
+- **47 are docstring-only bodies, and they are documented no-op hooks**:
+  `bdb.user_call` and `user_line`, `cmd.preloop` and `postloop`, `tzinfo.dst`, and
+  `cgi.nolog` whose own name says it does nothing. The docstring says *when the
+  method is called*, not what it does. Somebody wrote that prose deliberately.
+- **25 are `pass`**, and they are hooks too: `contextlib.__enter__`,
+  `enum.__init__`, `_markupbase.unknown_decl`.
+- **11 are `raise NotImplementedError`, which in Python means two different
+  things.** `argparse.Action.__call__` and `optparse.HelpFormatter.format_usage`
+  mean *a subclass implements this*. `ssl.SSLSocket.recvmsg` and
+  `pathlib.PurePath.__new__` mean *this operation is refused here*, which is a
+  finished decision and the opposite of unfinished.
+
+Narrowing to the shape with no override story at all — a module-level function,
+undecorated, whose whole body is `pass` or `...` — still gives eleven, and at
+least nine are deliberate: `shutil._nop` by name, three `onerror` callbacks, the
+`_copyxattr` platform fallback, and `types._f` and `_c`, which exist only so that
+`type(_f)` yields a function type.
+
+**Why it cannot be sharpened.** The difference between a deliberate no-op and an
+abandoned stub is intent, and Python carries no marker for it. That is what
+`@abstractmethod` is for, and code using it was already exempt. A rule that
+refuses `shutil._nop` is refusing a decision, and a blunt rule is not a strict
+one.
+
+The cell stays open with this measurement against it, so the next attempt begins
+from evidence instead of repeating this one. What would change the answer is a
+signal for intent that Python actually carries — not a cleverer reading of the
+same shapes.
+
+**looper owns its own hooks and repairs them; everything else in that file is the
+project's. Corrected 2026-08-19, finding 105.** `mergeSettings` added a hook
+beside whatever was there and never over it. That is right for a hook somebody
+else wrote and wrong for a stale one of looper's own, so moving the entry left
+every already-wired project running looper twice per event — or, if init was never
+re-run, still wired to the entry that cannot announce its own failure.
+
+It now recognises a hook it could have written, by the tail it writes and the four
+entry spellings it can produce, and replaces that one. It names each replacement in
+the report, because a repair nobody is told about is the same silence as the stale
+entry. This is the rule finding 94 taught `mergeMcp`, arriving in the second place
+it was needed.
+
+**There is one entry, and it cannot fail. Added 2026-08-19, issue #74, finding
+104.** looper fails open when a capability cannot reach a verdict, and that was
+already true. It did not hold when looper itself could not be **loaded**: the hook
+process died on its own import graph, the human saw a hook error in the terminal,
+and the agent saw nothing at all and kept writing.
+
+An announcement about a crash has to live somewhere the crash cannot reach, which
+means somewhere that imports almost nothing. `bin/looper.js` is that place — two
+Node built-ins, then everything else. It loads the rest inside a `try`, and on
+failure writes a real hook answer through `additionalContext`, the channel the
+agent reads, saying that nothing is being checked and that a verdict is absent
+rather than clean. It still exits 0.
+
+So every invocation kind now points at that one file. `dev` pointed at
+`src/main.ts` directly, which is how this repo ran and why the gap was found here
+rather than reported by somebody depending on it.
+
+**`config.ts` holds what looper runs by, and `stubs.ts` holds what it writes
+out. Split 2026-08-18, issue #67.** The file had reached 497 lines against its own
+500 cap, so the decisions capability could not put its path there and put it in
+its own module instead. A size limit had started deciding where facts live, and
+the reason was invisible from either file.
+
+The line is nameable in one sentence: **the prose looper writes into a project is
+not a setting.** `CONSTITUTION_STUB`, `MAP_STUB`, `DOCTRINE_README_STUB`,
+`ADOPTED_HEADER`, `RECALL_HEADER`, `SECRETS_ALLOW_STUB`, `BASELINE_HEADER` and
+`DECISIONS_HEADER` are documents a person reads; they moved. `config.ts` went to
+402 lines with the cap untouched at 500.
+
+**The sanctum is still one file.** Nothing that turns a missing value into a
+default moved — `stubs.ts` is template literals and nothing else — so the sentence
+about `src/config.ts` stays true rather than being quietly widened to two.
+
+`DECISIONS_PATH`, `DECISIONS_TOOL` and `DECISIONS_PRIORITY` came back to
+`config.ts` beside every other project-visible path, and the re-export that would
+have given them two import paths went out with them: one home means one place to
+import from, or it is two homes wearing one name.
+**A file is read as bytes; only a list is read as lines. Corrected 2026-08-18,
+from adopter issue #44, finding 100.** One helper in `src/git.ts` ran git and
+returned `output.split("\n").filter((line) => line.length > 0)`. Dropping empty
+lines is right for everything that helper was written for — a config value, a
+list of paths, the lines of a diff. `stagedText` used it to read a **file**, so
+the commit gate judged every staged file with its blank lines deleted, and every
+line below a blank was numbered wrong by the count of blanks above it.
+
+Reading content and reading a list are two different jobs and now have two
+different helpers. Nothing else moved: a blank added line reaches a diff as `+`,
+which is one character long and survives the filter, so the additions reader that
+counts lines for the secrets scan was never affected.
+
+**And the escape hatch has to open widest where the verdict is worst. Corrected
+2026-08-18, from finding 99.** `shapeAt` refused unless an enclosing node began
+on exactly the line given, so `looper report` — the one route the law offers when
+a rule is wrong everywhere — closed on two ordinary cases: a continuation line of
+a multi-line expression, which begins nothing, and a line the tool named wrongly,
+which is the whole of adopter issue #44. The route was open while looper was
+right about where the problem was and shut when it was wrong about it.
+
+So a shape lookup has three answers rather than two. Found, when something begins
+there. **Around**, when nothing begins there but a statement contains it: the
+report is written anyway, against that statement, and says which line it actually
+begins on, because the gap between the named line and the real one is the evidence.
+Not-found only when no statement contains the line at all.
+
+**All three readers answer it, finished 2026-08-18 from issue #58.** Rust needed a
+different fix and got its own change rather than being forced into the same one:
+`skeleton.rs` collects tokens that *start* on the line, so its refusal never had
+the same cause. It now asks `syn` which item contains the line, re-reads that
+item's first line, and carries `startsAt` out through the binary's JSON, which the
+TypeScript side already read. Rust's line that begins nothing is also a different
+shape — a method chain continues with `.filter(...)`, which does start tokens — so
+it is a blank line inside an item.
+
+**JavaScript is a language this project judges, and was not one. Corrected
+2026-08-18, from adopter issue #46, finding 98.** `JUDGED_EXTENSIONS` listed
+`.ts`, `.tsx`, `.mts`, `.cts`, `.rs` and `.py`. A `.mjs` was walked past by the
+survey, so no rule read it — and because `STACK:1` is handed the same list, the
+one rule whose whole job is noticing a language arrive never saw it either. Both
+halves of that report have one cause and one fix: `.js`, `.jsx`, `.mjs` and
+`.cjs` are judged.
+
+Nothing else had to change. `lawFor` already routes anything that is not Rust or
+Python to the TypeScript reader, and `languageOf` already knew all four
+extensions mean JavaScript. The list was the only place that disagreed.
+
+`.mjs` is what somebody reaches for precisely when they need something that runs
+before or outside the TypeScript build — which is often the part that decides how
+everything else runs. The adopter's example configured the build of an entire
+Next.js console.
+
+**The rule reached one of the two places a failure is caught. Corrected
+2026-08-18, from adopter issue #45, finding 97.** `TS-ERROR:4` walked for
+`CatchClause` and nothing else, so `.catch(() => {})` — named twice in the `law`
+rule set that is injected on every turn in a TypeScript project — was caught by
+nothing. The adopter counted 19 of them in one console, 12 in a single file,
+none reported, in a file that reports 630 problems from other rules.
+
+A `.catch(handler)` body is the same thing as a catch clause: a place that
+receives the failure. It faces the same two questions the clause already faced —
+does the body observe the failure through a blessed logger, and does the failure
+escape the body. Two boundaries keep it decidable. A handler that is a bare name,
+`.catch(handleIt)`, is not judged, because its body is not there to read. And a
+handler whose only act is making up a value belongs to `TS-ERROR:3`, which
+already had it: measured, that rule fires on `.catch(() => 0)`, `null`, `false`,
+`[]` and `({})` in both the concise and block spellings, so without that boundary
+one problem was reported twice.
+
 **Init checks that the command it just wrote can actually be found. Added
 2026-08-18, from adopter issue #8.** `reachedFrom` knew two shapes, installed and
 `node_modules/.bin`, so a looper checked out inside the project fell through to
@@ -1179,6 +1506,41 @@ naming looper — and wires the hooks to that path, because nothing load-bearing
 may sit behind a command somebody has to know to type. And whatever shape it
 picks, it then checks: the file exists, or the command is in a directory on PATH.
 When it is not, init says so in the report rather than reporting success.
+
+**Three shapes was still one short: the project that is looper. Corrected
+2026-08-18, finding 95.** The shapes above are all ways of reaching looper from
+somewhere else. Running init in looper's own repo matched none of them and fell
+to `installed`, so the entry it wrote launched a bare `looper` that is not on
+PATH there, and its own MCP server never started. The fourth shape, `dev`, whose
+launch is the root-relative `./src/main.ts`, existed and could only be reached by
+typing `--dev`.
+
+So `reachedFrom` asks first whether the root is itself a looper checkout, by the
+same test it already applies to subfolders, and answers `dev` when it is. No
+adopting project can reach this branch, because an adopting project's root is not
+a looper checkout. The flag stays as an override and stops being the only door.
+
+**And the check has to name the path that actually gets written. Corrected
+2026-08-18, finding 93.** The check above proved `vendor/looper/bin/looper.js` was
+there, and `.mcp.json` was then written with
+`$CLAUDE_PROJECT_DIR/vendor/looper/bin/looper.js`, which is a different filename.
+For every adopter with looper checked out inside the project the server never
+started, so `doctrine`, `recall` and `see` were absent from the session while the
+hooks ran normally and nothing said a word.
+
+There are two contexts here and they are not interchangeable. A hook command is a
+shell line the agent runs with `CLAUDE_PROJECT_DIR` in the environment, so it
+carries the variable and quotes it. An `.mcp.json` argument is argv: no shell, no
+expansion, and the agent's own `${VAR}` form reads an environment that this
+variable is not in, because the agent sets it for hooks and not for the config it
+expands. So the git hook and the MCP entry are both written root-relative through
+one helper, `fromRoot`, which returns the same string `entryReach` checked.
+
+What that costs, kept rather than dropped: a relative path resolves against the
+directory the agent was started in, so a session started in a subdirectory of the
+project gets no server. An absolute path would close that and cannot be used,
+because `.mcp.json` is committed and a machine-specific path in it breaks every
+other clone.
 
 **A hook the project already wrote is never overwritten.** A shell script cannot
 be merged the way a settings file can, so init leaves it exactly as it is,
@@ -1700,6 +2062,85 @@ version number or path, which goes stale silently; and one session's stumble
 written as permanent law, which makes every later session steer around a pothole
 filled months ago. A note earns its place by helping the next session, not by
 having surprised the last one.
+
+### Chunk 1d — `decisions`, the rules a project set aside on purpose
+
+**Built 2026-08-18, from an adopting project that had grown the same thing by
+hand.** They kept a ledger of every place the doctrine or a rule in `law.toml`
+was deliberately ignored, with seven entries in it: a credential that reached git
+history and was not rotated, a vendor API built ahead of the legal answer, holding
+every customer's server password, an anti-cheat recorder running inside somebody
+else's game process. Their own summary of why it exists is the argument for
+putting it here: **most of these are security or legal questions nobody on the
+team is qualified to answer.**
+
+`recall` is the wrong home for them. A note is a fact somebody worked out. A
+decision is a rule that was broken knowingly, whose safety is an open question,
+and the difference matters because the two want opposite treatment: a note is
+true until something teaches you otherwise, and a decision stops being true the
+moment the code under it moves.
+
+**So an entry names the files it rests on, and looper hashes them.** Every later
+session is told which entries the ground has shifted under. That is the whole
+mechanism and it is deliberately small: looper never edits the prose, because
+what an entry says is a judgement and no tool refreshes a judgement. What a tool
+can do is refuse to let the document be trusted blindly, which is the failure
+every stale design document has in common.
+
+Four standings, and each is said differently on purpose. **Watched**: the files
+hash as they did when somebody read it. **Moved**: they do not, so the entry
+carries `READ IT AGAIN` with both hashes. **Gone**: a file it rests on no longer
+exists, which is louder than moved because a rename can hide a rewrite. And
+**unwatchable**: the entry rests on a decision rather than on code, names no
+files, and says so rather than being counted as fresh. The adopting project had
+one of those and it is the oldest open item they have, which is exactly the entry
+a hash would have quietly reported as fine.
+
+**`reread` is the only way a hash is re-recorded**, and the tool says what that
+means: a claim that a person read the entry again and it still says something
+true. Running it without reading is how the document starts lying. Nothing
+re-records itself, and no gate blocks on a moved entry, because a decision that
+has rotted is a thing to think about rather than a thing to fix in the next
+commit.
+
+**Where the constants live is a finding of its own.** `src/config.ts` was 497
+lines against its own 500 cap, so adding a path, a tool name and a priority
+tripped `TS-DECOMPOSITION:1`. The cap was not widened. The decisions module names
+its own file and tool, which is defensible on its merits since nothing outside it
+needs them, and it leaves a note for whoever adds the next capability: that file
+is full.
+
+### Chunk 1e — `LOG:3`, because a log you cannot query is a log you re-read
+
+**Built 2026-08-18, from an adopting project's measurement.** They had 269 log
+calls across a Rust workspace and not one interpolated message, because a person
+had spent hours on it after a silent outage. That is the unusual case. The normal
+case is every line reading `logger.info(f"saved {order}")`, and the cost only
+arrives on the night somebody needs to count how many orders failed and finds
+that the value is inside a sentence rather than beside it.
+
+`LOG:1` in all three languages already says the output belongs to whoever ran the
+program. `LOG:3` says the shape of what you do emit: **the message is a constant
+and everything that varies is a field.** A constant message can be grouped,
+counted and filtered; a sentence can only be grepped, and only if you guess the
+wording.
+
+**Each language keys on its own logger, which is what keeps it precise.** Rust
+reads the `tracing` and `log` macros, where the first string literal is the
+message and a `{` in it is a value. Python reads a call to a level name in a file
+that imports `logging` or `structlog`, and refuses an f-string, a `%`, a
+`.format()` or a concatenation — **while leaving `logger.info("saved %s", order)`
+legal**, because that is the standard library's own lazy form and refusing it
+would be refusing the language. TypeScript has no standard logger, so it judges
+nothing until a file imports one of the known packages, and `[ts] loggers` lets a
+project name its own. A file that imports no logger cannot trip this rule, which
+is how `report.info(...)` on some unrelated object stays silent.
+
+**What it deliberately does not do.** It never asks for a log line to exist. That
+is a judgement about what is worth saying, no rule can make it, and a rule that
+demanded one per function would produce noise, which is how a tool gets switched
+off. The presence half belongs in the canon, where it can say where an event is
+worth emitting without refusing anything.
 
 ### Chunk 2 — the law engine, language-neutral half
 
@@ -2780,6 +3221,9 @@ built, as of 2026-08-18:
 | `PY-TRUTH:1` | a default argument that is a mutable container | built 2026-08-18 |
 | `PY-TRUTH:2` | `assert` outside a test file, whatever it is checking | built 2026-08-18 |
 | `PY-LAYER:1` | `from x import *`, which takes every name without saying which | built 2026-08-18 |
+| `PY-LOG:1` | `print`, and writing to `sys.stdout` or `sys.stderr` directly, in a file that does not say it starts the program | built 2026-08-18, from issue #63 |
+| `PY-SECURITY:1` | handing the operating system a command built by pasting values into it | built 2026-08-19, from the table of what the law defends |
+| `PY-SECURITY:2` | building a database query by pasting values into the text of it | built 2026-08-19, from the table of what the law defends |
 
 `PY-TRUTH:2` is the one worth explaining, because it is the rule most likely to
 be argued with. `assert` is not a check in Python; it is a check that disappears
@@ -2791,6 +3235,104 @@ They shipped one at a time, cases first from each ban text, and each run over re
 Python nobody here wrote before it counted as done. Naming all seven up front was
 not a promise to build all seven; it was so the gap stayed visible while it was
 open. It was open for a few hours, and the record of each is below.
+
+`PY-SECURITY:2` is its sibling, built the same day and the same way: the query
+half of the same row. It mirrors `DATA:1`, whose precision comes from two
+conditions together rather than one — the method is a querying one, `execute`,
+`executemany`, `executescript` or `text`, **and** the text carries at least two
+SQL words. A built string handed to something that merely happens to be called
+`execute` is not a query.
+
+**The corpus made this rule, twice over.** 574 files of Python's own standard
+library gave **zero** hits, which tests that it is quiet and tests nothing else —
+the standard library builds almost no SQL. So it was run over 3,217 files of
+third-party packages under `/usr/lib/python3/dist-packages`, none unreadable,
+which gave **eight**. Reading all eight found the rule was wrong about six:
+
+```python
+params = ", ".join(["?"] * len(message_ids))
+cursor.execute(f"SELECT id, data FROM message WHERE id IN ({params})", tuple(message_ids))
+```
+
+That is the **correct** way to write `IN (...)`, which no driver takes as a
+parameter: the f-string pastes only question marks and the values go through the
+driver untouched. Five more pasted `str(int(id))`, which cannot carry SQL either.
+
+So the rule gained the same boundary its sibling has, from the same principle:
+**text from outside is the harm, and an integer or a `?` is not text from
+outside.** A pasted part is followed back to what built it, and the rule stays
+silent when every varying part is a number again or a run of placeholders.
+
+With that, the same 3,217 files give **one hit and no false positives**:
+
+```python
+"DELETE FROM task WHERE id NOT IN ({})".format(
+    ",".join([str(task.id) for task in except_tasks]))
+```
+
+`str(task.id)` with no `int()` around it — nothing there proves the value is a
+number, and the repair is one word. That is a rule finding the one place worth
+looking at rather than firing on a pattern. Nothing in this repo fires.
+
+**The second corpus also found six more for `PY-SECURITY:1`**, all genuine: a
+pager and an editor pasted into shells in `click/_termui_impl.py`, and
+`os.system("mkdir %s" % path)` in an SFTP client where `path` is what somebody
+typed at its prompt.
+
+`PY-SECURITY:1` came next, on 2026-08-19, from the same table: TypeScript answers
+"something from outside is used as an instruction" with four rules and Python
+answered with none, in the language where `shell=True` is one keyword away and the
+safe form needs the command split into a list.
+
+It fires only where both halves are true: the operating system is handed a
+**shell** — `os.system`, `os.popen`, `subprocess.getoutput` and
+`getstatusoutput`, or `subprocess` called with `shell=True` — **and** the command
+was **built by pasting**, which is an f-string with a value in it, a `+`, a `%`,
+or `.format(...)`. A shell handed a line nobody outside wrote cannot be injected
+into, so `os.system("ls -la")` is silent, exactly as `NODE:1` treats its literal.
+
+**Ten cases, then 167 files of Python's own standard library: three hits, no false
+positives**, each read in full:
+
+- `pydoc.py:1724`, `os.system(cmd + ' "' + filename + '"')`, where `cmd` comes
+  from the `PAGER` environment variable. The classic.
+- `pydoc.py:1679`, `'more "%s"' % filename` pasted inside double quotes.
+- `_osx_support.py:292` pastes a compiler path but hand-escapes it with
+  `.replace("'", "'\"'\"'")` and carries a comment saying `subprocess` cannot be
+  used during bootstrap. The rule names it correctly and a project would answer
+  with a concession, which is what concessions are for — the escaping is the
+  repair this rule's own advice calls a repair.
+
+Three hits in 167 files is the shape of a rule that has found something rather
+than a rule that fires on a pattern. Nothing in this repo fires.
+
+`PY-LOG:1` came later, on 2026-08-18, from issue #63 rather than from the original
+seven: the table of what the law defends showed that Rust and TypeScript both
+answered "output is taken from whoever ran the program" and Python answered
+nothing, in the language `print` is most reached for.
+
+Two things had to be decided, and the corpus decided the second.
+
+**What says a file starts the program.** There is no `package.json` to read for a
+Python project, so the entry list `TS-LOG:1` leans on does not exist here. Python
+has its own way of saying it, and the rule uses that: a file named `__main__.py`,
+or a file holding an `if __name__ == "__main__":` block. Anything else is a module
+somebody imports.
+
+**Who chose the destination.** Thirteen cases, then the reader, then 167 files of
+Python's own standard library, where it found 37 with none unreadable. Reading all
+37 by hand turned up one class that is not this harm at all: `print(item, file=file)`
+in `abc`, `traceback`, `getpass` and `optparse`, where `file` is a parameter the
+caller supplied. The caller chose where it went, which is precisely what the rule
+wants. `file=sys.stdout` and `file=sys.stderr` are the opposite — the module
+choosing the terminal again — so those still fire. With that boundary the same
+corpus gives **21, and all 21 were read one at a time and every one is a module
+writing to the terminal**: `bdb`'s trace output and its two demo functions,
+`this.py` printing on import, `socketserver` printing a traceback banner where no
+logging setup can see it, `warnings` and `typing` naming stderr themselves.
+
+Nothing in this repo fires: looper's own `read.py` and `skeleton.py` print only
+under `if __name__ == "__main__":`, which is the shape the rule points at.
 
 `PY-ERROR:1` went first because it is the shape with the least room to argue and
 the clearest legal spelling. Twelve cases, then the reader, then two corpora

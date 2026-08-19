@@ -5,3 +5,5 @@ dist/
 *.looper-backup
 vendor/rust-law/target/
 vendor/seer/
+
+src/law/python/__pycache__/
