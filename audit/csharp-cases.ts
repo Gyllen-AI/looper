@@ -26,6 +26,17 @@ export const CSHARP_CASES: readonly CsharpCase[] = [
   { rule: "CS-ERROR:1", name: "a try with a finally and no catch at all", expect: "silent",
     code: `class C {\n    void F() {\n        try { G(); } finally { H(); }\n    }\n    void G() { }\n    void H() { }\n}\n` },
 
+  { rule: "CS-ERROR:1", name: "naming the one failure being ignored, which is the C# spelling of suppress()", expect: "silent",
+    code: `using Microsoft.JSInterop;\nclass C {\n    void F() {\n        try { G(); } catch (JSDisconnectedException) { }\n    }\n    void G() { }\n}\nnamespace Microsoft.JSInterop { class JSDisconnectedException : System.Exception { } }\n` },
+  { rule: "CS-ERROR:1", name: "a when filter naming which failure is expected", expect: "silent",
+    code: `using System;\nclass C {\n    void F() {\n        try { G(); } catch (Exception error) when (Expected(error)) { }\n    }\n    void G() { }\n    bool Expected(Exception e) => true;\n}\n` },
+  { rule: "CS-ERROR:1", name: "a named failure that is still not the everything type", expect: "silent",
+    code: `using System;\nclass C {\n    void F() {\n        try { G(); } catch (OperationCanceledException) { }\n    }\n    void G() { }\n}\n` },
+  { rule: "CS-ERROR:1", name: "SystemException is as wide as Exception and names as little", expect: "fires",
+    code: `using System;\nclass C {\n    void F() {\n        try { G(); } catch (SystemException) { }\n    }\n    void G() { }\n}\n` },
+  { rule: "CS-ERROR:1", name: "the everything type with a name on it is still the everything type", expect: "fires",
+    code: `using System;\nclass C {\n    void F() {\n        try { G(); } catch (Exception error) { }\n    }\n    void G() { }\n}\n` },
+
   { rule: "CS-ERROR:2", name: "a failure that says nothing about itself", expect: "fires",
     code: `using System;\nclass C {\n    void F() { throw new Exception("something went wrong"); }\n}\n` },
   { rule: "CS-ERROR:2", name: "the same failure written out in full", expect: "fires",

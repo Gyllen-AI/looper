@@ -49,7 +49,11 @@ public static class Program
 
         Say(new
         {
-            violations = violations.Select(one => new { rule = one.Rule, file = one.File, line = one.Line }),
+            violations = violations
+                .OrderBy(one => one.File, StringComparer.Ordinal)
+                .ThenBy(one => one.Line)
+                .ThenBy(one => one.Rule, StringComparer.Ordinal)
+                .Select(one => new { rule = one.Rule, file = one.File, line = one.Line }),
             unreadable,
         });
         return 0;

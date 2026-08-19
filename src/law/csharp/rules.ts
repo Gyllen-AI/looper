@@ -5,14 +5,16 @@ export const CSHARP_RULES: readonly Rule[] = [
     id: "CS-ERROR:1",
     category: "ERROR",
     pass: "fast",
-    bans: "a `catch` whose body is empty, including one holding only a comment",
+    bans:
+      "a `catch` whose body is empty and which names nothing — a bare `catch`, or `catch (Exception)` and `catch (SystemException)`, which are the same thing with a word in front. A comment in the body does not count as naming it",
     why:
       "a caught failure leaves through one of three doors: thrown onward, returned to the caller, or written down where somebody will read it. An empty `catch` uses none of them, so the program carries on as though the work succeeded and the wrong answer surfaces somewhere else entirely, with nothing left to say where it started. A comment in the body changes nothing: the person reading the log at two in the morning cannot see it",
     instead: [
       "write it down and carry on: `catch (Exception error) { _logger.LogWarning(error, \"could not read {Path}\", path); }`",
       "throw it onward untouched: `catch (Exception) { throw; }`",
       "turn it into a failure the caller can act on: `catch (IOException error) { throw new DatasetMissing(path, error); }`",
-      "if it truly does not matter, say which one does not matter and why, in the catch: `catch (FileNotFoundException) { return Array.Empty<string>(); }`",
+      "if one failure truly does not matter here, name that one and the catch may stay empty: `catch (TaskCanceledException) { }`",
+      "or name it with a filter, which this rule also accepts: `catch (Exception error) when (IsExpectedShutdown(error)) { }`",
     ],
     valve: { kind: "none" },
   },

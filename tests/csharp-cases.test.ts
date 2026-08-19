@@ -71,6 +71,26 @@ test("a Razor line number counts from the top of the Razor file, not the code bl
   }
 });
 
+test("a line number for the ! points at the ! and not at where its expression began", () => {
+  const root = mkdtempSync(join(tmpdir(), "looper-cs-"));
+  try {
+    const path = join(root, "Held.cs");
+    writeFileSync(
+      path,
+      `using System.Reflection;\nclass C {\n    void F(object held) {\n        var found = typeof(C)\n            .GetField("x", BindingFlags.NonPublic)!\n            .GetValue(held)!;\n    }\n}\n`,
+    );
+    const said = judgeCsharp(LOOPER, root, [path]);
+    assert.equal(said.kind, "found");
+    if (said.kind !== "found") return;
+    assert.deepEqual(
+      said.hits.filter((hit) => hit.rule === "CS-TYPE:1").map((hit) => hit.line),
+      [5, 6],
+    );
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
 test("a file that will not parse is named rather than passed as clean", () => {
   const root = mkdtempSync(join(tmpdir(), "looper-cs-"));
   try {

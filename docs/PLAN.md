@@ -3960,18 +3960,69 @@ Measured on 2026-08-19 across the adopter's `Base.API`, `BaseWeb` and
 
 | rule | bans | found | disposition |
 |---|---|---|---|
-| `CS-ERROR:1` | a `catch` whose body is empty, including one holding only a comment | 454 | built 2026-08-19 |
+| `CS-ERROR:1` | a `catch` whose body is empty and which names nothing | 429 | built 2026-08-19 |
 | `CS-ERROR:2` | `throw new Exception(...)` — the failure type that says nothing about itself | 67 | built 2026-08-19 |
 | `CS-TYPE:1` | the `!` that tells the compiler a value is not null | 210 | built 2026-08-19 |
 | `CS-TRUTH:1` | `async void` on a method that is not an event handler | 25 | built 2026-08-19 |
 
-**197 of the 454 swallowed catches are inside `.razor` files**, which is the
+**190 of the 429 swallowed catches are inside `.razor` files**, which is the
 number that decided Razor was worth reading rather than skipping.
 
 A regex over the same files finds 110 swallowed catches where Roslyn finds 257
 in `.cs` alone. The difference is entirely `catch` blocks holding a comment and
 `catch` blocks written across more than one line. That gap is why this is a
 parser and not a pattern.
+
+### Run over code nobody here wrote, which changed a rule
+
+Two third-party codebases, cloned 2026-08-19: **Newtonsoft.Json** at `09bb545`
+and **MudBlazor** at `56f4cc0`. Together 4,102 files and 493,083 lines, neither
+written by anyone involved here. MudBlazor was chosen for the second reason as
+well: 2,002 `.razor` files, so the Razor half was judged on somebody else's
+components rather than only on the adopter's.
+
+**`CS-ERROR:1` was wrong and the foreign code is what showed it.** As first
+written it fired on any empty `catch`, and it found 51 across the two
+repositories. Classified by hand, 32 of those named exactly which failure they
+were ignoring — `catch (JSDisconnectedException) { }`,
+`catch (Exception error) when (IsExpectedCancellationException(error)) { }`.
+Only 19 named nothing.
+
+That is the same act `PY-ERROR:1` already calls legal in the other direction:
+its own `instead` list offers `with suppress(FileNotFoundError)` **because it
+names what is ignored**. A rule cannot accept that reasoning in Python and refuse
+it in C#. The rule now fires only on a bare `catch`, on `catch (Exception)` and
+on `catch (SystemException)`, and stays silent when one failure is named or a
+`when` filter names it.
+
+What the narrowing did to each codebase says something on its own:
+
+| | before | after |
+|---|---|---|
+| Newtonsoft.Json | 9 | 5 |
+| MudBlazor | 42 | 14 |
+| the adopter | 454 | 429 |
+
+The libraries lost two thirds of their hits and the adopter lost six percent.
+Careful third-party code names what it ignores; this codebase mostly does not.
+Had the rule shipped as first written it would have fired on 32 deliberate uses
+in reviewed code, and the first thing any of those maintainers would have done
+is switch it off.
+
+**A line number was also wrong, in a way only long files show.** `CS-TYPE:1`
+reported the line where a `!`'s expression *began* rather than the line holding
+the `!`. In MudBlazor's tests a reflection chain spans three lines with a `!` on
+two of them, and both were reported against the first. Thirteen hits pointed at
+a line with no `!` on it. It now reports the operator's own token, and
+`tests/csharp-cases.test.ts` pins that with a three-line chain expecting 5 and 6.
+
+**After both fixes, every hit was checked against the line it names.** All 1,888
+across the two foreign repositories and the adopter land on a line that actually
+holds the thing the rule bans, and 4,881 files produced nothing unreadable.
+`CS-ERROR:1`, `CS-ERROR:2` and `CS-TRUTH:1` were judged one hit at a time — 19,
+55 and 12. `CS-TYPE:1` has 1,071 and was checked by machine against the line
+text rather than one at a time, which is the one place below the standard this
+document asks for, said out loud rather than left to be assumed.
 
 ### What is not built
 

@@ -24,7 +24,7 @@ public static class Law
 
                 case PostfixUnaryExpressionSyntax held
                     when held.IsKind(SyntaxKind.SuppressNullableWarningExpression):
-                    yield return At("CS-TYPE:1", file, held);
+                    yield return At("CS-TYPE:1", file, held.OperatorToken);
                     break;
 
                 case MethodDeclarationSyntax held when IsAsyncVoid(held):
@@ -35,10 +35,30 @@ public static class Law
     }
 
     private static Violation At(string rule, string file, SyntaxNode node) =>
-        new(rule, file, node.GetLocation().GetLineSpan().StartLinePosition.Line + 1);
+        At(rule, file, node.GetLocation());
 
-    private static bool Swallows(CatchClauseSyntax held) =>
-        held.Block.Statements.Count == 0;
+    private static Violation At(string rule, string file, SyntaxToken token) =>
+        At(rule, file, token.GetLocation());
+
+    private static Violation At(string rule, string file, Location where) =>
+        new(rule, file, where.GetLineSpan().StartLinePosition.Line + 1);
+
+    private static readonly string[] TheEverythingType = ["Exception", "SystemException"];
+
+    private static bool Swallows(CatchClauseSyntax held)
+    {
+        if (held.Block.Statements.Count > 0) return false;
+        if (held.Filter is not null) return false;
+        if (held.Declaration is null) return true;
+        return NamesNothing(held.Declaration.Type);
+    }
+
+    private static bool NamesNothing(TypeSyntax type) => type switch
+    {
+        IdentifierNameSyntax held => TheEverythingType.Contains(held.Identifier.ValueText),
+        QualifiedNameSyntax held => TheEverythingType.Contains(held.Right.Identifier.ValueText),
+        _ => false,
+    };
 
     private static bool NamesNothing(ObjectCreationExpressionSyntax made) =>
         made.Type is IdentifierNameSyntax { Identifier.ValueText: "Exception" }
