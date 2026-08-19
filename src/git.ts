@@ -2,7 +2,7 @@ import { execFileSync } from "node:child_process";
 import { existsSync } from "node:fs";
 import { join } from "node:path";
 
-import { GIT_TIMEOUT_MS } from "./config.ts";
+import { A_READER_MAY_ANSWER_WITH, GIT_TIMEOUT_MS } from "./config.ts";
 import { reasonFrom } from "./fields.ts";
 
 const CHANGED: readonly (readonly string[])[] = [
@@ -20,6 +20,7 @@ function askWhole(root: string, args: readonly string[]): string {
     cwd: root,
     encoding: "utf8",
     timeout: GIT_TIMEOUT_MS,
+    maxBuffer: A_READER_MAY_ANSWER_WITH,
     stdio: ["ignore", "pipe", "ignore"],
   });
 }
