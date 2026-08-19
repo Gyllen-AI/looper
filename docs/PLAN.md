@@ -274,6 +274,34 @@ looper must not assume. The mechanism is: the sweep, the verdict vocabulary,
 the two metrics, the stall fingerprints, and the injection. A project that declares nothing still gets
 its full internal report, and an external count of zero rather than a silence.
 
+**Nobody will write the checks, so looper proposes them.** A design that ends at
+"declare your checks in a file" has moved the problem rather than solved it. The
+adopter who most needs this is the one who does not know what their chain is made
+of, and an empty `.looper/loop.toml` is indistinguishable from a healthy project.
+Asking a person to author checks is asking them to already have the map the tool
+was supposed to draw.
+
+It does not need to be told. **The hooks already see every tool call, and what an
+agent reaches for is the chain, revealed by use.** A session that opens two ssh
+connections, queries a database and fetches one endpoint has just named four
+external layers, none of them guessed. So the proposal is: name what was reached
+for, how often, and say that none of it is covered.
+
+> two hosts, one database and one endpoint were reached this session and no check
+> covers any of them. Write them?
+
+That is the same evidence discipline the rule set already runs on, and it keeps
+the property that makes this safe: **looper never assumes what a project is made
+of, it reports what the project's own agent did.** A draft check is a proposal a
+person accepts, never a file that appears.
+
+**Init wires it, because a capability an adopter has to discover is a capability
+most adopters do not have.** The injection hook is written by `looper init`
+alongside the ones already there. Nothing about the loop should require knowing a
+command exists: the sweep is a command for the author and for debugging, and the
+verdict arrives without anyone asking for it. An adopter who has to be told to run
+something has already been failed by this design.
+
 **It must be injected, and it is not yet.** By the principle already stated
 above, a check that fires when somebody remembers to run it is a check that does
 not fire, so the failing labels and the two numbers belong where the reader
@@ -289,10 +317,21 @@ drivers on its own tree. `tests/invariants.test.ts` holds both halves: the runne
 is named among the files that may start a process, and a second test refuses to
 let the registry reach it, so a hook cannot run a project's line today.
 
-What would close it, when it is built: run declared checks only from an explicit
-invocation, cache the last result with its age, and inject **the cached result**
-rather than running anything. The reader gets the fact where they already are,
-and nothing a project wrote runs because a session opened.
+What closes it: run declared checks only from an explicit invocation, cache the
+last result with its age, and inject **the cached result** rather than running
+anything. The reader gets the fact where they already are, and nothing a project
+wrote runs because a session opened. When the cached answer is older than a
+threshold, start a refresh out of band and still inject the old one, labelled with
+its age, because a stale answer that says it is stale beats no answer.
+
+**Measured before being asked for, in an adopter, 2026-08-19.** The shape above
+was built there first to find out what it costs on a hook that runs on every
+prompt: **9 ms cold and 23 ms warm**, against the seconds it would take to
+actually run a sweep with several remote calls and a compile in it. It says
+nothing at all when the loop is whole, because a line that appears every time is
+a line nobody reads. That is the number this design needed and did not have: the
+objection to injecting anything is that it costs something on every turn, and the
+answer is that reading one cached line does not.
 
 **The stall metric is design only.** Nothing reads the hook stream for repeat
 clusters yet, and no fingerprint is implemented.
