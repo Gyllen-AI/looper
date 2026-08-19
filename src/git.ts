@@ -111,8 +111,16 @@ const FILE_HEADER = /^\+\+\+ b\/(.*)$/;
 const HUNK_START = /^@@ -\d+(?:,\d+)? \+(\d+)(?:,\d+)? @@/;
 
 export function stagedAdditions(root: string): Added {
+  return additionsIn(root, ["diff", "--cached", "-U0", "--no-color"]);
+}
+
+export function additionsAgainst(root: string, revision: string): Added {
+  return additionsIn(root, ["diff", "-U0", "--no-color", `${revision}...HEAD`]);
+}
+
+function additionsIn(root: string, args: readonly string[]): Added {
   try {
-    const diff = ask(root, ["diff", "--cached", "-U0", "--no-color"]);
+    const diff = ask(root, args);
     const added: AddedLine[] = [];
     let file = "(staged change)";
     let at = 0;
@@ -189,6 +197,59 @@ export function changedLines(root: string, path: string, against: Against): Touc
   } catch (cause) {
     const detail = reasonFrom(cause);
     return { kind: "unknown", why: detail };
+  }
+}
+
+export type Ahead =
+  | { readonly kind: "cannot-tell"; readonly why: string }
+  | { readonly kind: "against"; readonly revision: string };
+
+const WHAT_THE_REMOTE_HAS: readonly (readonly string[])[] = [
+  ["rev-parse", "--abbrev-ref", "--symbolic-full-name", "@{upstream}"],
+  ["rev-parse", "--abbrev-ref", "origin/HEAD"],
+];
+
+export function whatTheRemoteAlreadyHas(root: string): Ahead {
+  let last = "no remote-tracking branch to compare against";
+  for (const args of WHAT_THE_REMOTE_HAS) {
+    try {
+      const said = ask(root, args);
+      const first = said[0];
+      if (typeof first === "string" && first.length > 0) {
+        return { kind: "against", revision: first };
+      }
+    } catch (cause) {
+      last = reasonFrom(cause);
+    }
+  }
+  return { kind: "cannot-tell", why: last };
+}
+
+export type Vocabulary =
+  | { readonly kind: "cannot-tell"; readonly why: string }
+  | { readonly kind: "words"; readonly words: ReadonlySet<string> };
+
+const A_WORD = "[A-Za-z_$][A-Za-z0-9_$]{2,}";
+
+export function everyWordAt(
+  root: string,
+  revision: string,
+  ignoring: readonly string[],
+): Vocabulary {
+  try {
+    const said = askWhole(root, [
+      "grep",
+      "-h",
+      "-o",
+      "-E",
+      A_WORD,
+      revision,
+      "--",
+      ...ignoring.map((one) => `:!${one}`),
+    ]);
+    return { kind: "words", words: new Set(said.split("\n").filter((one) => one.length > 0)) };
+  } catch (cause) {
+    return { kind: "cannot-tell", why: reasonFrom(cause) };
   }
 }
 

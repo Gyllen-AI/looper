@@ -16,6 +16,7 @@ import type {
 import { stagedAdditions } from "../git.ts";
 import { commandFrom } from "../law/capability.ts";
 import { intentOf } from "../law/commit-command.ts";
+import { saidAboutStrangers, strangersLeaving } from "./strangers.ts";
 import { findingsIn } from "./detect.ts";
 
 const COMMIT_EVENTS: readonly HookEvent[] = [
@@ -140,7 +141,12 @@ export class Secrets implements Capability {
       if (context.payload.kind === "none") return { kind: "pass" };
       const typed = commandFrom(context.payload.text);
       if (typed.kind === "none") return { kind: "pass" };
-      if (intentOf(typed.text).kind !== "commit") return { kind: "pass" };
+      const intent = intentOf(typed.text);
+      if (intent.kind === "push") {
+        const note = saidAboutStrangers(strangersLeaving(context.root));
+        return note.length === 0 ? { kind: "pass" } : { kind: "mention", note };
+      }
+      if (intent.kind !== "commit") return { kind: "pass" };
       alsoTyped.push(...scanText(context.root, typed.text, AS_TYPED));
     }
     const caught = [...alsoTyped, ...scanStaged(context.root)];
