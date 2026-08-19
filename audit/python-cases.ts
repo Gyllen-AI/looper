@@ -167,6 +167,8 @@ export const PYTHON_CASES: readonly PythonCase[] = [
     code: `def save(order, report):\n    report.info(f"saved {order}")\n` },
   { rule: "PY-LOG:1", name: "a file that says it starts the program may print", expect: "silent",
     code: `def run():\n    print("done")\n\n\nif __name__ == "__main__":\n    run()\n` },
+  { rule: "PY-LOG:1", name: "the guard exempts the whole file, not only the lines it runs", expect: "silent",
+    code: `def work():\n    print("reached through the guard, and by any importer too")\n\n\nif __name__ == "__main__":\n    work()\n` },
   { rule: "PY-LOG:1", name: "the file Python itself calls the entry point may print", expect: "silent",
     file: "src/tool/__main__.py",
     code: `def run():\n    print("done")\n\n\nrun()\n` },
