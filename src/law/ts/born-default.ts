@@ -10,7 +10,7 @@ export const BORN_DEFAULT: Rule = {
   category: "TRUTH",
   pass: "fast",
   bans:
-    "a value standing in for one nobody gave: `??`, `||` used as a value, `??=`, `||=`, a default parameter, a destructuring default, `if (!x) x = 5`, and a spread merge over a defaults object — everywhere but the one file that gathers settings",
+    "a value standing in for one nobody gave: `??`, `||` used as a value, `??=`, `||=`, a default parameter, a destructuring default, `if (!x) x = 5`, and **any object literal spreading two or more things** — everywhere but the one file that gathers settings. That last one is wider than the harm: looper cannot tell `{ ...DEFAULTS, ...given }` from `{ ...current, ...patch }`, so the copy-and-patch idiom fires too",
   why:
     "two places answering \"what happens when nobody said\" means the answer is whichever one ran last, and neither place knows about the other. Scattered, nobody can say what the program does when a value is missing, and the one who finds out is whoever is using it. The value that was never given is also the one nobody tested",
   instead: [
