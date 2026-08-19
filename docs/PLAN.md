@@ -1887,6 +1887,33 @@ It also closes a sentence this plan already contains and could not honour: *a
 violation the agent cannot discharge is our defect, recorded as one.* Recorded
 where? Here.
 
+**The same argument reaches what is absent, not only what misfires.** A rule that
+fires wrongly is one kind of defect. A capability that is not there is the other,
+and it is the larger one, because nothing announces it. A human adopter never
+files "a search over this would have saved me an hour"; they spend the hour, and
+the hour leaves no trace. The agent's version of that hour does leave one, in the
+shape the stall metric already reads: one command shape run nine times in forty
+minutes, one file read eleven times with different filters, a test rerun three
+times before it produced data at all. Those are not complaints. Each one names a
+question the toolbox could not answer in a single call, which is a far better
+capability request than a feature wish, because it arrives with the evidence
+attached and the cost already counted.
+
+So a stall cluster that crosses the threshold becomes a proposal, on the same
+route a rule proposal already takes: written down where the adopter can read it
+before anything leaves, and sent only on purpose. What travels is the shape and
+the count, never the project's own material: the shape is "one process-listing
+command, nine times, forty minutes, no write between them" and never the command
+line, the paths or what was being built. A capability the tool lacks is
+discoverable from the shape alone, and the shape is the part that generalises.
+
+Two consequences worth stating. It means the toolbox grows from where adopters
+actually stalled rather than from where anyone guessed they would, which is the
+same evidence discipline the rule set already runs on. And it means an adopter
+who fixes their own stall locally has produced something worth sending, so the
+project half of the loop is not a private workaround but a draft of the next
+capability.
+
 **An agent that cannot commit will ask its human to type the command instead.
 Observed 2026-08-18.** An agent working in a project that had adopted looper hit
 the gate and passed the refused command to the person supervising it, presented
