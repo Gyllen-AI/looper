@@ -1,7 +1,13 @@
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 
-import { ALLOW_MARKER, NOT_A_WAY_THROUGH, SECRETS_ALLOW_PATH, SKIP_SUFFIXES } from "../config.ts";
+import {
+  ALLOW_MARKER,
+  BASELINE_PATH,
+  NOT_A_WAY_THROUGH,
+  SECRETS_ALLOW_PATH,
+  SKIP_SUFFIXES,
+} from "../config.ts";
 import { SILENT } from "../capability.ts";
 import type {
   Capability,
@@ -60,6 +66,7 @@ export function scanStaged(root: string): readonly Caught[] {
   for (const added of staged.added) {
     if (SKIP_SUFFIXES.some((suffix) => added.file.endsWith(suffix))) continue;
     if (added.file.endsWith(SECRETS_ALLOW_PATH)) continue;
+    if (added.file.endsWith(BASELINE_PATH)) continue;
     if (added.text.includes(ALLOW_MARKER)) continue;
     for (const finding of findingsIn(added.text, allowed)) {
       caught.push({ file: added.file, line: added.line, ...finding });
