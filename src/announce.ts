@@ -168,9 +168,6 @@ function strayBranchLines(root: string): readonly string[] {
   ];
 }
 
-// A task names three or four branches, and the router's own required lines take
-// the first third of the budget. A branch that will not fit in a sixth of it is
-// one that can only ever travel alone, and the allocator drops whole branches.
 const BRANCHES_AT_ONCE = 6;
 
 export function oversizedComplaints(root: string): readonly string[] {

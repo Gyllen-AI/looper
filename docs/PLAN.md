@@ -5628,3 +5628,48 @@ that will not parse says the same; a cache that will not read says so and names
 the command that would refresh it. `looper law` caught all three while they were
 being written.
 
+### Two corrections to what merged tonight, one of them to #125
+
+**The adopter was locked out of the tree it was given.** `#128` shipped 22 nested
+branches, and `isABranchName` refused a name containing a slash. So `ui/state` was
+not a name an adopter could write, all 22 were canon-only, and `listBranches` did
+not recurse either — a nested file of theirs was invisible even if they guessed.
+A tree that governs only half of itself. The guard now takes slash-joined
+segments and still refuses `..`, a backslash, a leading slash and an empty
+segment, because a branch name is a name and never a way out of the doctrine
+folder. Verified: `ui/state` and `secure/input` allowed, `../escape`, `/abs` and
+`a//b` refused.
+
+**And the budget never applied to the only thing it exists to govern.** `#125`
+made every routed branch `required: true` so none could be dropped. The reasoning
+was right — a rule that never arrived reads exactly like a rule that was followed
+— and the consequence was not: the ceiling then constrained nothing but looper's
+own status lines. Measured on the project that prompted it, nine branches went out
+at **19,354 characters against a stated 9,800**, and the only things dropped were
+`law`, `recall`, `decisions` and `stall`. An adopter's doctrine could grow without
+any consequence they could observe, because the number meant to stop it was never
+applied to it.
+
+**The resolution keeps both halves.** Branches are droppable again, but they sort
+at priority 10 — immediately after the constitution and ahead of everything else —
+so they fill the budget first and looper's own status lines yield to them. A branch
+that does not fit is named **with its size**, and the marker already points at the
+`doctrine` tool that fetches a rule set by name:
+
+```
+[looper: 1 contribution(s) dropped for budget — doctrine:law (3894 chars). A name
+cannot be weighed, so the size is here: run looper law to see what the
+outstanding-work count would have said, and the doctrine tool for a rule set by
+name.]
+```
+
+So the absence is stated rather than silent, and the rule is still reachable. That
+is the difference between this and what `#124` reported: there, a branch vanished
+and nothing said so. `#125`'s guarantee was that a missing rule must be visible,
+not that the ceiling must be ignored — and honouring the first by breaking the
+second made the ceiling decorative.
+
+Both commits carried their reasoning in code comments, which `TS-DEAD:2` refused
+on the first run here. The reasoning is above instead, which is what that rule's
+own `instead` list says to do.
+

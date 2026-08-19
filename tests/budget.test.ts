@@ -167,7 +167,7 @@ test("a doctrine branch that does not fit is dropped and named, never sent anywa
           { source: `doctrine:${name}`, priority: 10 + at, text: "x".repeat(3000), required: false },
         ],
         hooks: () => NO_EVENTS,
-        onHook: () => ({ kind: "pass" }) as Outcome,
+        onHook: (): Outcome => ({ kind: "pass" }),
       }) satisfies Capability,
   );
   const { allocation } = allocate(capabilities, { root: process.cwd(), budget: INJECTION_BUDGET });
