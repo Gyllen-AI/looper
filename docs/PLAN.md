@@ -590,6 +590,31 @@ and costs nothing new, because the parse has happened either way. A file with a
 lock in it should raise `runtime/concurrency`; no path expression will ever say
 that.
 
+**The constitution carries the index, and it is generated.** The constitution is
+paid on every single message and named no branch at all, so the seven that route
+by no path (`runtime/*`, `observe/*`, `secure/input`) could only be reached by a
+reader who already knew they existed. `canonBranchIndex()` builds the list from
+`canonBranchNames()` and `assembleConstitution` appends it:
+
+```
+# THE BRANCHES. Name every one your task touches and pull it by name with the
+# doctrine tool before you act; skip the rest. A branch you do not name is one
+# you do not get.
+#   data/         schema indexing migrations queries
+#   runtime/      time failure concurrency performance
+#   ...
+```
+
+589 characters for 33 branches, 6% of the budget, and adding a branch costs a
+word rather than an edit. It is generated rather than written down for the reason
+every other list here is: a hand-kept index of a growing tree is an index that is
+wrong, and wrong quietly. Two properties hold it, one that every branch appears
+and one that the whole block stays under 900 characters, because past that it is
+cheaper to name the groups and let the reader ask for the leaves.
+
+This is the first half of the inversion below, taken for the cheapest case. The
+second half is the branch bodies.
+
 **Push an index, pull the body.** The constitution already instructs the reader
 to pull the branches their task touches, so pushing whole branches is the
 fallback that spends the budget. Inverted, the per-turn cost stops growing with

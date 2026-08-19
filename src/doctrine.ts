@@ -1,7 +1,7 @@
 import { existsSync, readFileSync, readdirSync } from "node:fs";
 import { join } from "node:path";
 
-import { canonBranch, canonBranchNames, canonConstitution } from "./canon.ts";
+import { canonBranch, canonBranchIndex, canonBranchNames, canonConstitution } from "./canon.ts";
 import {
   CONSTITUTION_PATH,
   DOCTRINE_DIR,
@@ -98,7 +98,7 @@ export function assembleBranch(root: string, name: string): BranchLookup {
 }
 
 export function assembleConstitution(project: ProjectHalf): Assembly {
-  const canon = canonConstitution();
+  const canon = `${canonConstitution()}${DOCTRINE_SEPARATOR}${canonBranchIndex()}`;
   if (project.kind !== "present") {
     return { text: canon, halves: ["canon"] };
   }

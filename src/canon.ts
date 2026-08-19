@@ -99,6 +99,33 @@ function read(name: string): string {
   return readFileSync(join(import.meta.dirname, CANON_DIR, `${name}.md`), "utf8").trim();
 }
 
+export function canonBranchIndex(): string {
+  const grouped = new Map<string, string[]>();
+  const alone: string[] = [];
+  for (const name of canonBranchNames()) {
+    const cut = name.indexOf("/");
+    if (cut < 0) {
+      alone.push(name);
+      continue;
+    }
+    const head = name.slice(0, cut);
+    const kids = grouped.get(head);
+    if (kids === undefined) grouped.set(head, [name.slice(cut + 1)]);
+    else kids.push(name.slice(cut + 1));
+  }
+  const ALONE = "on their own";
+  const heads = [...grouped.keys()].map((one) => one.length + 1);
+  const widest = Math.max(...heads, alone.length > 0 ? ALONE.length : 0);
+  const lines = [
+    "# THE BRANCHES. Name every one your task touches and pull it by name with the",
+    "# doctrine tool before you act; skip the rest. A branch you do not name is one",
+    "# you do not get.",
+  ];
+  for (const [head, kids] of grouped) lines.push(`#   ${`${head}/`.padEnd(widest)}  ${kids.join(" ")}`);
+  if (alone.length > 0) lines.push(`#   ${ALONE.padEnd(widest)}  ${alone.join(" ")}`);
+  return lines.join("\n");
+}
+
 export function canonConstitution(): string {
   return read("constitution");
 }
