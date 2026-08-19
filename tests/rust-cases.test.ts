@@ -3,10 +3,11 @@ import assert from "node:assert/strict";
 
 import { RUST_CASES } from "../audit/rust-cases.ts";
 import { judgeCases, say } from "../audit/rust-judge.ts";
+import { WITHOUT_THE_RUST_ENGINE } from "./rust-engine.ts";
 
 const PARSES = RUST_CASES.filter((held) => held.rule !== "RUST-ERROR:9");
 
-test("every Rust case agrees with the rule it was written from", () => {
+test("every Rust case agrees with the rule it was written from", WITHOUT_THE_RUST_ENGINE, () => {
   const judged = judgeCases(PARSES);
 
   assert.deepEqual(
@@ -16,7 +17,7 @@ test("every Rust case agrees with the rule it was written from", () => {
   );
 });
 
-test("the known misses are still missed, so the day they are fixed is visible", () => {
+test("the known misses are still missed, so the day they are fixed is visible", WITHOUT_THE_RUST_ENGINE, () => {
   const judged = judgeCases(PARSES);
 
   assert.equal(
@@ -26,7 +27,7 @@ test("the known misses are still missed, so the day they are fixed is visible", 
   );
 });
 
-test("a file the Rust reader cannot parse does not take its crate down in silence", () => {
+test("a file the Rust reader cannot parse does not take its crate down in silence", WITHOUT_THE_RUST_ENGINE, () => {
   const judged = judgeCases([
     { rule: "RUST-ERROR:9", name: "not Rust at all", code: "this is not rust {{{", expect: "fires" },
     { rule: "RUST-ERROR:1", name: "an unwrap beside it", code: "pub fn f(v: Result<u8, u8>) -> u8 { v.unwrap() }", expect: "fires" },

@@ -6,6 +6,7 @@ import { join } from "node:path";
 
 import { buildReport } from "../src/report/write.ts";
 import { render, shapeAt, shapeFor } from "../src/report/skeleton.ts";
+import { WITHOUT_THE_RUST_ENGINE } from "./rust-engine.ts";
 
 const LOOPER = join(import.meta.dirname, "..");
 
@@ -89,7 +90,7 @@ const RUST_OVER_LINES = `pub fn totals(rows: &[Row]) -> u64 {
 }
 `;
 
-test("a Rust line that starts nothing is reported against the item around it", () => {
+test("a Rust line that starts nothing is reported against the item around it", WITHOUT_THE_RUST_ENGINE, () => {
   const root = mkdtempSync(join(tmpdir(), "looper-report-rust-around-"));
   try {
     mkdirSync(join(root, "src"), { recursive: true });
