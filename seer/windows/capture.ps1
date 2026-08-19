@@ -1,4 +1,4 @@
-param([Parameter(Mandatory = $true)][string]$Window)
+param([string]$Window = '', [switch]$Status)
 
 $ErrorActionPreference = 'Stop'
 [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
@@ -13,7 +13,7 @@ function Ask-Consent([string]$title) {
     try {
         $client.Connect(2000)
     } catch {
-        return 'no'
+        return 'unreachable'
     }
     try {
         $writer = New-Object System.IO.StreamWriter($client)
@@ -28,7 +28,22 @@ function Ask-Consent([string]$title) {
     }
 }
 
-if ((Ask-Consent $Window) -ne 'yes') { exit $DISARMED }
+$UNREACHABLE = 6
+$TOO_OLD = 7
+
+if ($Status) {
+    $said = Ask-Consent 'armed?'
+    if ($said -eq 'unreachable' -or -not $said) { exit $UNREACHABLE }
+    if (-not $said.StartsWith('{')) { exit $TOO_OLD }
+    [Console]::Out.Write($said)
+    exit 0
+}
+
+if (-not $Window) { exit $UNAVAILABLE }
+
+$said = Ask-Consent $Window
+if ($said -eq 'unreachable') { exit $UNREACHABLE }
+if ($said -ne 'yes') { exit $DISARMED }
 
 Add-Type -AssemblyName System.Drawing
 Add-Type @"

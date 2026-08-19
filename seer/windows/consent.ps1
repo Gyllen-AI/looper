@@ -18,8 +18,17 @@ $pipe.Runspace = $runspace
             $reader = New-Object System.IO.StreamReader($server)
             $writer = New-Object System.IO.StreamWriter($server)
             $asked = $reader.ReadLine()
-            $answer = 'no'
-            if ($asked -and $state.Armed.Contains($asked)) { $answer = 'yes' }
+            if ($asked -eq 'armed?') {
+                $open = @(Get-Process |
+                    Where-Object { $_.MainWindowTitle -ne '' } |
+                    ForEach-Object { $_.MainWindowTitle } |
+                    Sort-Object -Unique)
+                $answer = @{ armed = @($state.Armed); open = $open } |
+                    ConvertTo-Json -Depth 3 -Compress
+            } else {
+                $answer = 'no'
+                if ($asked -and $state.Armed.Contains($asked)) { $answer = 'yes' }
+            }
             $writer.WriteLine($answer)
             $writer.Flush()
         } finally {

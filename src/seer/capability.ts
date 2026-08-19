@@ -11,7 +11,14 @@ import type {
   ToolDef,
   ToolResult,
 } from "../capability.ts";
-import { capture, seerIsInstalled, type Image, type Shot } from "./drive.ts";
+import {
+  capture,
+  seerIsInstalled,
+  standing,
+  type Image,
+  type Shot,
+  type Standing,
+} from "./drive.ts";
 
 const NO_HOOKS: readonly HookEvent[] = [];
 
@@ -24,7 +31,7 @@ const CONTROL_CHARACTER = /[\u0000-\u001f\u007f]/;
 const SEE: ToolDef = {
   name: SEER_TOOL,
   description:
-    "Look at a window on this machine and get back a picture of it, so a claim about what the running thing does is something you saw rather than something you believe. Only windows the person at this machine has armed can be seen; anything else comes back refused, and asking again will not change that.",
+    "Look at a window on this machine and get back a picture of it, so a claim about what the running thing does is something you saw rather than something you believe. Only windows the person at this machine has ticked in their own consent window can be seen.\n\nCall it with no argument first: it answers whether that consent window is running, which titles are ticked, and every window title currently open. Then ask for one of those titles exactly as it is written there, because a title you half remember is the usual reason a look comes back with nothing.",
   inputSchema: {
     type: "object",
     properties: {
@@ -33,7 +40,6 @@ const SEE: ToolDef = {
         description: "the title of the window to look at, as it appears on screen",
       },
     },
-    required: [WINDOW],
   },
 };
 
@@ -43,12 +49,13 @@ function looperRoot(): string {
 
 type Asked =
   | { readonly kind: "refused"; readonly why: string }
+  | { readonly kind: "asking-what-is-armed" }
   | { readonly kind: "window"; readonly name: string };
 
 function windowIn(args: ReadonlyMap<string, string>): Asked {
   const held = args.get(WINDOW);
   if (held === undefined || held.trim().length === 0) {
-    return { kind: "refused", why: `${SEER_TOOL} needs the title of a window to look at.` };
+    return { kind: "asking-what-is-armed" };
   }
   if (held.length > SEER_NAME_LIMIT) {
     return {
@@ -88,14 +95,17 @@ export function answerFor(shot: Shot, window: string): ToolResult {
       text: `looper cannot look at anything on this machine: no seer is installed for ${shot.platform}. Nothing was captured.`,
     };
   }
-  if (shot.kind === "disarmed") {
+  if (shot.kind === "unreachable") {
     return {
       kind: "text",
-      text: `"${window}" is not armed, so nothing was captured. Only the person at this machine can arm a window, in their own window for it, and asking again will not change the answer.`,
+      text: `the consent window is not running, so nothing can be looked at and nothing was captured. It is started by the person at this machine, with seer/windows/consent.ps1, and until it is there no title will work.`,
     };
   }
+  if (shot.kind === "disarmed") {
+    return { kind: "text", text: `"${window}" is not ticked in the consent window, so nothing was captured.${alsoSaid(window)}` };
+  }
   if (shot.kind === "not-found") {
-    return { kind: "text", text: `there is no window called "${shot.named}" on this machine.` };
+    return { kind: "text", text: `there is no window called "${shot.named}" on this machine.${alsoSaid(shot.named)}` };
   }
   if (shot.kind === "unavailable") {
     return {
@@ -113,6 +123,66 @@ export function answerFor(shot: Shot, window: string): ToolResult {
     kind: "shown",
     said: `looked at "${window}".${missing}${warningsIn(shot.images)}`,
     images: shot.images.map((held) => ({ media: held.media, base64: held.base64 })),
+  };
+}
+
+function nearlyNamed(wanted: string, open: readonly string[]): readonly string[] {
+  const asked = wanted.toLowerCase();
+  return open.filter((held) => {
+    const one = held.toLowerCase();
+    return one.includes(asked) || asked.includes(one);
+  });
+}
+
+function alsoSaid(window: string): string {
+  const state = standing(looperRoot());
+  if (state.kind !== "reachable") return "";
+  const near = nearlyNamed(window, state.open).filter((held) => held !== window);
+  const nearly =
+    near.length === 0 ? "" : ` A window is open called ${near.map((held) => `"${held}"`).join(", ")}.`;
+  const armed =
+    state.armed.length === 0
+      ? " Nothing at all is ticked right now."
+      : ` What is ticked: ${state.armed.map((held) => `"${held}"`).join(", ")}.`;
+  return `${nearly}${armed} Ticking is done by the person at this machine, in their consent window.`;
+}
+
+export function saidAbout(state: Standing): ToolResult {
+  if (state.kind === "not-installed") {
+    return {
+      kind: "text",
+      text: `looper cannot look at anything on this machine: no seer is installed for ${state.platform}. Nothing was captured.`,
+    };
+  }
+  if (state.kind === "unavailable") {
+    return {
+      kind: "text",
+      text: `looper could not ask what is armed (${state.detail}). Nothing here is a verdict on what is on screen.`,
+    };
+  }
+  if (state.kind === "unreachable") {
+    return {
+      kind: "text",
+      text: "the consent window is not running, so nothing can be looked at. The person at this machine starts it with seer/windows/consent.ps1, and ticks a window in it.",
+    };
+  }
+  if (state.kind === "too-old") {
+    return {
+      kind: "text",
+      text: "the consent window is running but is an older build that cannot say what is ticked. Ask the person at this machine to close it and start seer/windows/consent.ps1 again. Looking at a window they have ticked still works.",
+    };
+  }
+  const armed =
+    state.armed.length === 0
+      ? "nothing is ticked, so nothing can be looked at yet"
+      : `ticked, and able to be looked at: ${state.armed.map((held) => `"${held}"`).join(", ")}`;
+  const open =
+    state.open.length === 0
+      ? ""
+      : `\n\nEvery window open right now:\n${state.open.map((held) => `  ${held}`).join("\n")}`;
+  return {
+    kind: "text",
+    text: `the consent window is running and ${armed}. Ask for a title exactly as it is written below.${open}`,
   };
 }
 
@@ -141,6 +211,7 @@ export class Seer implements Capability {
 
     const asked = windowIn(request.args);
     if (asked.kind === "refused") return { kind: "text", text: asked.why };
+    if (asked.kind === "asking-what-is-armed") return saidAbout(standing(looperRoot()));
 
     return answerFor(capture(looperRoot(), asked.name), asked.name);
   }

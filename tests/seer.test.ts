@@ -2,11 +2,11 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { chmodSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
 
-import { SEER_DIR, SEER_NAME, SEER_NAME_LIMIT, SEER_TOOL } from "../src/config.ts";
+import { SEER_CAPTURE, SEER_DIR, SEER_NAME_LIMIT, SEER_TOOL } from "../src/config.ts";
 import { Seer, answerFor } from "../src/seer/capability.ts";
-import { capture, seerIsInstalled } from "../src/seer/drive.ts";
+import { capture, captureWith, seerIsInstalled } from "../src/seer/drive.ts";
 
 const A_WINDOW = "the app";
 
@@ -16,12 +16,14 @@ function scratch(): string {
   return mkdtempSync(join(tmpdir(), "looper-seer-"));
 }
 
-function withSeer(root: string, body: string): void {
-  const where = join(root, SEER_DIR, process.platform);
-  mkdirSync(where, { recursive: true });
-  const path = join(where, SEER_NAME);
-  writeFileSync(path, `#!/bin/sh\n${body}\n`);
-  chmodSync(path, 0o755);
+function withSeer(root: string, body: string): string {
+  const path = join(root, SEER_DIR, SEER_CAPTURE);
+  mkdirSync(dirname(path), { recursive: true });
+  writeFileSync(path, "");
+  const shell = join(root, "fake-shell");
+  writeFileSync(shell, `#!/bin/sh\n${body}\n`);
+  chmodSync(shell, 0o755);
+  return shell;
 }
 
 test("a machine with no seer installed cannot be looked at, and says so", () => {
@@ -54,8 +56,8 @@ test("the tool exists exactly when a capture program does, and never otherwise",
 test("a refusal from the consent process is a refusal, and no picture comes back", () => {
   const root = scratch();
   try {
-    withSeer(root, "exit 5");
-    const shot = capture(root, A_WINDOW);
+    const shell = withSeer(root, "exit 5");
+    const shot = captureWith(shell, root, A_WINDOW);
     assert.equal(shot.kind, "disarmed");
 
     const answer = answerFor(shot, A_WINDOW);
@@ -65,8 +67,7 @@ test("a refusal from the consent process is a refusal, and no picture comes back
       "a disarmed answer produced something other than words. looper does not decide consent and must never hand back an image the person did not allow.",
     );
     if (answer.kind !== "text") return;
-    assert.ok(answer.text.includes("not armed"));
-    assert.ok(answer.text.includes("asking again will not change the answer"));
+    assert.ok(answer.text.includes("not ticked in the consent window"));
   } finally {
     rmSync(root, { recursive: true, force: true });
   }
@@ -75,8 +76,8 @@ test("a refusal from the consent process is a refusal, and no picture comes back
 test("a window that is not there is named, not guessed at", () => {
   const root = scratch();
   try {
-    withSeer(root, "exit 3");
-    const shot = capture(root, A_WINDOW);
+    const shell = withSeer(root, "exit 3");
+    const shot = captureWith(shell, root, A_WINDOW);
     assert.equal(shot.kind, "not-found");
   } finally {
     rmSync(root, { recursive: true, force: true });
@@ -86,12 +87,12 @@ test("a window that is not there is named, not guessed at", () => {
 test("a picture only comes back when the seer says it may", () => {
   const root = scratch();
   try {
-    withSeer(
+    const shell = withSeer(
       root,
       `printf '{"images":[{"label":"the app","media":"image/png","base64":"${ONE_PIXEL}"}],"missing":["the other one"]}'`,
     );
 
-    const answer = answerFor(capture(root, A_WINDOW), A_WINDOW);
+    const answer = answerFor(captureWith(shell, root, A_WINDOW), A_WINDOW);
     assert.equal(answer.kind, "shown");
     if (answer.kind !== "shown") return;
     assert.equal(answer.images.length, 1);
@@ -108,8 +109,8 @@ test("a picture only comes back when the seer says it may", () => {
 test("a seer that answers with nonsense is unavailable, never a verdict", () => {
   const root = scratch();
   try {
-    withSeer(root, "printf 'not json'");
-    const shot = capture(root, A_WINDOW);
+    const shell = withSeer(root, "printf 'not json'");
+    const shot = captureWith(shell, root, A_WINDOW);
     assert.equal(shot.kind, "unavailable");
   } finally {
     rmSync(root, { recursive: true, force: true });
@@ -125,10 +126,12 @@ test("what the agent asks for is checked before anything is started", () => {
   });
   assert.equal(tooLong.kind, "text");
 
-  const empty = seer.call({ root: ".", tool: SEER_TOOL, args: new Map() });
-  assert.equal(empty.kind, "text");
-  if (empty.kind !== "text") return;
-  assert.ok(empty.text.includes("needs the title of a window"));
+  const asking = seer.call({ root: ".", tool: SEER_TOOL, args: new Map() });
+  assert.equal(
+    asking.kind,
+    "text",
+    "asking with no window is how an agent finds out what is ticked, and it must answer in words rather than refuse",
+  );
 });
 
 test("a picture of a window that was not rendering says so beside the picture", () => {
@@ -152,11 +155,11 @@ test("a picture of a window that was not rendering says so beside the picture", 
 test("a seer that does not say what state the window was in is not believed", () => {
   const root = scratch();
   try {
-    withSeer(
+    const shell = withSeer(
       root,
       `printf '{"images":[{"label":"the app","media":"image/png","base64":"${ONE_PIXEL}"}]}'`,
     );
-    const shot = capture(root, A_WINDOW);
+    const shot = captureWith(shell, root, A_WINDOW);
     assert.equal(shot.kind, "seen");
     if (shot.kind !== "seen") return;
     assert.equal(shot.images[0]?.state, "unknown");
@@ -188,12 +191,12 @@ test("a picture of a real window survives the pipe, which Node's default buffer 
   const root = scratch();
   try {
     const wide = "A".repeat(3_000_000);
-    withSeer(
+    const shell = withSeer(
       root,
       `printf '{"images":[{"label":"${A_WINDOW}","media":"image/png","base64":"'; printf '%s' '${wide}'; printf '","state":"rendering"}],"missing":[]}'`,
     );
 
-    const shot = capture(root, A_WINDOW);
+    const shot = captureWith(shell, root, A_WINDOW);
     assert.equal(shot.kind, "seen");
     if (shot.kind !== "seen") return;
     assert.equal(shot.images.length, 1);

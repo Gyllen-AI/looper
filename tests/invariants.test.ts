@@ -145,11 +145,41 @@ test("only the named files may start another process, and each says what it star
   }
 });
 
+test("the seer starts a shell, and only ever hands it looper's own script", () => {
+  const text = readFileSync(join(ROOT, "src", "seer", "drive.ts"), "utf8");
+  assert.ok(
+    text.includes("captureWith(WINDOWS_SHELL,") && text.includes("standingWith(WINDOWS_SHELL,"),
+    "the seer reaches its capturer through PowerShell since 2026-08-19, because the shim that used to sit between them lost the difference between a consent window that is closed and a window that is not ticked. WINDOWS_SHELL is the only program it ever passes",
+  );
+  const reached = ourFiles().filter((file) => {
+    if (file.endsWith("seer/drive.ts")) return false;
+    const held = readFileSync(file, "utf8");
+    return held.includes("captureWith(") || held.includes("standingWith(");
+  });
+  assert.deepEqual(
+    reached,
+    [],
+    "captureWith and standingWith take the program to run as an argument, which exists so a test can hand them a fake. Nothing in looper may call them: the only callers are capture and standing, in the same file, and they pass WINDOWS_SHELL",
+  );
+  assert.ok(
+    text.includes("scriptFor(looperRoot)"),
+    "whatever PowerShell is handed must come from seerAt, under looper's own directory. A window title is data and never reaches the command line as anything else",
+  );
+  assert.ok(
+    !text.includes("shell: true") && !text.includes("execSync("),
+    "a shell that parses its own string is how a window title becomes a command",
+  );
+  assert.ok(
+    text.includes('execFileSync("wslpath"'),
+    "the only other program it starts is wslpath, handed looper's own path so a Windows PowerShell can find a script that lives inside WSL",
+  );
+});
+
 test("the files that may start a process start only what they were allowed to", () => {
   const starts: Record<string, string> = {
     [SPAWN_SANCTUM]: '"git"',
     "law/rust/drive.ts": '"cargo"',
-    "seer/drive.ts": "seerAt(",
+    "seer/drive.ts": '"wslpath"',
   };
   for (const [file, expected] of Object.entries(starts)) {
     const text = readFileSync(join(ROOT, "src", file), "utf8");

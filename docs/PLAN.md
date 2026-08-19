@@ -2165,6 +2165,49 @@ demanded one per function would produce noise, which is how a tool gets switched
 off. The presence half belongs in the canon, where it can say where an event is
 worth emitting without refusing anything.
 
+### Chunk 1f — the seer says what is ticked, and the shim is gone
+
+**Rebuilt 2026-08-19, from an adopting project that lost twenty minutes to it.**
+An agent asked to look at a window, was told "not armed, only the person at this
+machine can arm it, and asking again will not change the answer", and told the
+person to tick a box. They had ticked one. Three things were wrong at once and
+the message could distinguish none of them.
+
+**The consent window was not running.** `capture.ps1` returned `no` when the
+named pipe refused to connect, which exits 5, which reads as "not armed". A
+closed consent window and an unticked window were the same sentence. They are now
+exit 6 and exit 5, and the agent is told which.
+
+**The title was wrong and nothing said so.** The window was `RustOnTop (Ubuntu)`,
+because WSLg appends the distro, and the agent asked for `RustOnTop`. The refusal
+named neither the titles that are open nor the ones that are ticked, so the only
+way through was to read the PowerShell source, which is what the adopter did.
+
+**The agent could not ask.** `see` required a window and had no way to answer
+"what may I look at". It now takes no argument to mean that question: the consent
+window answers `armed?` with what is ticked and every title currently open, and
+the tool's own description says to call it that way first.
+
+**The Linux half was a shim and is deleted.** `seer/linux/looper-seer` was a
+shell script that translated a title into a PowerShell call and exit codes back,
+and it was where the two failures above became indistinguishable. There is one
+seer, it looks at Windows windows, and it lives under `windows/` whether looper
+runs on Windows or inside WSL beside it. `underWsl()` decides, in `config.ts`
+because it reads the environment, and the drive reaches PowerShell directly.
+
+**What that widened, and how it is held.** The drive used to start exactly one
+program: the file at `seerAt()`. It now starts PowerShell and `wslpath`, and it
+takes the shell as an argument so a test can hand it a fake. That argument is the
+kind of seam that turns into an arbitrary-program hole, so `tests/invariants.test.ts`
+refuses any file except the drive itself calling `captureWith` or `standingWith`,
+and refuses `shell: true` and `execSync` anywhere in it. A window title is data
+and never reaches a command line as anything else.
+
+**One more state, found while proving it.** A consent window from before this
+change answers `no` to `armed?`, which is not JSON, and the first version of the
+status path printed it as an answer. That is exit 7 now, and the agent is told the
+window is running but too old to say, and to restart it.
+
 ### Chunk 2 — the law engine, language-neutral half
 
 Everything about the law that is not a parser: the rule and category and
