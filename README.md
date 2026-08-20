@@ -68,7 +68,7 @@ is holding this:
 What is not allowed, what it costs, and a spelling that works. The agent repairs
 it in the same turn, while the reasoning that produced it is still in the room.
 
-## Four gates
+## Five gates
 
 ```
 ①  before each turn      the rules for what you are touching are put in
@@ -81,7 +81,11 @@ it in the same turn, while the reasoning that produced it is still in the room.
 ③  before each commit    everything staged is judged again, plus a scan for
                          anything shaped like a password or a key
 
-④  before it leaves     every word that appears nowhere else in the
+④  before each commit    a check this project declared and knows is broken
+                         refuses it. a check that could not be asked does
+                         not — that is the world's fault, not the commit's
+
+⑤  before it leaves     every word that appears nowhere else in the
                          repository is named — on a push from your machine,
                          and on every pull request, because a merge through
                          GitHub never pushes

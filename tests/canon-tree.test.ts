@@ -3,10 +3,11 @@ import assert from "node:assert/strict";
 import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
 import { join } from "node:path";
 
-import { canonBranchIndex, canonBranchNames, canonGoverns, pulledByName } from "../src/canon.ts";
-import { isABranchName } from "../src/doctrine.ts";
+import { canonBranchNames, canonGoverns, pulledByName } from "../src/canon.ts";
+import { branchIndex, isABranchName, listBranches } from "../src/doctrine.ts";
 
 const CANON = join(import.meta.dirname, "..", "src", "canon");
+const ROOT = join(import.meta.dirname, "..");
 
 function everyCanonFile(dir: string, prefix: string): string[] {
   const found: string[] = [];
@@ -80,23 +81,34 @@ test("a branch name is still a name and never a way out of the doctrine folder",
   }
 });
 
-test("the constitution names every branch, or a branch nobody knows about is a rule nobody gets", () => {
-  const index = canonBranchIndex();
-  const missing = canonBranchNames().filter((name) => {
+test("the constitution's index names every branch the project has, canon and its own alike", () => {
+  const index = branchIndex(ROOT);
+  const missing = listBranches(ROOT).filter((name) => {
     const cut = name.indexOf("/");
-    if (cut < 0) return !index.includes(` ${name} `) && !index.endsWith(` ${name}`);
-    return !index.includes(`${name.slice(0, cut)}/`) || !index.includes(name.slice(cut + 1));
+    return cut < 0 ? !index.includes(`- ${name} `) : !index.includes(`- ${name.slice(0, cut)}/`);
   });
   assert.deepEqual(
     missing,
     [],
-    "these branches exist and the constitution does not name them. Seven of them route by no path at all and can only be pulled by name, so a reader who is never told they exist can never reach them",
+    "a branch that exists and is not named in the constitution is one the reader never learns about, which is the same as not shipping it",
   );
 });
 
-test("the index is generated, so it costs a line to add a branch and cannot go stale", () => {
+test("every canon branch gives the index a rule to quote", () => {
+  const index = branchIndex(ROOT);
+  for (const name of canonBranchNames()) {
+    if (name.includes("/")) continue;
+    assert.ok(
+      index.includes(`- ${name.padEnd(14)}`) && !index.includes(`- ${name.padEnd(14)}\n`),
+      `${name} contributes an empty line to the constitution. Its first bullet is what gets quoted, so it needs one`,
+    );
+  }
+});
+
+test("the index is bounded, because it is paid on every single message", () => {
+  const size = branchIndex(ROOT).length;
   assert.ok(
-    canonBranchIndex().length < 900,
-    `the branch index is ${canonBranchIndex().length} chars and is paid on every single message. Past this it is cheaper to name the groups and let the reader ask for the leaves`,
+    size <= 2200,
+    `the branch index is ${size} chars. Past the ceiling it collapses each group to a count, and past that it is cheaper to stop naming leaves at all`,
   );
 });

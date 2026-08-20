@@ -46,6 +46,8 @@ export function loop(argv: readonly string[], out: Out): number {
     broken: tally.broken,
     blind: tally.blind,
     failing: tally.failing,
+    brokenNames: tally.brokenNames,
+    blindNames: tally.blindNames,
   });
 
   if (terse) {
