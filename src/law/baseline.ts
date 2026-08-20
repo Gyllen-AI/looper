@@ -130,9 +130,15 @@ export function writeBaseline(root: string, baseline: Baseline): void {
 
 export type Shrink =
   | { readonly kind: "unchanged" }
+  | { readonly kind: "not-all-read"; readonly unread: readonly string[] }
   | { readonly kind: "shrunk"; readonly baseline: Baseline; readonly by: number };
 
-export function shrinkToward(recorded: Baseline, current: Baseline): Shrink {
+export function shrinkToward(
+  recorded: Baseline,
+  current: Baseline,
+  unread: readonly string[],
+): Shrink {
+  if (unread.length > 0) return { kind: "not-all-read", unread };
   const next = new Map<string, Counts>();
   let removed = 0;
 

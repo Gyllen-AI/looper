@@ -373,11 +373,16 @@ export function shrinkBaseline(root: string): Outcome {
     const recorded = readBaseline(root);
     if (totalIn(recorded) === 0) return;
 
-    const shrink = shrinkToward(
-      recorded,
-      countsOf(surveyProject(root, "everything", EVERYTHING).violations),
-    );
+    const survey = surveyProject(root, "everything", EVERYTHING);
+    const shrink = shrinkToward(recorded, countsOf(survey.violations), survey.unreadable);
     if (shrink.kind === "unchanged") return;
+    if (shrink.kind === "not-all-read") {
+      said = {
+        kind: "mention",
+        note: `looper: the outstanding-work count was left alone. ${String(shrink.unread.length)} thing(s) could not be read this run, and a file nobody read is not a file with nothing wrong in it: ${shrink.unread.slice(0, UNREAD_NAMED).join("; ")}`,
+      };
+      return;
+    }
 
     writeBaseline(root, shrink.baseline);
   });
@@ -391,6 +396,8 @@ export function shrinkBaseline(root: string): Outcome {
   if (wrote.length > 0 && said.kind === "pass") return { kind: "mention", note: wrote };
   return said;
 }
+
+const UNREAD_NAMED = 3;
 
 const FILES_NAMED_AT_ONCE = 4;
 
