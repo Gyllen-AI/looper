@@ -10,4 +10,8 @@ them.
   you.** Do not switch it off, and do not hand the command to a person, because
   the same rules judge their commit. Run `looper report`, which writes the shape
   it fired on and nothing else of yours, and say so once.
+- **A promise the law cannot trace is still yours to await.** `TS-ERROR:1` sees a
+  call to a project function it can follow; `Promise.resolve`, a bare `.then`, and
+  anything imported from outside the project it cannot. Those are the ones that
+  fail in silence.
 - **Logging is `observe/logging`.** Same rules in every language.
