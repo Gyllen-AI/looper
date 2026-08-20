@@ -640,6 +640,31 @@ cheaper to name the groups and let the reader ask for the leaves.
 This is the first half of the inversion below, taken for the cheapest case. The
 second half is the branch bodies.
 
+### A fault outranks a rule, because only one of them can be asked for
+
+The loop injected at priority 20 and doctrine branches at 10, so on any turn
+whose branches filled the budget the one line saying a layer is broken went over
+the side. Seen in an adopter's own drop markers on 2026-08-20: `loop (337
+chars)`, `loop (292 chars)`, `loop (293 chars)`, each time next to several
+kilobytes of doctrine that arrived.
+
+That ordering is backwards, and the asymmetry is the argument rather than any
+opinion about which matters more. A rule set that does not arrive is still
+reachable: the reader is told it was dropped and the `doctrine` tool fetches it
+by name. **A fault nobody mentions is one the reader does not know to ask about**,
+and the whole reason the loop exists is to reach somebody working three files
+away from the thing that broke.
+
+`LOOP_PRIORITY` is now 5, between the constitution and the branches. It costs
+nothing to do this: the capability already returns `SILENT` when `broken` and
+`blind` are both zero, so a healthy project injects no loop line at all and the
+budget is untouched. The change is only visible on a turn where something is
+actually wrong, which is the turn it was built for.
+
+Pinned by a test that fills the budget with rule sets, breaks one check, and
+requires the check's name in the text that goes out. It fails with the old
+priority, which is what makes it a test rather than an agreement.
+
 ### The loop grew teeth, and lied on its first firing
 
 The constitution's first rule now names `looper loop`, and a rule that names a

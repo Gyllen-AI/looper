@@ -4,7 +4,8 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 
 import { canonBranchNames, canonConstitution } from "../src/canon.ts";
-import { HOOK_OUTPUT_CEILING, INJECTION_BUDGET } from "../src/config.ts";
+import { BRANCH_PRIORITY, HOOK_OUTPUT_CEILING, INJECTION_BUDGET, LOOP_PRIORITY } from "../src/config.ts";
+import { saidAbout } from "../src/loop/capability.ts";
 import {
   assembleBranch,
   assembleConstitution,
@@ -185,4 +186,44 @@ test("a doctrine branch that does not fit is dropped and named, never sent anywa
       `${one.source} was dropped and its name never reached the reader`,
     );
   }
+});
+
+test("a check known broken outranks a rule set, because a fault now beats a rule you might need", () => {
+  const kept = {
+    at: "2026-08-20T00:00:00Z",
+    ok: 3,
+    broken: 1,
+    blind: 0,
+    failing: ["loop.uplink"],
+    brokenNames: ["loop.uplink"],
+    blindNames: [],
+  };
+  const alarm = saidAbout(kept, Date.parse("2026-08-20T00:05:00Z"));
+  const branches = ["alpha", "beta", "gamma", "delta", "epsilon"];
+  const speaking: readonly Capability[] = [
+    {
+      name: "loop",
+      inject: () => [{ source: "loop", priority: LOOP_PRIORITY, text: alarm, required: false }],
+      hooks: () => NO_EVENTS,
+      onHook: (): Outcome => ({ kind: "pass" }),
+    },
+    ...branches.map((name) => ({
+      name: `doctrine:${name}`,
+      inject: () => [
+        { source: `doctrine:${name}`, priority: BRANCH_PRIORITY, text: "b".repeat(2400), required: false },
+      ],
+      hooks: () => NO_EVENTS,
+      onHook: (): Outcome => ({ kind: "pass" }),
+    })),
+  ];
+  const { allocation } = allocate(speaking, { root: process.cwd(), budget: INJECTION_BUDGET });
+
+  assert.ok(
+    allocation.text.includes("loop.uplink"),
+    "the budget was full of rule sets and the one line saying a layer is broken went over the side. A rule that does not arrive can be pulled by name; a fault nobody mentions is one the reader does not know to ask about",
+  );
+  assert.ok(
+    allocation.dropped.some((one) => one.source.startsWith("doctrine:")),
+    "nothing was dropped, so this proves nothing about the ordering",
+  );
 });
