@@ -5,9 +5,12 @@ import { join } from "node:path";
 import { A_READER_MAY_ANSWER_WITH, GIT_TIMEOUT_MS } from "./config.ts";
 import { reasonFrom } from "./fields.ts";
 
-const CHANGED: readonly (readonly string[])[] = [
+const IN_HAND: readonly (readonly string[])[] = [
   ["diff", "HEAD", "--name-only", "--no-renames"],
   ["ls-files", "--others", "--exclude-standard"],
+];
+
+const JUST_PUT_DOWN: readonly (readonly string[])[] = [
   ["diff-tree", "--no-commit-id", "--name-only", "-r", "HEAD"],
 ];
 
@@ -256,17 +259,22 @@ export function everyWordAt(
   }
 }
 
-export function changedPaths(root: string): Changed {
+function pathsFrom(root: string, asking: readonly (readonly string[])[]): Changed {
   const seen = new Set<string>();
-  for (const args of CHANGED) {
+  for (const args of asking) {
     try {
       for (const path of ask(root, args)) seen.add(path);
     } catch (cause) {
-      const detail = reasonFrom(cause);
-      return { kind: "unavailable", detail };
+      return { kind: "unavailable", detail: reasonFrom(cause) };
     }
   }
   return { kind: "paths", paths: [...seen] };
+}
+
+export function changedPaths(root: string): Changed {
+  const inHand = pathsFrom(root, IN_HAND);
+  if (inHand.kind === "unavailable" || inHand.paths.length > 0) return inHand;
+  return pathsFrom(root, JUST_PUT_DOWN);
 }
 
 export type Moved = {
