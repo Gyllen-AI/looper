@@ -71,6 +71,16 @@ export const GOVERNS_SECTION = "governs";
 
 export const DOCTRINE_README_PATH = ".looper/doctrine/README.md";
 
+export const CANON_SOURCE_DIR = "src/canon";
+
+export const BULLET_CEILING = 300;
+
+export const DOCTRINE_FILE_CEILING = 1300;
+
+export const CONSTITUTION_CEILING = 1000;
+
+export const INDEX_CEILING = 900;
+
 export const LAW_PATH = "law.toml";
 
 export const JUDGED_EXTENSIONS: readonly string[] = [

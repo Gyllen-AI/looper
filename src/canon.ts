@@ -74,7 +74,6 @@ export function canonGoverns(): ReadonlyMap<string, readonly string[]> {
     ["rust", RUST],
     ["python", PYTHON],
     ["csharp", CSHARP],
-    ["security", WHERE_SECRETS_LIVE],
     ["evidence", WRITTEN_DOWN],
     ["frontend", LOOKED_AT],
     ["doctrine", [`${DOCTRINE_DIR}/**`]],
@@ -113,7 +112,7 @@ export function canonBranchNames(): readonly string[] {
   return BRANCH_NAMES;
 }
 
-const PULLED_BY_NAME: readonly string[] = ["sources", "process", "architecture",
+const PULLED_BY_NAME: readonly string[] = ["sources", "process", "architecture", "security",
   "structure", "discipline", "authority", "voice", "deps", "debugging",
   "runtime/time", "runtime/failure", "runtime/concurrency", "runtime/performance",
   "observe/logging", "observe/health", "secure/input",

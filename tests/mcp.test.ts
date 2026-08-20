@@ -87,7 +87,7 @@ test("pulling a branch by name returns canon and project merged", () => {
   }, FIXTURE);
 
   assert.ok(
-    text.includes("A promise nobody waits for fails in silence"),
+    text.includes("Writing TypeScript in a governed project"),
     "the canon half is missing",
   );
   assert.ok(text.includes("A fixture rule"), "the project half is missing");

@@ -277,6 +277,10 @@ export function changedPaths(root: string): Changed {
   return pathsFrom(root, JUST_PUT_DOWN);
 }
 
+export function pathsInHand(root: string): Changed {
+  return pathsFrom(root, IN_HAND);
+}
+
 export type Moved = {
   readonly path: string;
   readonly to: string;

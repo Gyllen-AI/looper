@@ -130,15 +130,26 @@ export function matches(pattern: string, path: string): boolean {
   return walk(pattern.split("/"), path.split("/"));
 }
 
-type Touched = { readonly branch: string; readonly hits: number };
+type Touched = { readonly branch: string; readonly hits: number; readonly own: boolean };
 
-export function branchesFor(governs: Governs, paths: readonly string[]): readonly string[] {
+function ownFirst(left: Touched, right: Touched): number {
+  return Number(right.own) - Number(left.own);
+}
+
+export function branchesFor(
+  governs: Governs,
+  paths: readonly string[],
+  own: ReadonlySet<string>,
+): readonly string[] {
   const found: Touched[] = [];
   for (const [branch, globs] of governs) {
     const hits = paths.filter((path) => globs.some((glob) => matches(glob, path))).length;
-    if (hits > 0) found.push({ branch, hits });
+    if (hits > 0) found.push({ branch, hits, own: own.has(branch) });
   }
   return found
-    .sort((left, right) => right.hits - left.hits || left.branch.localeCompare(right.branch))
+    .sort(
+      (left, right) =>
+        right.hits - left.hits || ownFirst(left, right) || left.branch.localeCompare(right.branch),
+    )
     .map((held) => held.branch);
 }

@@ -443,6 +443,38 @@ contribution contained rather than only its name, since a name cannot be weighed
 and decide on purpose whether `recall` and `decisions` belong at the end rather
 than inheriting it.
 
+**Built 2026-08-20, measured in the same adopter's repository before the change.**
+Ten editing shapes were replayed in a scratch worktree and the hook's output
+counted. Eight of ten went over budget. A feature touching a plugin, the backend
+and the client got `csharp` and `frontend` and lost `game`, the adopter's own
+branch about the plugin. A schema edit got `architecture` and lost both
+`contract` branches. A migration got `architecture` and lost all four `data`
+branches. A clean tree, the shape of a question, got the two branches of the
+last commit: 8,867 characters for a prompt that edited nothing. The router alone
+was 4,020 of the 9,800, and 1,700 of that was the index quoting each branch's
+first bullet, which for a canon branch is a principle the constitution already
+carries or a rule the law already refuses.
+
+Four things changed, each with a test. A clean tree signals nothing: the last
+commit's files no longer raise branches, so a question gets the constitution and
+the index, and the branches return the moment a file is in hand. The first
+branch the files in hand raised is marked required, so the allocator cannot drop
+it; when two tie, the branch the project mapped itself outranks a canon default,
+because the project's own words about its own code are the more specific rule.
+The index lists names, grouped, in under 900 characters, and a sentence in it
+fails a test. And a commit gate refuses a doctrine bullet over 300 characters, a
+branch file over 1,300, or a constitution over 1,000, with no line that waves it
+through: the rule stays, the story goes to recall, and a branch past the ceiling
+is two branches. The canon itself was cut to the same ceilings, from 39,737
+characters to about 26,600, and the language branches now carry only what the
+law cannot see, because telling a rule the judge refuses is paying for it twice.
+
+What the three-times cost of an anchored rule bought, this keeps: the date and
+the one number stay in the bullet. What it stops paying for is the narrative
+around them, which persuades on the first reading and is skimmed on the fortieth,
+and which was the reason eighteen branches in one project had grown past the
+point where three could arrive together.
+
 ## What is missing, ranked by what its absence costs
 
 **None of this is built.** It is a list of capabilities an agent asked for after
