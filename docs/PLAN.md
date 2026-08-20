@@ -6385,3 +6385,47 @@ no branch names, a pin onto a tag off main, a commit that moves no pin, and a
 submodule that is not checked out. Then against the real thing, not a fixture: a
 parent pinned at `cd1281c` fetched from the real remote is refused with exit 2,
 and the same parent moved to `6b835d0` on main is allowed with exit 0.
+
+### A server answering from code that no longer exists
+
+Reported 2026-08-20 and reproduced: `npm install` at 12:51:44 took an adopting
+project from `300eaf1` to `6b835d0`, and the MCP server carried on answering
+from the code it had loaded on **18 August**. `mcp__looper__doctrine` said
+*"there is no rule set called `observe/logging`"* while the file was on disk with
+that morning's mtime, and while the constitution injected in the same prompt
+carried the full text of other branches.
+
+**The asymmetry is the bug.** `.claude/settings.json` runs `looper inject` and
+`looper hook` as commands, so every prompt and every tool call is a **new process
+on the new code**. `looper serve` is one process that reads its modules once.
+The half that enforces upgrades instantly; the half that explains does not.
+
+What makes it worse than an inconvenience is that the stale answer is
+**word for word** what looper says when a branch genuinely does not exist. There
+is no way for the reader to tell *not installed* from *installed after this
+process started*, and the honest conclusion from the sentence is the wrong one.
+It also lands on the person least able to diagnose it: nobody who has not read
+this source would guess that reconnecting an MCP server answers *"that rule set
+does not exist"*.
+
+`src/code-age.ts` walks `src/` at startup and records the newest mtime and the
+file count — **1.3-1.8 ms for 161 files**, so it can be re-read on every tool
+call. When either has moved, one line goes in front of whatever the tool returns:
+
+> looper: this server is answering from the code it loaded when it started, and
+> the code on disk has changed since. Anything below may be out of date, and a
+> rule set it says does not exist may simply not have existed yet when this
+> server began. Reconnect the looper MCP server and ask again.
+
+The file count matters on its own, because a new branch can arrive without any
+of its neighbours moving. **It cannot restart itself, and it does not pretend to
+— it stops lying, which is the part that was missing.**
+
+Half of the reported symptom was already closed by the disk fallback: a branch
+whose file exists is served even when the compiled list has never heard of it.
+That only helps a server new enough to carry the fallback, and it only covers
+branch lookups. This covers the rest, including a stale tool list.
+
+**Not built, and recorded rather than left:** whatever ends a session does not
+always end its `looper serve`. A server from 18 August was still alive two days
+later, so a machine accumulates them, and the window is wider than one session.
