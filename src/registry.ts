@@ -8,6 +8,7 @@ import type { Capability, HookContext, Outcome } from "./capability.ts";
 import { reasonFrom } from "./fields.ts";
 import { whereTheUserLives } from "./config.ts";
 import { Loop } from "./loop/capability.ts";
+import { Pins } from "./pins/capability.ts";
 import { Stall } from "./stall/capability.ts";
 
 export type Refusal = {
@@ -40,6 +41,7 @@ export function registry(): readonly Capability[] {
     new Decisions(),
     new Seer(),
     new Loop(whereTheUserLives()),
+    new Pins(),
     new Stall(),
   ];
 }
