@@ -11,7 +11,7 @@ export type CanonBranch = {
 const BRANCH_NAMES: readonly string[] = ["law", "process",
   "architecture", "rust", "python", "csharp", "doctrine", "security", "evidence",
   "frontend", "sources",
-  "structure", "discipline", "authority", "voice", "deps",
+  "structure", "discipline", "authority", "voice", "deps", "debugging",
   "data/schema", "data/indexing", "data/migrations", "data/queries",
   "runtime/time", "runtime/failure", "runtime/concurrency", "runtime/performance",
   "contract/versioning", "contract/serialization",
@@ -114,7 +114,7 @@ export function canonBranchNames(): readonly string[] {
 }
 
 const PULLED_BY_NAME: readonly string[] = ["sources", "process", "architecture",
-  "structure", "discipline", "authority", "voice", "deps",
+  "structure", "discipline", "authority", "voice", "deps", "debugging",
   "runtime/time", "runtime/failure", "runtime/concurrency", "runtime/performance",
   "observe/logging", "observe/health", "secure/input",
 ];
