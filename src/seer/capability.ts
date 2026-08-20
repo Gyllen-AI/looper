@@ -14,6 +14,7 @@ import type {
 import {
   capture,
   seerIsInstalled,
+  startConsent,
   standing,
   type Image,
   type Shot,
@@ -98,7 +99,7 @@ export function answerFor(shot: Shot, window: string): ToolResult {
   if (shot.kind === "unreachable") {
     return {
       kind: "text",
-      text: `the consent window is not running, so nothing can be looked at and nothing was captured. It is started by the person at this machine, with seer/windows/consent.ps1, and until it is there no title will work.`,
+      text: whenNotRunning().text,
     };
   }
   if (shot.kind === "disarmed") {
@@ -134,6 +135,26 @@ function nearlyNamed(wanted: string, open: readonly string[]): readonly string[]
   });
 }
 
+function whenNotRunning(): { readonly kind: "text"; readonly text: string } {
+  const started = startConsent(looperRoot());
+  if (started.kind === "no-consent-program") {
+    return {
+      kind: "text",
+      text: `the consent window is not running and looper has no copy of it to start: nothing is at ${started.path}. Until it is there, nothing can be looked at.`,
+    };
+  }
+  if (started.kind === "could-not-start") {
+    return {
+      kind: "text",
+      text: `the consent window is not running and looper could not start it (${started.detail}). Nothing can be looked at.`,
+    };
+  }
+  return {
+    kind: "text",
+    text: "the consent window was not running, so looper has just opened it on this machine. It lists every window that is open, with a tick box beside each. Nothing can be looked at until one is ticked there, which is the person's decision and not looper's. Ask again once it is.",
+  };
+}
+
 function alsoSaid(window: string): string {
   const state = standing(looperRoot());
   if (state.kind !== "reachable") return "";
@@ -160,16 +181,11 @@ export function saidAbout(state: Standing): ToolResult {
       text: `looper could not ask what is armed (${state.detail}). Nothing here is a verdict on what is on screen.`,
     };
   }
-  if (state.kind === "unreachable") {
-    return {
-      kind: "text",
-      text: "the consent window is not running, so nothing can be looked at. The person at this machine starts it with seer/windows/consent.ps1, and ticks a window in it.",
-    };
-  }
+  if (state.kind === "unreachable") return whenNotRunning();
   if (state.kind === "too-old") {
     return {
       kind: "text",
-      text: "the consent window is running but is an older build that cannot say what is ticked. Ask the person at this machine to close it and start seer/windows/consent.ps1 again. Looking at a window they have ticked still works.",
+      text: "the consent window on this machine is an older build that cannot say what is ticked, so looper cannot list it. Looking at a window that has already been ticked still works. Closing that window is enough: looper opens the current one by itself the next time it is asked.",
     };
   }
   const armed =

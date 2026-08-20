@@ -6112,3 +6112,41 @@ full-screen PNG is 90 KB here and reaches the model as base64. Half-size JPEG of
 the same screen is 79 KB, and the gap widens on a larger display. Nothing has
 been measured about what either costs the reader in tokens or in latency, so
 nothing here claims it.
+
+### The consent window was a command somebody had to know to type
+
+The seer's own README said to start the consent window with a PowerShell line,
+and the tool's messages repeated it: *"the person at this machine starts it with
+`seer/windows/consent.ps1`"*. That is the thing this project's constitution
+forbids in as many words — **the only input is a sentence** — and it was in the
+one capability whose whole point is to be reached for casually, mid-task, by
+somebody who is designing a page rather than administering a machine.
+
+The reasoning that let it in is in the entry above: installing an eye is a
+deliberate act on the machine whose screen it is, and that is right. **Opening
+the window that asks for consent is not that act.** It sees nothing. It offers a
+list and a tick box, and the tick is the decision. Making a person type a command
+to be *offered* a choice guards nothing and costs the feature its users.
+
+`startConsent` opens it, detached, the first time an agent finds it missing.
+The agent is told what happened rather than handed a command, and the sentence
+ends where looper's authority ends:
+
+> the consent window was not running, so looper has just opened it on this
+> machine. It lists every window that is open, with a tick box beside each.
+> Nothing can be looked at until one is ticked there, which is the person's
+> decision and not looper's.
+
+`consent.ps1` is installed beside `capture.ps1` now, because looper cannot open
+a program it has no copy of, and a machine with only half the pair is told that
+plainly rather than being told a window is opening that never will.
+
+`tests/seer.test.ts` refuses any message in the capability that names a command
+to type, so this cannot come back as a helpful sentence.
+
+**Found while doing it, and not yet fixed.** `standing()` returns every open
+window title before anything is ticked — eight of them here, including a chat
+with a person's name in it and a document title. The consent model gates
+capture and not enumeration, so an agent learns what a person has open before
+they have agreed to show it anything. That is a separate hole and it is written
+down here rather than quietly left.

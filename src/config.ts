@@ -142,6 +142,8 @@ export const SEER_DIR = "vendor/seer";
 
 export const SEER_CAPTURE = "windows/capture.ps1";
 
+export const SEER_CONSENT = "windows/consent.ps1";
+
 export const WINDOWS_SHELL = "powershell.exe";
 
 const KERNEL_NAMED = "/proc/version";
