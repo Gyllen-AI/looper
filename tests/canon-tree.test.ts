@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
 import { join } from "node:path";
 
-import { canonBranchNames, canonGoverns, pulledByName } from "../src/canon.ts";
+import { canonBranchIndex, canonBranchNames, canonGoverns, pulledByName } from "../src/canon.ts";
 import { isABranchName } from "../src/doctrine.ts";
 
 const CANON = join(import.meta.dirname, "..", "src", "canon");
@@ -78,4 +78,25 @@ test("a branch name is still a name and never a way out of the doctrine folder",
   for (const fine of ["frontend", "ui/state", "data/schema", "work/deploy"]) {
     assert.equal(isABranchName(fine), true, `${fine} is a branch name and was refused`);
   }
+});
+
+test("the constitution names every branch, or a branch nobody knows about is a rule nobody gets", () => {
+  const index = canonBranchIndex();
+  const missing = canonBranchNames().filter((name) => {
+    const cut = name.indexOf("/");
+    if (cut < 0) return !index.includes(` ${name} `) && !index.endsWith(` ${name}`);
+    return !index.includes(`${name.slice(0, cut)}/`) || !index.includes(name.slice(cut + 1));
+  });
+  assert.deepEqual(
+    missing,
+    [],
+    "these branches exist and the constitution does not name them. Seven of them route by no path at all and can only be pulled by name, so a reader who is never told they exist can never reach them",
+  );
+});
+
+test("the index is generated, so it costs a line to add a branch and cannot go stale", () => {
+  assert.ok(
+    canonBranchIndex().length < 900,
+    `the branch index is ${canonBranchIndex().length} chars and is paid on every single message. Past this it is cheaper to name the groups and let the reader ask for the leaves`,
+  );
 });
