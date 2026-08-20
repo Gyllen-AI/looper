@@ -5,10 +5,11 @@ Changing the canon, this tree, or the machinery that delivers them.
   `tests/plan-is-true.test.ts` hold the two halves of that.
 - **A number inherited is a number unmeasured.** Measure against this repo,
   write the number and the date down, and gate it with a test.
-- **A branch that does not fit is offered, not lost.** The drop marker lists
-  each one by name with its opening sentence, so write that sentence as the
-  answer to "when would I need this" — it is the only part of the branch a
-  reader may ever see.
+- **A branch's opening line and its first bullet are both read on every
+  message** — the line as the drop marker's entry, the bullet as the branch's
+  entry in the constitution index. Write the line as the answer to "when would I
+  need this", and put the branch's hardest rule first, because for most readers
+  those two are the whole branch.
 - **The hook caps every turn at ten thousand characters** — measured 2026-08-20,
   not inherited: 10,000 arrive, 10,001 becomes a 2,000-character preview and a
   file path, so `src/allocator.ts` cuts to the ceiling and states the count. The

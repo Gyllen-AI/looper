@@ -18,7 +18,7 @@ function home(): string {
 }
 
 test("a loop nobody has asked says nothing, rather than guessing it is healthy", () => {
-  assert.deepEqual([...new Loop().inject({ root: "/nowhere/at/all", budget: 9800 })], []);
+  assert.deepEqual([...new Loop("/nowhere/at/all").inject({ root: "/nowhere/at/all", budget: 9800 })], []);
 });
 
 test("a whole loop says nothing, and a broken one arrives without anything being run", () => {

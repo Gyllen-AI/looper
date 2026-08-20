@@ -16,6 +16,8 @@ export type Kept = {
   readonly broken: number;
   readonly blind: number;
   readonly failing: readonly string[];
+  readonly brokenNames: readonly string[];
+  readonly blindNames: readonly string[];
 };
 
 export type Read =
@@ -30,6 +32,10 @@ export function keptPath(root: string, home: string): string {
 
 export function keep(root: string, home: string, kept: Kept): void {
   writeAtomically(keptPath(root, home), `${JSON.stringify(kept, null, JSON_INDENT)}\n`);
+}
+
+function namesAt(held: unknown): readonly string[] {
+  return Array.isArray(held) ? held.filter((one): one is string => typeof one === "string") : [];
 }
 
 function numberAt(held: unknown, key: string): number | undefined {
@@ -56,8 +62,16 @@ export function lastSeen(root: string, home: string): Read {
   if (typeof at !== "string" || ok === undefined || broken === undefined || blind === undefined) {
     return { kind: "unreadable", why: `${path} does not hold a loop answer` };
   }
-  const named = Array.isArray(failing)
-    ? failing.filter((one): one is string => typeof one === "string")
-    : [];
-  return { kind: "kept", kept: { at, ok, broken, blind, failing: named } };
+  return {
+    kind: "kept",
+    kept: {
+      at,
+      ok,
+      broken,
+      blind,
+      failing: namesAt(failing),
+      brokenNames: namesAt(fieldAt(parsed, "brokenNames")),
+      blindNames: namesAt(fieldAt(parsed, "blindNames")),
+    },
+  };
 }

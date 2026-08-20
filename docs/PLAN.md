@@ -387,7 +387,7 @@ budget, by name:
 | `decisions` | 8 |
 | `recall` | 6 |
 | `law` | 6 |
-| `doctrine:game` | 6 |
+| `doctrine:<the adopter's own>` | 6 |
 
 The branch governing the work actually being done was the one most often absent,
 and it was absent silently: the marker names what was dropped and never what was
@@ -639,6 +639,92 @@ cheaper to name the groups and let the reader ask for the leaves.
 
 This is the first half of the inversion below, taken for the cheapest case. The
 second half is the branch bodies.
+
+### The loop grew teeth, and lied on its first firing
+
+The constitution's first rule now names `looper loop`, and a rule that names a
+command is still told. `Loop` becomes a `CommitMessage` gate.
+
+**Broken refuses the commit. Blind does not.** Broken is a fact about the code in
+front of you; blind is a fact about the world, and a gate that refuses your
+commit because a remote box is down is a gate somebody turns off. Blind is stated
+and not refused, and every prompt still says it is not ok.
+
+Three more refusals it does not make. A project that declared no checks is never
+refused over them, because an empty `loop.toml` means there is nothing of theirs
+to be broken. A cache that cannot be read passes rather than blocks, because
+looper's own failure is not the committer's. And the departure is available in
+the message, `Loop-broken: <why>`, which is the constitution's own rule about
+saying a departure out loud, once, applied to itself.
+
+It reads the answer `looper loop` last wrote rather than running anything. A gate
+that takes minutes is a gate that gets bypassed, and the loop here takes about
+twenty seconds across eight checks. The consequence is that a stale broken answer
+still refuses, which is correct: re-running clears it, and that is the behaviour
+you want a gate to provoke.
+
+**Fired against an adopting project on the first try and produced a lie.** It
+said **one** check was broken and then **named two**, because `Kept.failing`
+merged broken with blind and the second of the two was blind, not broken. Naming
+a blind check as broken is the exact report this vocabulary exists to make
+impossible, produced by the gate built to enforce it. The names are that
+project's and stay there. `Tally` and `Kept` now carry `brokenNames` and `blindNames` separately, a
+cache written before this says "run looper loop to see which" rather than
+guessing, and a test pins it with the real firing in its message.
+
+### The constitution became the index, and the index is generated
+
+The constitution named no branch at all, so the seven that route by no path could
+only be reached by a reader who already knew they existed. The fix is not a list
+written into the file. It is the file becoming the list.
+
+`constitution.md` now holds a header and four absolutes: run the loop, never
+invent data, report what happened with the proof, end with what changed and what
+is next. Those are true of a message with no code in it, so they cannot be a
+branch.
+
+The loop is first because it is what the predecessor put first, and for the same
+reason. Its constitution opened with "No network in the dependency tree, ever,
+`just check` stays green. This is the one invariant the whole product rests on",
+and that rule had teeth: `just check` ran a `deps-invariant` recipe that failed
+the build if a named crate appeared in the resolved tree. The general shape is
+"name the thing this rests on, and one command that proves it", and this tool
+already ships the command. `looper loop` reads `.looper/loop.toml`, runs what the
+project declared, and answers `ok`, `broken` or `blind`. A fresh adopter has
+declared nothing, so the rule reads as an instruction to declare it, which is the
+right first thing to ask of them.
+Everything else moved into one, and `branchIndex(root)` builds the rest at
+injection time from `listBranches`, which merges the canon's names with whatever
+the adopter has written:
+
+```
+- architecture  State has one home and that home is the truth.
+- deps          Nothing enters unread, unpinned or unowned.
+- rust          No comments.
+- <their own>   <its own first rule, exactly as they wrote it>
+- data/         indexing migrations queries schema
+```
+
+The rule quoted is the branch's own first bullet, preferring its bolded lead,
+which is where every canon branch already states its hardest rule in one
+sentence. Nothing is stored. A branch added here appears in every adopter's
+constitution at the next pin; a branch the adopter writes appears on their next
+message; and neither requires anyone to keep a list.
+
+**Five branches were missing and were found by probing rather than by opinion.**
+Searching the canon for `third-party`, `supply`, `speculative`, `propagate`,
+`vanish`, `outcome` and `commit only` returned nothing, so: `structure` (deciding
+the shape), `discipline` (writing code once the shape is decided), `authority`
+(who decides, and what an assumption costs), `voice` (anything a person reads)
+and `deps` (taking on code you did not write). The last is the serious one: a
+canon with rules about indexes and migrations had nothing about what you are
+allowed to depend on.
+
+**The cap had to change with it.** `tests/budget.test.ts` counted bullets, capped
+at 14, and twenty-seven one-line index entries are not twenty-seven rules. It now
+measures the always-on tier in characters, capped at 5,200, because characters
+are what the budget actually spends. The index has its own ceiling of 2,200, past
+which each group collapses from its leaf names to a count.
 
 **Push an index, pull the body.** The constitution already instructs the reader
 to pull the branches their task touches, so pushing whole branches is the

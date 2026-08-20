@@ -19,6 +19,8 @@ export type Tally = {
   readonly broken: number;
   readonly blind: number;
   readonly failing: readonly string[];
+  readonly brokenNames: readonly string[];
+  readonly blindNames: readonly string[];
 };
 
 export const BLIND_EXIT = 3;
@@ -67,17 +69,24 @@ export function ask(check: Check, root: string, seconds: number): Seen {
 
 export function tallyOf(seen: readonly Seen[]): Tally {
   const failing: string[] = [];
+  const brokenNames: string[] = [];
+  const blindNames: string[] = [];
   let ok = 0;
-  let broken = 0;
-  let blind = 0;
   for (const one of seen) {
     if (one.verdict === "ok") {
       ok += 1;
       continue;
     }
     failing.push(one.label);
-    if (one.verdict === "blind") blind += 1;
-    else broken += 1;
+    if (one.verdict === "blind") blindNames.push(one.label);
+    else brokenNames.push(one.label);
   }
-  return { ok, broken, blind, failing };
+  return {
+    ok,
+    broken: brokenNames.length,
+    blind: blindNames.length,
+    failing,
+    brokenNames,
+    blindNames,
+  };
 }
