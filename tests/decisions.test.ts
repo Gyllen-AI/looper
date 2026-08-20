@@ -155,7 +155,7 @@ test("the injection says nothing with no entries, and names the stale ones when 
     assert.equal(calm.length, 1);
     const first = calm[0];
     if (first === undefined) throw new Error("unreachable");
-    assert.match(first.text, /1 decision\(s\) taken with a known cost/);
+    assert.match(first.text, /1 decision\(s\) taken here with a known cost/);
 
     writeFileSync(join(root, "thing.ts"), "export const one = 2;\n");
     const loud = new Decisions().inject({ root, touched: [] });

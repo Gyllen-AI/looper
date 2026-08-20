@@ -392,18 +392,30 @@ export function shrinkBaseline(root: string): Outcome {
   return said;
 }
 
+const FILES_NAMED_AT_ONCE = 4;
+
+function filesIn(baseline: Baseline): string {
+  const named = [...baseline.keys()];
+  const shown = named.slice(0, FILES_NAMED_AT_ONCE);
+  const rest = named.length - shown.length;
+  if (rest <= 0) return shown.join(", ");
+  return `${shown.join(", ")} and ${rest} more`;
+}
+
 export class Law implements Capability {
   readonly name = "law";
 
   inject(context: InjectContext): readonly Injection[] {
-    const outstanding = totalIn(readBaseline(context.root));
+    const baseline = readBaseline(context.root);
+    const outstanding = totalIn(baseline);
     if (outstanding === 0) return SILENT;
+    const where = filesIn(baseline);
     return [
       {
         source: "law",
         priority: BASELINE_PRIORITY,
         required: false,
-        text: `looper: ${outstanding} thing(s) in this project were already here before looper arrived and are still to fix. They block nothing. Fixing one while you are already in that file is the cheapest it will ever be.`,
+        text: `looper: ${outstanding} problem(s) were already here before looper arrived, in ${where}. They block nothing, and fixing one while you are already in that file is the cheapest it will ever be.`,
       },
     ];
   }

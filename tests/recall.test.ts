@@ -119,7 +119,10 @@ test("once there are notes, every turn is told they exist", () => {
     const said = new Recall().inject({ root, budget: INJECTION_BUDGET });
 
     assert.equal(said.length, 1);
-    assert.ok(first(said).text.includes("1 note"));
+    assert.ok(
+      first(said).text.includes("a thing"),
+      "a count cannot be acted on: a turn told only that notes exist has to spend a tool call to find out whether any of them matter",
+    );
     assert.ok(first(said).text.length < 250, "it is paid for on every turn");
   } finally {
     rmSync(root, { recursive: true, force: true });
@@ -281,6 +284,22 @@ test("a lock left behind by a process that died is swept, and the write goes thr
 
     assert.equal(written.kind, "added", "a lock nobody holds any more locked recall out for good");
     assert.equal(existsSync(lock), false, "the dead lock was left on disk to be swept again next time");
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test("naming the notes is bounded, so a project that has learned a lot is not read as wallpaper", () => {
+  const root = scratch();
+  try {
+    for (let at = 0; at < 12; at += 1) write(root, `a thing numbered ${at}`, "some detail");
+    const said = new Recall().inject({ root, budget: INJECTION_BUDGET });
+
+    assert.match(first(said).text, /and 9 more/);
+    assert.ok(
+      first(said).text.length < 500,
+      "a line paid on every turn that grows with every note becomes the thing naming was meant to fix",
+    );
   } finally {
     rmSync(root, { recursive: true, force: true });
   }

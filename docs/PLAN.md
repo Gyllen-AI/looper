@@ -6569,3 +6569,26 @@ The rules had no notion of proportion. Every one fired at full strength on the
 smallest change, and *build the stricter one without asking* pointed only
 upward. `process` now carries the line that points the other way. This entry is
 four paragraphs because the change is one line, which is the rule working.
+
+### A count cannot be acted on, and looper's own status lines were counts
+
+#134 fixed this for the drop marker — *a size cannot be acted on, nobody can tell
+from `1118 chars` whether they needed it* — and never applied it to looper's own
+lines. Three of the four announced a number and told the reader to call a tool to
+find out what it meant. `stall` was the only one that named anything.
+
+The `law` line was the plainest case: *fixing one while you are already in that
+file* never said which files. It does now, and it got **shorter** — 195 to 189
+characters — because naming one file beats explaining why you cannot.
+
+`recall` and `decisions` cost more: 481 characters became 908. **This is a growth,
+not a saving**, and it is deliberate. A note's summary is usually the whole
+useful fact — *a hook may write at most 10,000 bytes* needs no tool call — and
+knowing what the notes are about is what lets a turn decide **not** to call.
+Measured against the session that prompted it: `recall` was called zero times and
+`decisions` once, so the old 481 characters told a turn to call a tool it did not
+call, every turn, and delivered nothing.
+
+Three named at most, then *and N more*. Without the cap it becomes wallpaper
+again as soon as a project has learned twenty things, and a test holds it at
+twelve notes.

@@ -84,12 +84,17 @@ function dependsIn(written: string | undefined): readonly string[] {
     .filter((one) => one.length > 0);
 }
 
+const NAMED_AT_ONCE = 3;
+
 export class Decisions implements Capability {
   readonly name = "decisions";
 
   inject(context: InjectContext): readonly Injection[] {
     const found = standings(context.root);
     if (found.length === 0) return SILENT;
+    const shown = found.slice(0, NAMED_AT_ONCE);
+    const over = found.length - shown.length;
+    const more = over <= 0 ? "" : `\n  and ${over} more, by name from the tool.`;
     const stale = found.filter((one) => one.kind === "moved" || one.kind === "gone");
     if (stale.length === 0) {
       return [
@@ -97,7 +102,7 @@ export class Decisions implements Capability {
           source: this.name,
           priority: DECISIONS_PRIORITY,
         required: false,
-          text: `looper: this project has ${found.length} decision(s) taken with a known cost — call the \`decisions\` tool before crossing the same line again.`,
+          text: `looper: ${found.length} decision(s) taken here with a known cost:\n${shown.map((one) => `  ${one.decision.summary}`).join("\n")}${more}\nRead one with the \`decisions\` tool before crossing that same line again.`,
         },
       ];
     }

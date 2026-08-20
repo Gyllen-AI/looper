@@ -47,18 +47,23 @@ function listed(notes: readonly Note[]): string {
     .join("\n\n");
 }
 
+const NAMED_AT_ONCE = 3;
+
 export class Recall implements Capability {
   readonly name = "recall";
 
   inject(context: InjectContext): readonly Injection[] {
     const notes = readNotes(context.root);
     if (notes.length === 0) return SILENT;
+    const shown = notes.slice(0, NAMED_AT_ONCE);
+    const rest = notes.length - shown.length;
+    const more = rest <= 0 ? "" : `\n  and ${rest} more, by name from the tool.`;
     return [
       {
         source: this.name,
         priority: RECALL_PRIORITY,
         required: false,
-        text: `looper: this project has ${notes.length} note(s) of things it worked out before — call the \`recall\` tool before assuming anything you would otherwise have to work out again.`,
+        text: `looper: ${notes.length} thing(s) this project worked out before, so you do not have to again:\n${shown.map((one) => `  ${one.summary}`).join("\n")}${more}\nPull one with the \`recall\` tool if it touches what you are doing; if none does, it costs you nothing.`,
       },
     ];
   }

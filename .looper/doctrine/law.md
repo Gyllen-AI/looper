@@ -18,6 +18,10 @@ Writing looper's own code, and writing the rules looper enforces.
   path is broken: sharpen it rather than soften it.
 - **Run every new rule over this repo before calling it done.** A rule tested only
   on fixtures its author wrote agrees with its author.
+- **A count is not something anyone can act on.** Say what it is about, capped
+  and with "and N more", never a number and an instruction to go and ask. The
+  drop marker learned this in #134 and looper's own status lines still had not
+  by #164.
 - **A refusal closes the routes around it and names the one that is open.** An
   agent that cannot commit will ask its human to type the command; a refusal that
   does not say so has left the door it was standing in front of.
