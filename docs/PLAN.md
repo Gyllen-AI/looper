@@ -6178,3 +6178,45 @@ ticked, looper now says what it does not know:
 
 The person still sees everything, in their own window, on their own screen. That
 is the half that was always right.
+
+### A frame in 57 milliseconds, and the guard that stopped it landing
+
+`capture.ps1 -Serve <dir>` is a capturer that stays alive: it loads
+`System.Drawing`, compiles the P/Invoke helper once, and then answers requests
+until the consent window goes away. Measured 2026-08-20 against a real ticked
+window on this machine:
+
+| | per frame |
+|---|---|
+| one shot, as shipped | 429-485 ms |
+| through the live capturer | **57-85 ms**, first frame 135 |
+
+Five to eight times faster, and it lands where the stage numbers above said it
+would: the ~440 ms of setup is paid once instead of per frame.
+
+**Consent does not move.** The server asks the pipe on every single capture, so
+a window that stops being ticked stops being visible immediately, and it exits
+the moment the consent window is unreachable. Three real bugs were found by
+running it rather than reading it: `Set-Content` cannot create a file on a
+`\\wsl.localhost` path, `File.Move` with an overwrite flag is .NET Core only and
+Windows PowerShell 5.1 has the two-argument one, and `Get-Content -Raw` decodes
+as ANSI, so a window title containing an em dash never matched what was ticked
+and every frame came back refused.
+
+**It is not wired into looper, and this is why.** The synchronous tool boundary
+needs a request channel, and the obvious one is a file the agent's side writes.
+`tests/invariants.test.ts` refuses any write from `src/seer/`:
+
+> looper cannot record consent, because consent is not its to record. Anything
+> looper can write, whoever is talking to the agent can have it write.
+
+That guard is right about the property it protects and blunter than the property
+itself. A request file names a subject; it does not decide anything, and the
+consent window still answers yes or no per capture — an injected agent could
+already ask for any title through the tool. So the property survives a request
+channel and the test does not, which is the shape this project calls a blunt
+rule: sharpen it rather than soften it.
+
+**Sharpening a consent guard to let a feature through is not a change to make
+quietly**, and it is not one the measurement decides. The capturer is here,
+proven, and unused until that is settled.
