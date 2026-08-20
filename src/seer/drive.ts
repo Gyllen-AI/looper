@@ -1,9 +1,10 @@
-import { execFileSync } from "node:child_process";
+import { execFileSync, spawn } from "node:child_process";
 import { existsSync } from "node:fs";
 import { join } from "node:path";
 
 import {
   SEER_CAPTURE,
+  SEER_CONSENT,
   SEER_DIR,
   SEER_MAX_OUTPUT,
   SEER_TIMEOUT_MS,
@@ -65,10 +66,13 @@ export function seerIsInstalled(looperRoot: string): boolean {
   return looksAtWindows() && existsSync(seerAt(looperRoot));
 }
 
-function scriptFor(looperRoot: string): string {
-  const path = seerAt(looperRoot);
+function windowsPathFor(path: string): string {
   if (!underWsl()) return path;
-  return execFileSync("wslpath", ["-w", path], { encoding: "utf8" }).trim();
+  return execFileSync("wslpath", ["-w", path], { encoding: "utf8", maxBuffer: SEER_MAX_OUTPUT }).trim();
+}
+
+function scriptFor(looperRoot: string): string {
+  return windowsPathFor(seerAt(looperRoot));
 }
 
 function askedOf(shell: string, looperRoot: string, args: readonly string[]): string {
@@ -85,6 +89,35 @@ function titlesIn(payload: unknown, field: string): readonly string[] {
   const held = fieldAt(payload, field);
   if (!Array.isArray(held)) return [];
   return held.filter((one) => typeof one === "string");
+}
+
+export type Started =
+  | { readonly kind: "starting" }
+  | { readonly kind: "no-consent-program"; readonly path: string }
+  | { readonly kind: "could-not-start"; readonly detail: string };
+
+export function consentAt(looperRoot: string): string {
+  return join(looperRoot, SEER_DIR, SEER_CONSENT);
+}
+
+export function startConsentWith(shell: string, looperRoot: string): Started {
+  const script = consentAt(looperRoot);
+  if (!existsSync(script)) return { kind: "no-consent-program", path: script };
+  try {
+    const child = spawn(shell, ["-NoProfile", "-ExecutionPolicy", "Bypass", "-File", windowsPathFor(script)], {
+      detached: true,
+      stdio: "ignore",
+    });
+    child.unref();
+    return { kind: "starting" };
+  } catch (cause) {
+    return { kind: "could-not-start", detail: reasonFrom(cause) };
+  }
+}
+
+export function startConsent(looperRoot: string): Started {
+  if (!looksAtWindows()) return { kind: "no-consent-program", path: consentAt(looperRoot) };
+  return startConsentWith(WINDOWS_SHELL, looperRoot);
 }
 
 export function standingWith(shell: string, looperRoot: string): Standing {

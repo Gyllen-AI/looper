@@ -39,20 +39,20 @@ indistinguishable from "that window is not ticked". It is gone.
 
 ```sh
 mkdir -p vendor/seer/windows
-cp seer/windows/capture.ps1 vendor/seer/windows/
+cp seer/windows/capture.ps1 seer/windows/consent.ps1 vendor/seer/windows/
 ```
 
 looper looks for `vendor/seer/windows/capture.ps1` and offers its `see` tool only
 when that file exists and it is running on Windows or under WSL. Delete it and
 the tool disappears again.
 
-Then start the consent window, and leave it where you can see it:
+Both files are installed because looper opens the consent window itself the
+first time an agent asks to look at anything. You do not start it, and there is
+no command to remember: it appears, always on top, listing every window that is
+open with a tick box beside each.
 
-```sh
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File seer/windows/consent.ps1
-```
-
-Nothing can be looked at until you tick something in it.
+Nothing can be looked at until you tick something in it. That tick is the whole
+decision, and it is the one thing looper will never do for you.
 
 ## What is not covered
 

@@ -1,12 +1,12 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { chmodSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { chmodSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 
-import { SEER_CAPTURE, SEER_DIR, SEER_NAME_LIMIT, SEER_TOOL } from "../src/config.ts";
+import { SEER_CAPTURE, SEER_CONSENT, SEER_DIR, SEER_NAME_LIMIT, SEER_TOOL } from "../src/config.ts";
 import { Seer, answerFor } from "../src/seer/capability.ts";
-import { capture, captureWith, seerIsInstalled } from "../src/seer/drive.ts";
+import { capture, captureWith, seerIsInstalled, startConsentWith } from "../src/seer/drive.ts";
 
 const A_WINDOW = "the app";
 
@@ -204,4 +204,46 @@ test("a picture of a real window survives the pipe, which Node's default buffer 
   } finally {
     rmSync(root, { recursive: true, force: true });
   }
+});
+
+test("looper starts the consent window itself rather than naming a command for a person to type", () => {
+  const root = scratch();
+  try {
+    const shell = withSeer(root, "exit 0");
+    const consent = join(root, SEER_DIR, SEER_CONSENT);
+    mkdirSync(dirname(consent), { recursive: true });
+    writeFileSync(consent, "");
+
+    const started = startConsentWith(shell, root);
+
+    assert.equal(started.kind, "starting");
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test("a machine with no copy of the consent window says that, instead of pretending it started one", () => {
+  const root = scratch();
+  try {
+    const shell = withSeer(root, "exit 0");
+    const started = startConsentWith(shell, root);
+
+    assert.equal(
+      started.kind,
+      "no-consent-program",
+      "reporting a start that did not happen sends the reader to look for a window that will never appear",
+    );
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test("no message tells the person at the machine to type a command", () => {
+  const source = readFileSync(join(import.meta.dirname, "..", "src", "seer", "capability.ts"), "utf8");
+
+  assert.doesNotMatch(
+    source,
+    /starts it with|started by the person at this machine, with|start seer\/windows\/consent\.ps1 again/,
+    "the only input is a sentence: a message that hands somebody a command to type is a step they have to know exists",
+  );
 });
