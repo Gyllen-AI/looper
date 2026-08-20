@@ -1,4 +1,6 @@
 import { test } from "node:test";
+import { NO_TURN } from "../src/capability.ts";
+import { NEVER_SAID } from "../src/said.ts";
 import assert from "node:assert/strict";
 
 import { allocate } from "../src/allocator.ts";
@@ -17,7 +19,7 @@ function speaking(injections: readonly Injection[]): Capability {
   };
 }
 
-const AT = { root: "/nowhere", budget: 100 };
+const AT = { root: "/nowhere", budget: 100, turn: NO_TURN, said: NEVER_SAID };
 
 test("a rule set the work raised is never dropped for budget", () => {
   const said = allocate(
@@ -65,7 +67,7 @@ test("what is not required still gives way, and is named with its weight", () =>
         { source: "recall", priority: 30, text: "r".repeat(600), required: false },
       ]),
     ],
-    { root: "/nowhere", budget: 500 },
+    { root: "/nowhere", budget: 500, turn: NO_TURN, said: NEVER_SAID },
   ).allocation;
 
   assert.deepEqual(said.dropped.map((one) => one.source), ["recall"]);
@@ -100,7 +102,7 @@ test("a branch the router could not fit is offered by name and by what it holds"
         })),
       ]),
     ],
-    { root: "/nowhere", budget: 600 },
+    { root: "/nowhere", budget: 600, turn: NO_TURN, said: NEVER_SAID },
   ).allocation;
 
   assert.ok(said.dropped.length > 0, "four branches of 400 chars fit in 600 and nothing was dropped");

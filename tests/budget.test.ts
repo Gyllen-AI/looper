@@ -1,4 +1,6 @@
 import { test } from "node:test";
+import { NO_TURN } from "../src/capability.ts";
+import { NEVER_SAID } from "../src/said.ts";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
@@ -85,6 +87,8 @@ test("a turn that touches everything drops the least urgent set, and says which"
   const run = allocate(everyBranchName().map((name, at) => new Standing(name, at)), {
     root: ROOT,
     budget: 400,
+    turn: NO_TURN,
+    said: NEVER_SAID,
   });
 
   assert.ok(
@@ -171,7 +175,7 @@ test("a doctrine branch that does not fit is dropped and named, never sent anywa
         onHook: (): Outcome => ({ kind: "pass" }),
       }) satisfies Capability,
   );
-  const { allocation } = allocate(capabilities, { root: process.cwd(), budget: INJECTION_BUDGET });
+  const { allocation } = allocate(capabilities, { root: process.cwd(), budget: INJECTION_BUDGET, turn: NO_TURN, said: NEVER_SAID });
   assert.ok(
     allocation.chars <= INJECTION_BUDGET,
     `doctrine went out at ${allocation.chars} chars against a ceiling of ${INJECTION_BUDGET}. Marking a branch required makes the budget decorative for the only thing it governs`,
@@ -216,7 +220,7 @@ test("a check known broken outranks a rule set, because a fault now beats a rule
       onHook: (): Outcome => ({ kind: "pass" }),
     })),
   ];
-  const { allocation } = allocate(speaking, { root: process.cwd(), budget: INJECTION_BUDGET });
+  const { allocation } = allocate(speaking, { root: process.cwd(), budget: INJECTION_BUDGET, turn: NO_TURN, said: NEVER_SAID });
 
   assert.ok(
     allocation.text.includes("loop.uplink"),

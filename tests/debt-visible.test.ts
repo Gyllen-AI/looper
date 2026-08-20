@@ -1,5 +1,7 @@
 import { first } from "./helpers.ts";
 import { test } from "node:test";
+import { NO_TURN } from "../src/capability.ts";
+import { NEVER_SAID } from "../src/said.ts";
 import assert from "node:assert/strict";
 import { execFileSync, spawnSync } from "node:child_process";
 import { mkdtempSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
@@ -63,7 +65,7 @@ function adopted(source: string): string {
 }
 
 function injected(root: string): readonly string[] {
-  return new Law().inject({ root, budget: INJECTION_BUDGET }).map((held) => held.text);
+  return new Law().inject({ root, budget: INJECTION_BUDGET, turn: NO_TURN, said: NEVER_SAID }).map((held) => held.text);
 }
 
 test("outstanding work is said every turn, not left in a file", () => {

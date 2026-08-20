@@ -4,7 +4,8 @@ import { NO_SESSION_EVER, lastRun, noteRun, sayWhenHooksRan, worthSayingAtCommit
 import { AFTER_INIT, USAGE, costLines, describeStep, mapComplaints, oversizedComplaints } from "../announce.ts";
 import { totalIn, readBaseline } from "../law/baseline.ts";
 import { surveyProject } from "../law/project.ts";
-import { here, currentAllocation } from "../session.ts";
+import { here, allocationFor } from "../session.ts";
+import { NO_TURN, type Turn } from "../capability.ts";
 
 const NOTHING_NAMED: readonly string[] = [];
 
@@ -15,8 +16,12 @@ function hookLines(): readonly string[] {
   );
 }
 
-export function status(out: Out): number {
-  const allocation = currentAllocation(out);
+export function status(out: Out, paths: readonly string[]): number {
+  const asked: Turn =
+    paths.length === 0
+      ? NO_TURN
+      : { session: { kind: "unknown" }, prompt: "", inHand: { kind: "given", paths } };
+  const allocation = allocationFor(out, asked);
   const outstanding = totalIn(readBaseline(here()));
   const rooted = projectRoot(process.cwd(), namedProject());
   const lines = [
@@ -25,7 +30,9 @@ export function status(out: Out): number {
     `                     chosen by ${rooted.how}`,
     ...hookLines(),
     `  injection budget   ${INJECTION_BUDGET} chars`,
-    `  used this turn     ${allocation.chars} chars`,
+    ...(paths.length === 0
+      ? [`  used this turn     ${allocation.chars} chars`]
+      : [`  if in hand         ${paths.join(", ")}`, `  a turn would cost  ${allocation.chars} chars`]),
     `  contributors`,
     ...costLines(here(), allocation.weighed),
     `  dropped            ${describeList(allocation.dropped.map((one) => `${one.source} (${one.chars})`))}`,

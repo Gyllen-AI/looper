@@ -13,6 +13,8 @@ const REPEATED_ENOUGH = 4;
 
 const A_LONG_READ_RUN = 8;
 
+const RE_READING_AT_MOST = 2;
+
 const MINUTE = 60 * 1000;
 
 const WRITING: readonly string[] = ["Edit", "MultiEdit", "Write", "NotebookEdit"];
@@ -58,12 +60,14 @@ function longReadRun(held: readonly Reached[]): readonly Fingerprint[] {
   }
   if (run.length > longest.length) longest = run;
   if (longest.length < A_LONG_READ_RUN) return [];
+  const targets = new Set(longest.map((one) => one.shape));
+  if (targets.size > RE_READING_AT_MOST) return [];
   return [
     {
-      shape: `${longest.length} reads with no write between them`,
+      shape: `${longest.length} reads of the same ${targets.size} thing(s) with no write between them`,
       times: longest.length,
       minutes: spanOf(longest),
-      means: "diagnosing rather than building",
+      means: "re-reading instead of acting on what was read",
     },
   ];
 }

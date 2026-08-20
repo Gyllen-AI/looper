@@ -1,4 +1,6 @@
 import { test } from "node:test";
+import { NO_TURN } from "../src/capability.ts";
+import { NEVER_SAID } from "../src/said.ts";
 import assert from "node:assert/strict";
 
 import { allocate } from "../src/allocator.ts";
@@ -70,7 +72,7 @@ class Broken implements Capability {
   }
 }
 
-const CONTEXT = { root: "/nowhere", budget: 100 };
+const CONTEXT = { root: "/nowhere", budget: 100, turn: NO_TURN, said: NEVER_SAID };
 
 test("priority decides the order, not registration", () => {
   const run = allocate(
@@ -124,7 +126,7 @@ test("the cost is reported in characters", () => {
 test("what each rule set cost is reported, because the author cannot cut what they cannot see", () => {
   const run = allocate(
     [new Speaker("first", 0, "a".repeat(100), true), new Speaker("second", 10, "b".repeat(250), true)],
-    { root: ".", budget: 9800 },
+    { root: ".", budget: 9800, turn: NO_TURN, said: NEVER_SAID },
   );
 
   assert.deepEqual(

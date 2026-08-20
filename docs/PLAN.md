@@ -475,6 +475,45 @@ around them, which persuades on the first reading and is skimmed on the fortieth
 and which was the reason eighteen branches in one project had grown past the
 point where three could arrive together.
 
+## A notice speaks once, about this session, by relevance
+
+**Measured in one adopter's repository, 2026-08-21, before the change.** On a
+clean tree the prompt hook delivered 4,297 characters, and 2,048 of them were
+four notices that said the same thing on every turn: the baseline count
+(unchanged since the day looper arrived), three recall entries chosen because
+they were the oldest in the file (the first one described behaviour that had
+changed twice since), the count of stale decisions, and a stall report whose
+shapes were two-word command prefixes (`sed -n`, `grep -rn`), which read a
+forty-file investigation as being stuck and, because the stream was keyed by
+project rather than by session, counted another session's commands on the same
+machine as this one's. Every one of those lines was the always-on tier in
+disguise, and by the fifth turn it was wallpaper.
+
+Four things changed, each with a test. The prompt hook reads the payload it is
+handed, so a turn knows its session and its prompt; a turn that arrives without
+them behaves as before. Every injection says whether it is a rule or a notice,
+and a notice is kept per session by the gist of its words with digits masked:
+heard once, it is left out until its words change, and one dropped for budget
+was never heard, so it speaks next turn. Recall ranks its notes by the words of
+the prompt and of the files in hand, names at most three that share at least
+two words, and otherwise says once per session that notes exist. The stall
+stream carries the session on every line and is read per session; a shape is
+the whole command, so two different greps are two shapes; and a run of reads
+over more than two distinct targets is research, while eight reads of the same
+file is a stall. `looper status` takes paths and answers what a turn editing
+them would cost, with notices marked, so a map can be tuned from numbers.
+
+**After, the same repository.** A session's first turn carries 742 characters of
+notices; its second carries none unless a note touches the prompt, and then only
+the notes that do. The question "is the dev companion showing the correct map"
+names the three notes about the map identity and the cargo dock, not the three
+oldest. A second session is told once more, because it has heard nothing.
+
+What this deliberately does not do: repeat a counter because it ticked. A
+baseline going from 1,705 to 1,698 is not news the turn can act on, and the law
+says it again in the file when the file is open. Stream lines written before
+this change carry no session and are not read, so the metric starts clean.
+
 ## What is missing, ranked by what its absence costs
 
 **None of this is built.** It is a list of capabilities an agent asked for after

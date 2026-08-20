@@ -1,5 +1,7 @@
 import { first } from "./helpers.ts";
 import { test } from "node:test";
+import { NO_TURN } from "../src/capability.ts";
+import { NEVER_SAID } from "../src/said.ts";
 import assert from "node:assert/strict";
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, utimesSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -106,24 +108,30 @@ test("a project with nothing written down says so, and injects nothing", () => {
   const root = scratch();
   try {
     assert.ok(read(root).includes("not written anything down yet"));
-    assert.deepEqual([...new Recall().inject({ root, budget: INJECTION_BUDGET })], []);
+    assert.deepEqual([...new Recall().inject({ root, budget: INJECTION_BUDGET, turn: NO_TURN, said: NEVER_SAID })], []);
   } finally {
     rmSync(root, { recursive: true, force: true });
   }
 });
 
-test("once there are notes, every turn is told they exist", () => {
+test("a note is named when the prompt reaches for it, and a turn that asks for nothing is told once that notes exist", () => {
   const root = scratch();
   try {
-    write(root, "a thing", "some detail");
-    const said = new Recall().inject({ root, budget: INJECTION_BUDGET });
+    write(root, "the cargo ship docks for eight minutes", "some detail");
+    const asked = new Recall().inject({
+      root,
+      budget: INJECTION_BUDGET,
+      said: NEVER_SAID,
+      turn: { ...NO_TURN, prompt: "how long does the cargo ship stay docked" },
+    });
+    assert.equal(asked.length, 1);
+    assert.ok(first(asked).text.includes("cargo ship docks"), "the note that touches the question is named, not the oldest");
+    assert.equal(first(asked).notice, true, "and it is a notice, so a session hears it once");
 
-    assert.equal(said.length, 1);
-    assert.ok(
-      first(said).text.includes("a thing"),
-      "a count cannot be acted on: a turn told only that notes exist has to spend a tool call to find out whether any of them matter",
-    );
-    assert.ok(first(said).text.length < 250, "it is paid for on every turn");
+    const idle = new Recall().inject({ root, budget: INJECTION_BUDGET, turn: NO_TURN, said: NEVER_SAID });
+    assert.equal(idle.length, 1);
+    assert.ok(!first(idle).text.includes("cargo ship"), "nothing was asked, so nothing is named for being first in the file");
+    assert.ok(first(idle).text.length < 250, "it is paid for once per session");
   } finally {
     rmSync(root, { recursive: true, force: true });
   }
@@ -292,13 +300,18 @@ test("a lock left behind by a process that died is swept, and the write goes thr
 test("naming the notes is bounded, so a project that has learned a lot is not read as wallpaper", () => {
   const root = scratch();
   try {
-    for (let at = 0; at < 12; at += 1) write(root, `a thing numbered ${at}`, "some detail");
-    const said = new Recall().inject({ root, budget: INJECTION_BUDGET });
+    for (let at = 0; at < 12; at += 1) write(root, `a thing numbered ${at} about docking ships`, "some detail");
+    const said = new Recall().inject({
+      root,
+      budget: INJECTION_BUDGET,
+      said: NEVER_SAID,
+      turn: { ...NO_TURN, prompt: "docking ships numbered" },
+    });
 
-    assert.match(first(said).text, /and 9 more/);
+    assert.match(first(said).text, /3 of this project's 12 notes/);
     assert.ok(
       first(said).text.length < 500,
-      "a line paid on every turn that grows with every note becomes the thing naming was meant to fix",
+      "a line that grows with every note becomes the thing naming was meant to fix",
     );
   } finally {
     rmSync(root, { recursive: true, force: true });

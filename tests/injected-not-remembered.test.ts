@@ -1,4 +1,6 @@
 import { test } from "node:test";
+import { NO_TURN } from "../src/capability.ts";
+import { NEVER_SAID } from "../src/said.ts";
 import assert from "node:assert/strict";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -18,7 +20,7 @@ function home(): string {
 }
 
 test("a loop nobody has asked invents no counts, and is never read as healthy", () => {
-  const said = [...new Loop("/nowhere/at/all").inject({ root: "/nowhere/at/all", budget: 9800 })];
+  const said = [...new Loop("/nowhere/at/all").inject({ root: "/nowhere/at/all", budget: 9800, turn: NO_TURN, said: NEVER_SAID })];
   assert.equal(said.length, 1);
   const first = said[0];
   const text = first === undefined ? "" : first.text;
