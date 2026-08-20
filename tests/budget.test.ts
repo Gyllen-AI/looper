@@ -121,7 +121,7 @@ const ALWAYS_ON: readonly string[] = [
   ".looper/doctrine/constitution.md",
 ];
 
-const MOST_CHARS_READ_EVERY_TURN = 5200;
+const MOST_CHARS_READ_EVERY_TURN = 2600;
 
 function charsIn(path: string): number {
   return readFileSync(join(ROOT, path), "utf8").length;

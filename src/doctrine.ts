@@ -92,69 +92,27 @@ export function assembleBranch(root: string, name: string): BranchLookup {
 }
 
 const INDEX_HEADER = [
-  "Every branch and its hardest rule. Name the ones your task touches and pull",
-  "each with the doctrine tool before you act. The rest of the rule set is in the",
-  "file, and a branch you do not pull is one you do not get.",
+  "Rule sets. The ones tied to the files you are editing arrive on their own; before",
+  "editing in another area, pull its set by name with the doctrine tool. A question",
+  "needs none of them: go to the running system first.",
 ].join("\n");
 
-const INDEX_CEILING = 2200;
+const SAID_AS: ReadonlyMap<string, string> = new Map([["law", "law (TypeScript)"]]);
 
-const NAME_COLUMN = 14;
-
-const RULE_WIDTH = 74;
-
-const A_BOLD_LEAD = /\*\*([^*]+)\*\*/;
-
-function firstSentence(said: string): string {
-  const stop = said.search(/[.!?](\s|$)/);
-  const whole = (stop < 0 ? said : said.slice(0, stop + 1)).trim().replace(/[:,;]$/, ".");
-  if (whole.length <= RULE_WIDTH) return whole;
-  const cut = whole.lastIndexOf(" ", RULE_WIDTH);
-  return `${whole.slice(0, cut < 0 ? RULE_WIDTH : cut)} ...`;
+function nameOf(branch: string): string {
+  const said = SAID_AS.get(branch);
+  return said === undefined ? branch : said;
 }
 
-function hardestRuleIn(text: string): string {
-  const flat: string[] = [];
-  let opening = "";
-  let inFirst = false;
-  for (const line of text.split("\n")) {
-    const said = line.trim();
-    if (said.startsWith("#") || said.startsWith("—")) continue;
-    if (said.startsWith("- ") || said.startsWith("* ")) {
-      if (inFirst) break;
-      inFirst = true;
-      flat.push(said.slice(2));
-      continue;
-    }
-    if (said.length === 0) {
-      if (inFirst) break;
-      continue;
-    }
-    if (inFirst) flat.push(said);
-    else if (opening === "") opening = said;
-  }
-  const joined = flat.join(" ").replace(/\s+/g, " ");
-  const bold = A_BOLD_LEAD.exec(joined);
-  if (bold !== null && bold[1] !== undefined) return firstSentence(bold[1]);
-  if (joined.length > 0) return firstSentence(joined.replace(/\*\*/g, ""));
-  return firstSentence(opening.replace(/\*\*/g, ""));
-}
-
-function ruleFor(root: string, name: string): string {
-  const canon = canonBranch(name);
-  if (canon.kind === "found") return hardestRuleIn(canon.body);
-  const project = readProjectBranch(root, name);
-  return project.kind === "present" ? hardestRuleIn(project.text) : "";
-}
-
-function rowsFor(root: string, withLeaves: boolean): readonly string[] {
+function rowsFor(root: string): readonly string[] {
+  const canon = new Set(canonBranchNames());
+  const shared: string[] = [];
+  const own: string[] = [];
   const groups = new Map<string, string[]>();
-  const rows: string[] = [];
   for (const name of listBranches(root)) {
     const cut = name.indexOf("/");
     if (cut < 0) {
-      const rule = ruleFor(root, name);
-      if (rule.length > 0) rows.push(`- ${name.padEnd(NAME_COLUMN)}${rule}`);
+      (canon.has(name) ? shared : own).push(nameOf(name));
       continue;
     }
     const head = name.slice(0, cut);
@@ -162,17 +120,14 @@ function rowsFor(root: string, withLeaves: boolean): readonly string[] {
     if (kids === undefined) groups.set(head, [name.slice(cut + 1)]);
     else kids.push(name.slice(cut + 1));
   }
-  for (const [head, kids] of groups) {
-    const shown = withLeaves ? kids.join(" ") : `${kids.length} branches, pull by name`;
-    rows.push(`- ${`${head}/`.padEnd(NAME_COLUMN)}${shown}`);
-  }
+  const rows = [`- ${shared.join(", ")}`];
+  for (const [head, kids] of groups) rows.push(`- ${head}/ ${kids.join(", ")}`);
+  if (own.length > 0) rows.push(`- this project's own: ${own.join(", ")}`);
   return rows;
 }
 
 export function branchIndex(root: string): string {
-  const full = rowsFor(root, true);
-  const body = full.join("\n").length <= INDEX_CEILING ? full : rowsFor(root, false);
-  return `${INDEX_HEADER}\n\n${body.join("\n")}`;
+  return `${INDEX_HEADER}\n\n${rowsFor(root).join("\n")}`;
 }
 
 export function assembleConstitution(project: ProjectHalf): Assembly {

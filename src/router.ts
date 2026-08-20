@@ -6,10 +6,11 @@ import {
   listBranches,
   readProjectConstitution,
 } from "./doctrine.ts";
-import { changedPaths } from "./git.ts";
+import { pathsInHand } from "./git.ts";
 import { branchesFor, readMap, withCanonDefaults } from "./map.ts";
 import { canonGoverns } from "./canon.ts";
 import { freshnessOf, saidAbout } from "./freshness.ts";
+import { saidAboutSize, sizeOfStaged } from "./size.ts";
 import {
   SILENT,
   type Capability,
@@ -72,6 +73,7 @@ export class Router implements Capability {
       });
     }
 
+    let raisedFirst = true;
     for (const name of this.signalled(context.root)) {
       const branch = assembleBranch(context.root, name);
       if (branch.kind === "nowhere") continue;
@@ -79,26 +81,28 @@ export class Router implements Capability {
         source: `doctrine:${name}`,
         priority: BRANCH_PRIORITY,
         text: branch.text,
-        required: false,
+        required: raisedFirst,
         summary: firstSentenceOf(branch.text),
       });
+      raisedFirst = false;
     }
 
     return injections;
   }
 
   unreachable(root: string): string {
-    const changed = changedPaths(root);
-    if (changed.kind !== "unavailable") return "";
-    return `looper: the rule sets tied to what you touched were not loaded (${changed.detail}). Only the constitution below is in force, which is a fraction of this project's rules.`;
+    const held = pathsInHand(root);
+    if (held.kind !== "unavailable") return "";
+    return `looper: the rule sets tied to what you are editing were not loaded (${held.detail}). Only the constitution below is in force, which is a fraction of this project's rules.`;
   }
 
   signalled(root: string): readonly string[] {
     const map = readMap(root);
     const project = map.kind === "absent" ? EMPTY_MAP : map.governs;
-    const changed = changedPaths(root);
-    if (changed.kind === "unavailable") return NO_BRANCHES;
-    return branchesFor(withCanonDefaults(project, canonGoverns()), changed.paths);
+    const held = pathsInHand(root);
+    if (held.kind === "unavailable") return NO_BRANCHES;
+    const own = new Set(project.keys());
+    return branchesFor(withCanonDefaults(project, canonGoverns()), held.paths, own);
   }
 
   hooks(): readonly HookEvent[] {
@@ -117,6 +121,14 @@ export class Router implements Capability {
         note: `looper: the rule sets were not checked for staleness (${verdict.detail}).`,
       };
     }
+    const grown = sizeOfStaged(context.root);
+    if (grown.kind === "unavailable") {
+      return {
+        kind: "mention",
+        note: `looper: the rule sets were not measured (${grown.detail}).`,
+      };
+    }
+    if (grown.oversized.length > 0) return { kind: "block", reason: saidAboutSize(grown.oversized) };
     return { kind: "pass" };
   }
 
@@ -125,7 +137,7 @@ export class Router implements Capability {
       {
         name: DOCTRINE_TOOL,
         description:
-          "Read a rule set by name: the rules looper ships plus this project's own, merged. Call with no argument to list what is available. Before starting a task, pull every set that touches it — the ones tied to files you edit arrive on their own, and the rest only arrive if you ask.",
+          "Read a rule set by name: the rules looper ships plus this project's own, merged. Call with no argument to list what is available. The sets tied to the files you are editing arrive on their own; before editing in another area, pull its set. A question needs none.",
         inputSchema: {
           type: "object",
           properties: {

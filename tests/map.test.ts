@@ -62,6 +62,24 @@ test("a malformed line refuses with the line number and the shape wanted", () =>
   assert.throws(() => parseMap(`[governs]\nlaw = [src/**]\n`), TomlMalformed);
 });
 
+const NOBODY_OWN: ReadonlySet<string> = new Set();
+
+test("a branch the project mapped itself outranks a canon default it tied just as strongly", () => {
+  const project = parseMap(`[governs]\ngame = ["game/**"]\n`);
+  const canon = new Map([["csharp", ["**/*.cs"]]]);
+  const merged = withCanonDefaults(project, canon);
+  assert.deepEqual(
+    [...branchesFor(merged, ["game/Plugin.cs"], new Set(project.keys()))],
+    ["game", "csharp"],
+    "the project's own words about its own code are the more specific rule set, and when the budget drops from the end they are the ones that must survive",
+  );
+  assert.deepEqual(
+    [...branchesFor(merged, ["game/Plugin.cs"], NOBODY_OWN)],
+    ["csharp", "game"],
+    "with nothing owned, the tie falls back to the name",
+  );
+});
+
 test("only the branches whose area was touched are selected", () => {
   const governs = parseMap(`
 [governs]
@@ -70,12 +88,12 @@ process = ["PLAN.md"]
 frontend = ["ui/**"]
 `);
 
-  assert.deepEqual([...branchesFor(governs, ["src/main.ts"])], ["law"]);
-  assert.deepEqual([...branchesFor(governs, ["PLAN.md", "src/map.ts"])], [
+  assert.deepEqual([...branchesFor(governs, ["src/main.ts"], NOBODY_OWN)], ["law"]);
+  assert.deepEqual([...branchesFor(governs, ["PLAN.md", "src/map.ts"], NOBODY_OWN)], [
     "law",
     "process",
   ]);
-  assert.deepEqual([...branchesFor(governs, ["README.md"])], []);
+  assert.deepEqual([...branchesFor(governs, ["README.md"], NOBODY_OWN)], []);
 });
 
 test("the branch governing most of what was touched arrives first", () => {
@@ -86,12 +104,12 @@ frontend = ["ui/**"]
 `);
 
   assert.deepEqual(
-    [...branchesFor(governs, ["src/a.ts", "src/b.ts", "ui/panel.tsx"])],
+    [...branchesFor(governs, ["src/a.ts", "src/b.ts", "ui/panel.tsx"], NOBODY_OWN)],
     ["law", "frontend"],
     "a turn wider than the budget drops from the end, so the order is a judgement about which rules this turn is actually about. Alphabetical order is not that judgement.",
   );
   assert.deepEqual(
-    [...branchesFor(governs, ["src/a.ts", "ui/one.tsx", "ui/two.tsx"])],
+    [...branchesFor(governs, ["src/a.ts", "ui/one.tsx", "ui/two.tsx"], NOBODY_OWN)],
     ["frontend", "law"],
   );
 });
@@ -102,8 +120,8 @@ test("the canon's own map is filled in only where the project said nothing", () 
 
   assert.deepEqual([...merged.get("law")], ["only/here/**"], "the project's own mapping was overwritten");
   assert.ok(merged.has("rust"), "a branch the project never mentioned did not get the canon's default");
-  assert.deepEqual([...branchesFor(merged, ["src/a.ts"])], [], "the canon default fired for a branch the project had claimed");
-  assert.deepEqual([...branchesFor(merged, ["crates/a/src/main.rs"])], ["architecture", "rust"].filter((name) => merged.has(name)));
+  assert.deepEqual([...branchesFor(merged, ["src/a.ts"], NOBODY_OWN)], [], "the canon default fired for a branch the project had claimed");
+  assert.deepEqual([...branchesFor(merged, ["crates/a/src/main.rs"], NOBODY_OWN)], ["architecture", "rust"].filter((name) => merged.has(name)));
 });
 
 test("a branch nobody can hear is said out loud", () => {

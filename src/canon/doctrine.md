@@ -1,19 +1,21 @@
 Writing the rules this project runs under.
 
-- **A line earns its place only if the model would not already do it.** "Write
-  clean code" makes it hedge more, not less. A rule with a number, a name or a
-  refusal in it changes what gets written.
-- **This half instantiates the canon and never repeats it.** A new line has to
-  say what it replaces. Restating a rule you already receive costs the same
-  characters as a real one and teaches nothing.
-- **Anchor a rule to what actually went wrong, with the date.** A rule that names
-  an incident is followed; the same rule as a principle is skimmed.
+- **A line earns its place only if the model would not already do it.** A rule
+  with a number, a name or a refusal in it changes what gets written; "write
+  clean code" makes it hedge.
+- **A bullet is the rule, the number and the date, under 300 characters.** The
+  story behind it goes to recall, where it is found by topic. The commit gate
+  refuses a longer bullet and a branch past 1,300 characters; the constitution
+  stops at 1,000, because it is paid on every message.
+- **This half instantiates the canon and never repeats it.** A new line says
+  what it replaces.
+- **A rule the law already refuses is not written as prose.** Impossible beats
+  gated beats told, and the violation report teaches the rule at the moment it
+  matters.
 - **A line that only matters during one kind of work belongs in that work's
-  branch**, and a branch too broad to be selective is two branches. The
-  constitution is paid on every single message.
+  branch**, and a branch too broad to be selective is two branches, named in
+  `map.toml`.
+- **A branch opens with one line saying when it is needed.** That line is what
+  the drop marker quotes; the index lists names only.
 - **A rule states intent and stops nothing.** What must not happen belongs in a
-  gate: impossible beats gated beats told, and anything told is a suggestion.
-  Never describe a barrier that is not wired as though it were one.
-- **A branch opens with one line saying what it is for**, before any rule. That
-  line is quoted as the branch's entry in the constitution and in the drop
-  marker, so a branch that opens with a rule instead gets quoted mid-sentence.
+  gate. Never describe a barrier that is not wired as though it were one.

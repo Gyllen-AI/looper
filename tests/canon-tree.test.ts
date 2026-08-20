@@ -1,4 +1,6 @@
 import { test } from "node:test";
+import { INDEX_CEILING } from "../src/config.ts";
+import { doctrineFilesUnder, lineFor, oversizedIn } from "../src/size.ts";
 import assert from "node:assert/strict";
 import { existsSync, readFileSync, readdirSync, rmSync, statSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
@@ -50,16 +52,16 @@ test("a branch is routed by path or pulled by name, never neither", () => {
 });
 
 test("a branch stays small enough to be worth injecting whole", () => {
-  const TOO_BIG = 2500;
   const oversized: string[] = [];
-  for (const name of canonBranchNames()) {
-    const size = readFileSync(join(CANON, `${name}.md`), "utf8").length;
-    if (size > TOO_BIG) oversized.push(`${name} is ${size} chars`);
+  for (const path of doctrineFilesUnder(ROOT)) {
+    for (const one of oversizedIn(path, readFileSync(join(ROOT, path), "utf8"))) {
+      oversized.push(lineFor(one).trim());
+    }
   }
   assert.deepEqual(
     oversized,
     [],
-    `a branch past ${TOO_BIG} chars is one the budget will drop whole; split it instead`,
+    "the canon is held to the same ceilings the commit gate holds a project to: a bullet is the rule, the number and the date, and a branch past the ceiling is dropped whole by the budget",
   );
 });
 
@@ -85,7 +87,10 @@ test("the constitution's index names every branch the project has, canon and its
   const index = branchIndex(ROOT);
   const missing = listBranches(ROOT).filter((name) => {
     const cut = name.indexOf("/");
-    return cut < 0 ? !index.includes(`- ${name} `) : !index.includes(`- ${name.slice(0, cut)}/`);
+    const shown = cut < 0 ? name : name.slice(cut + 1);
+    const group = cut < 0 ? "" : `- ${name.slice(0, cut)}/ `;
+    const row = index.split("\n").find((line) => line.startsWith(group) && line.includes(shown));
+    return row === undefined;
   });
   assert.deepEqual(
     missing,
@@ -94,13 +99,13 @@ test("the constitution's index names every branch the project has, canon and its
   );
 });
 
-test("every canon branch gives the index a rule to quote", () => {
+test("the index is names, never rules, because a rule quoted on every turn is the always-on tier in disguise", () => {
   const index = branchIndex(ROOT);
-  for (const name of canonBranchNames()) {
-    if (name.includes("/")) continue;
+  for (const line of index.split("\n")) {
+    if (!line.startsWith("- ")) continue;
     assert.ok(
-      index.includes(`- ${name.padEnd(14)}`) && !index.includes(`- ${name.padEnd(14)}\n`),
-      `${name} contributes an empty line to the constitution. Its first bullet is what gets quoted, so it needs one`,
+      !/[.!?]/.test(line.replace(/\(TypeScript\)/, "")),
+      `the index carries a sentence: ${line}`,
     );
   }
 });
@@ -108,8 +113,8 @@ test("every canon branch gives the index a rule to quote", () => {
 test("the index is bounded, because it is paid on every single message", () => {
   const size = branchIndex(ROOT).length;
   assert.ok(
-    size <= 2200,
-    `the branch index is ${size} chars. Past the ceiling it collapses each group to a count, and past that it is cheaper to stop naming leaves at all`,
+    size <= INDEX_CEILING,
+    `the branch index is ${size} chars against a ceiling of ${INDEX_CEILING}. It lists names, grouped, and a name costs a word; past the ceiling, stop listing leaves`,
   );
 });
 
