@@ -6507,3 +6507,45 @@ exactly the work.
 **A fixture caught itself being wrong.** The first version of the test passed
 before the fix, because `diff-tree HEAD` on a root commit has no parent and shows
 nothing. A base commit was added so the fixture exercises the thing it names.
+
+### What looper costs a turn, measured, and the optimisation not taken
+
+Asked whether looper is spending effort nobody gets back. Measured 2026-08-20 on
+one workstation, WSL2, Node 22.23:
+
+| | |
+|---|---|
+| bare `node -e ""` | 16 ms |
+| loading looper's module graph, doing nothing | 105 ms |
+| `looper inject`, a whole prompt hook | 150 ms |
+| `looper hook PostToolUse` on a TypeScript file | 155 ms |
+| the same on a markdown file, nothing to judge | 122 ms |
+| **one realistic turn: a prompt and three judged edits** | **707 ms** |
+
+**About 90 of every 150 ms is looper parsing its own source**, not working.
+`src/law/checks.ts` imports 32 rule modules and costs 66-68 ms on its own, and
+the prompt hook pays it through `project.ts` for a count it never uses.
+
+**That optimisation was not taken, and the measurement is why.** A turn in this
+session costs tens of seconds to minutes of model time. 707 ms is **one to three
+percent** of it, and deferring the rule modules would save perhaps 65 of those
+milliseconds. Nobody will feel it. Building it would be the thing this branch
+warns against — optimising because a number looks large in isolation.
+
+**What does cost a goal its time is imprecision, and that is measurable too.**
+Across one long session, looper's gates fired about seven times. Five were right
+and cost a minute each to satisfy. Two were wrong:
+
+- `NODE:1` read `regex.exec(parts.join(" "))` as a built shell command. Over
+  1,068 files nobody here wrote it fired three times and every one was that same
+  false positive. Fixing the rule cost several turns; not fixing it would have
+  cost every adopter who writes a regular expression.
+- The stall capability fired on nine reads of one file inside a minute and
+  called it *acting on a guess, because looking was too expensive*. The nine
+  reads were a benchmark of the hook itself. It has fired once and been wrong
+  once.
+
+A gate that is right costs a minute. A gate that is wrong costs a turn, and a
+turn is two orders of magnitude more than the 65 ms. **Precision is the
+performance work here**, which is what `doctrine:law` already says — *only
+imprecision burns turns* — and it now has numbers under it.
