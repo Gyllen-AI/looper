@@ -1,0 +1,16 @@
+[tests]
+reach = "internal"
+run = "npm test"
+
+[evasion]
+reach = "internal"
+run = "node audit/evasion.ts"
+
+[law]
+reach = "internal"
+run = "node src/main.ts law"
+
+[rust]
+reach = "internal"
+patience = 180
+run = "cargo build --release --offline --manifest-path vendor/rust-law/Cargo.toml"

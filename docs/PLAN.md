@@ -6429,3 +6429,44 @@ branch lookups. This covers the rest, including a stale tool list.
 **Not built, and recorded rather than left:** whatever ends a session does not
 always end its `looper serve`. A server from 18 August was still alive two days
 later, so a machine accumulates them, and the window is wider than one session.
+
+### looper declares its own checks
+
+#153 made a project that declares nothing hear about it on every prompt, and the
+first thing it said was that **looper declares nothing**. The tool that had just
+shipped that message was not taking its own advice.
+
+Authoring them was copying rather than deciding, exactly as the report that
+prompted #153 found. Every one was already written down somewhere:
+
+| check | where it already lived | cold |
+|---|---|---|
+| `tests` | `package.json`, and `.github/workflows/test.yml` | 4s |
+| `rust` | `.github/workflows/test.yml` — *the Rust half, which every Rust verdict needs* | 16s |
+| `evasion` | `CONTRIBUTING.md` step 2 — *`node audit/evasion.ts` reports zero mismatches* | under 1s |
+| `law` | looper judging itself, which `docs/PLAN.md` already names as an internal check | 1s |
+
+All four are `internal`: answerable from the checkout alone. Nothing here reaches
+a host, because the invariant the whole product rests on forbids it. The Rust
+build is run `--offline` and passes, which is that invariant demonstrated rather
+than asserted — `vendor/rust-law/.cargo/config.toml` replaces crates-io with a
+vendored directory.
+
+**`rust` carries `patience = 180`.** It took 16s from cold here, inside the
+30-second default, but a cold build on a slower machine or after `cargo clean`
+would cross it and be reported `broken` for being slow — which is the failure
+#144 was built to fix, arriving in looper's own file the first day it existed.
+
+First run, seven seconds for the four:
+
+```
+  ok      tests      > looper@0.1.0 test
+  ok      evasion    257 cases, 0 mismatches
+  ok      law        looper found 7 problems, all of them older than looper.
+  ok      rust       Finished `release` profile [optimized] target(s) in 0.01s
+
+the loop is whole: ok=4 broken=0 blind=0
+```
+
+And the prompt went quiet: the loop capability injects nothing at all now, which
+is what it does for a project that proves itself.
