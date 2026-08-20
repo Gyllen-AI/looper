@@ -12,10 +12,9 @@ them and says which entries the code has moved out from under. It never edits th
 prose, because what an entry says is a judgement and no tool refreshes a judgement.
 
 ## 2026-08-20 — Doctrine branches are droppable, reversing the rule that they must always arrive
-
 kind: law
 depends: src/router.ts, src/allocator.ts
-checked: 2026-08-20  625f7dc87e43
+checked: 2026-08-20  3f5c3c8d9274
 
 tests/rules-that-never-arrived.test.ts states the opposite, and states it with
 evidence: adopter PR #124 counted doctrine:frontend going over the side 32 times
