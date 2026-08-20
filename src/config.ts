@@ -144,6 +144,16 @@ export const SEER_CAPTURE = "windows/capture.ps1";
 
 export const SEER_CONSENT = "windows/consent.ps1";
 
+export const SEER_EXCHANGE_DIR = ".looper-seer";
+
+export const SEER_ASK = "ask.txt";
+
+export const SEER_SAID = "said.json";
+
+export const SEER_LIVE_WAIT_MS = 400;
+
+export const SEER_STARTING_WAIT_MS = 12000;
+
 export const WINDOWS_SHELL = "powershell.exe";
 
 const KERNEL_NAMED = "/proc/version";

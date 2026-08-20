@@ -1,14 +1,20 @@
 import { execFileSync, spawn } from "node:child_process";
-import { existsSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 
 import {
   SEER_CAPTURE,
+  SEER_ASK,
   SEER_CONSENT,
   SEER_DIR,
+  SEER_EXCHANGE_DIR,
+  SEER_LIVE_WAIT_MS,
+  SEER_SAID,
+  SEER_STARTING_WAIT_MS,
   SEER_MAX_OUTPUT,
   SEER_TIMEOUT_MS,
   WINDOWS_SHELL,
+  whereTheUserLives,
   underWsl,
 } from "../config.ts";
 import { fieldAt, reasonFrom } from "../fields.ts";
@@ -120,6 +126,87 @@ export function startConsent(looperRoot: string): Started {
   return startConsentWith(WINDOWS_SHELL, looperRoot);
 }
 
+export function exchangeAt(): string {
+  return join(whereTheUserLives(), SEER_EXCHANGE_DIR);
+}
+
+function restFor(millis: number): void {
+  Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, millis);
+}
+
+function startCapturer(shell: string, looperRoot: string): void {
+  const child = spawn(
+    shell,
+    [
+      "-NoProfile",
+      "-ExecutionPolicy",
+      "Bypass",
+      "-File",
+      scriptFor(looperRoot),
+      "-Serve",
+      "-Exchange",
+      windowsPathFor(exchangeAt()),
+    ],
+    { detached: true, stdio: "ignore" },
+  );
+  child.unref();
+}
+
+type Heard =
+  | { readonly kind: "said"; readonly raw: string }
+  | { readonly kind: "nothing"; readonly why: string };
+
+function answerWithin(said: string, millis: number): Heard {
+  const began = Date.now();
+  while (Date.now() - began < millis) {
+    if (existsSync(said)) {
+      try {
+        const raw = readFileSync(said, "utf8");
+        rmSync(said, { force: true });
+        if (raw.length > 0) return { kind: "said", raw };
+      } catch (cause) {
+        return { kind: "nothing", why: `its answer could not be read (${reasonFrom(cause)})` };
+      }
+    }
+    restFor(4);
+  }
+  return { kind: "nothing", why: `nothing answered within ${millis}ms` };
+}
+
+export type Live =
+  | { readonly kind: "shot"; readonly shot: Shot }
+  | { readonly kind: "fell-back"; readonly why: string };
+
+export function liveCaptureWith(shell: string, looperRoot: string, window: string): Live {
+  mkdirSync(exchangeAt(), { recursive: true });
+  const ask = join(exchangeAt(), SEER_ASK);
+  const said = join(exchangeAt(), SEER_SAID);
+  rmSync(said, { force: true });
+
+  writeFileSync(ask, window, "utf8");
+  let heard = answerWithin(said, SEER_LIVE_WAIT_MS);
+  if (heard.kind === "nothing") {
+    startCapturer(shell, looperRoot);
+    writeFileSync(ask, window, "utf8");
+    heard = answerWithin(said, SEER_STARTING_WAIT_MS);
+  }
+  rmSync(ask, { force: true });
+  if (heard.kind === "nothing") return { kind: "fell-back", why: heard.why };
+
+  let payload: unknown;
+  try {
+    payload = JSON.parse(heard.raw);
+  } catch (cause) {
+    return { kind: "fell-back", why: `its answer was not JSON (${reasonFrom(cause)})` };
+  }
+  const refused = fieldAt(payload, "refused");
+  if (refused === DISARMED) return { kind: "shot", shot: { kind: "disarmed" } };
+  if (refused === NOT_FOUND) return { kind: "shot", shot: { kind: "not-found", named: window } };
+  if (refused === UNREACHABLE) return { kind: "shot", shot: { kind: "unreachable" } };
+  if (typeof refused === "number") return { kind: "fell-back", why: `it refused with ${refused}` };
+  return { kind: "shot", shot: readAnswer(heard.raw) };
+}
+
 export function standingWith(shell: string, looperRoot: string): Standing {
   if (!existsSync(seerAt(looperRoot))) {
     return { kind: "not-installed", platform: process.platform };
@@ -204,5 +291,9 @@ export function capture(looperRoot: string, window: string): Shot {
   if (!seerIsInstalled(looperRoot)) {
     return { kind: "not-installed", platform: process.platform };
   }
-  return captureWith(WINDOWS_SHELL, looperRoot, window);
+  const live = liveCaptureWith(WINDOWS_SHELL, looperRoot, window);
+  if (live.kind === "shot") return live.shot;
+  const slow = captureWith(WINDOWS_SHELL, looperRoot, window);
+  if (slow.kind !== "unavailable") return slow;
+  return { kind: "unavailable", detail: `${slow.detail}. The live capturer was tried first and ${live.why}.` };
 }

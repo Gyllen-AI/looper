@@ -6220,3 +6220,57 @@ rule: sharpen it rather than soften it.
 **Sharpening a consent guard to let a feature through is not a change to make
 quietly**, and it is not one the measurement decides. The capturer is here,
 proven, and unused until that is settled.
+
+### The fast frame landed, and the guard got sharper rather than softer
+
+#150 measured a live capturer at 57-85ms against 429-485ms a frame, and left it
+unwired because `tests/invariants.test.ts` refused any write from `src/seer/`.
+That guard is right about what it protects: **anything looper can write, whoever
+is talking to the agent can have it write**, and a record saying a window may be
+photographed is the one thing an injected agent must never be able to forge.
+
+It was also blunter than the property. A request names a subject and decides
+nothing, and the consent window is still asked over its pipe on **every single
+capture**. So the guard now names the one shape that is allowed —
+`writeFileSync(ask, window, "utf8")`, and `mkdirSync` of the exchange folder —
+and refuses every other write and every other folder.
+
+**It is stricter than it was**, because the old one listed function names and
+never looked at what was being written. `writeFileSync(ask, "yes", "utf8")`
+would have passed it. It does not pass now.
+
+**The guard was falsified before it was trusted**, and the first version failed:
+a regular expression could not read `join(exchangeAt(), "granted")`, because that
+is two levels of nesting and the pattern handled one. It is a balanced-paren
+scanner now, and all three attacks are refused:
+
+```
+REFUSED : writeFileSync(join(exchangeAt(), "granted"), "yes", "utf8");
+REFUSED : mkdirSync(join(exchangeAt(), window), { recursive: true });
+REFUSED : writeFileSync(ask, "yes", "utf8");
+```
+
+Measured end to end through `capture()`, cold and then warm:
+
+```
+frame 1: 875 ms      frame 2: 79 ms      frame 3: 83 ms
+frame 4: 79 ms       frame 5: 79 ms
+leftover in the exchange: (nothing)
+```
+
+The first frame waits `SEER_LIVE_WAIT_MS` for a capturer that is not there
+before starting one. That began at 2,000ms and a cold frame cost 2,507; a live
+capturer answers in well under 100, so 400 is three times the headroom it needs
+and a cold frame now costs 875.
+
+**Nothing is left behind and nothing is trusted.** The live path falls back to
+the one-shot whenever it cannot get an answer, and it carries the reason it fell
+back rather than losing it — `looper law` refused two bare `catch { return
+undefined }` while this was being written, and it was right to. The exchange
+lives under the person's home, never in the repository, because a picture of a
+screen is not project state and a working tree is one careless `git add` from
+publishing it.
+
+**The cost is written down in `.looper/decisions.md`**: a frame now exists as a
+file for the moment between being written and being read, where before it went
+through a pipe and touched no disk.

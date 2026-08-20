@@ -184,13 +184,55 @@ test("no install can arrive able to look at a screen", () => {
   }
 });
 
+const NAMES_A_WINDOW = 'writeFileSync(ask, window, "utf8")';
+const ONLY_THE_EXCHANGE = "mkdirSync(exchangeAt(), { recursive: true })";
+
+function callsTo(text: string, named: string): readonly string[] {
+  const found: string[] = [];
+  let at = text.indexOf(`${named}(`);
+  while (at !== -1) {
+    let depth = 0;
+    let end = at + named.length;
+    for (; end < text.length; end += 1) {
+      const here = text[end];
+      if (here === "(") depth += 1;
+      if (here === ")") {
+        depth -= 1;
+        if (depth === 0) {
+          end += 1;
+          break;
+        }
+      }
+    }
+    found.push(text.slice(at, end));
+    at = text.indexOf(`${named}(`, end);
+  }
+  return found;
+}
+
 test("looper cannot record consent, because consent is not its to record", () => {
   for (const file of sourceFiles(join(ROOT, "src", "seer"))) {
     const text = readFileSync(file, "utf8");
-    for (const written of ["writeFileSync", "writeAtomically", "appendFileSync", "mkdirSync"]) {
+    for (const written of ["writeAtomically", "appendFileSync"]) {
       assert.ok(
         !text.includes(written),
-        `${file} writes to disk. Whether a window may be looked at is decided by the person at the machine, in a process looper does not own — anything looper can write, whoever is talking to the agent can have it write.`,
+        `${file} keeps something on disk. Whether a window may be looked at is decided by the person at the machine, in a process looper does not own — anything looper can write, whoever is talking to the agent can have it write, and anything it can add to it can be grown into a record.`,
+      );
+    }
+
+    for (const call of callsTo(text, "mkdirSync")) {
+      assert.equal(
+        call,
+        ONLY_THE_EXCHANGE,
+        `${file} makes ${call}. The only folder the seer may make is the one the live capturer trades through; a name is a place to put data too.`,
+      );
+    }
+
+    for (const call of callsTo(text, "writeFileSync")) {
+      assert.equal(
+        call,
+        NAMES_A_WINDOW,
+        `${file} writes ${call}. The seer may write one thing: the name of a window, into the file the live capturer reads, and nothing else. A request names a subject and decides nothing — the consent window is still asked on every capture — but a seer that can write anything else can be made to write a record of permission it was never given.`,
       );
     }
   }
