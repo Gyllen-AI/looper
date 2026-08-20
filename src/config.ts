@@ -47,11 +47,11 @@ export const CANON_DIR = "canon";
 
 export const ROUTER_PRIORITY = 0;
 
+export const LOOP_PRIORITY = 5;
+
 export const BRANCH_PRIORITY = 10;
 
 export const BASELINE_PRIORITY = 20;
-
-export const LOOP_PRIORITY = 20;
 
 export const STALL_PRIORITY = 30;
 
