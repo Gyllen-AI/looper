@@ -21,11 +21,7 @@ $pipe.Runspace = $runspace
             $writer = New-Object System.IO.StreamWriter($server)
             $asked = $reader.ReadLine()
             if ($asked -eq 'armed?') {
-                $open = @(Get-Process |
-                    Where-Object { $_.MainWindowTitle -ne '' } |
-                    ForEach-Object { $_.MainWindowTitle } |
-                    Sort-Object -Unique)
-                $answer = @{ armed = @($state.Armed); open = $open } |
+                $answer = @{ armed = @($state.Armed) } |
                     ConvertTo-Json -Depth 3 -Compress
             } else {
                 $answer = 'no'

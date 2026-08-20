@@ -6150,3 +6150,31 @@ with a person's name in it and a document title. The consent model gates
 capture and not enumeration, so an agent learns what a person has open before
 they have agreed to show it anything. That is a separate hole and it is written
 down here rather than quietly left.
+
+### Consent gated the capture and not the list
+
+`standing()` returned every open window title, and `saidAbout` printed them under
+the heading *"Every window open right now"*. Nothing had been ticked. Measured on
+a real desktop 2026-08-20: eight titles, among them a direct-message thread with
+a person's name in it and the filename of a document.
+
+So the seer's central claim — the program that can see is never the program that
+decides — held for pixels and not for names. **An agent learned what somebody had
+open before they had agreed to show it anything**, and a window title is not a
+small thing to leak: it carries client names, document names, and who somebody is
+talking to.
+
+The list was there to be helpful. A title that does not match anything got a
+near-match hint, and the full list was offered so the agent could pick a real
+one. Both are the same mistake in different clothes: helpfulness paid for with
+something nobody offered.
+
+The consent window no longer sends `open` at all, `Standing` no longer carries
+it, and near-match hints are drawn from what is ticked. Asked with nothing
+ticked, looper now says what it does not know:
+
+> What else is open on this machine is not looper's to know: the consent window
+> lists it to the person, and only what they tick is named here.
+
+The person still sees everything, in their own window, on their own screen. That
+is the half that was always right.
