@@ -9,6 +9,9 @@ const NO_TOOLS: readonly ToolDef[] = [];
 
 const AT_COMMIT: readonly HookEvent[] = ["CommitMessage"];
 
+export const NO_CHECKS_EVER =
+  "looper: this project declares no checks in .looper/loop.toml, so the loop is asking nothing and cannot say whether this project builds or its tests pass. The commit gate does not refuse over that, and it is not ok either. `looper loop` says what to write.";
+
 export function bypassIn(message: string): string {
   for (const line of message.split("\n")) {
     const held = line.trimStart();
@@ -80,8 +83,27 @@ export class Loop implements Capability {
   }
 
   inject(context: InjectContext): readonly Injection[] {
+    if (declaredIn(context.root).checks.length === 0) {
+      return [
+        {
+          source: this.name,
+          priority: LOOP_PRIORITY,
+          text: NO_CHECKS_EVER,
+          required: false,
+        },
+      ];
+    }
     const read = lastSeen(context.root, this.home);
-    if (read.kind === "never") return SILENT;
+    if (read.kind === "never") {
+      return [
+        {
+          source: this.name,
+          priority: LOOP_PRIORITY,
+          text: `looper: this project declares checks and the loop has never been asked, so nothing here has been proven to build or pass. Run looper loop.`,
+          required: false,
+        },
+      ];
+    }
     if (read.kind === "unreadable") {
       return [
         {

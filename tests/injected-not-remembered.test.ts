@@ -17,8 +17,13 @@ function home(): string {
   return mkdtempSync(join(tmpdir(), "looper-home-"));
 }
 
-test("a loop nobody has asked says nothing, rather than guessing it is healthy", () => {
-  assert.deepEqual([...new Loop("/nowhere/at/all").inject({ root: "/nowhere/at/all", budget: 9800 })], []);
+test("a loop nobody has asked invents no counts, and is never read as healthy", () => {
+  const said = [...new Loop("/nowhere/at/all").inject({ root: "/nowhere/at/all", budget: 9800 })];
+  assert.equal(said.length, 1);
+  const first = said[0];
+  const text = first === undefined ? "" : first.text;
+  assert.match(text, /declares no checks/);
+  assert.doesNotMatch(text, /ok=|broken=|blind=/);
 });
 
 test("a whole loop says nothing, and a broken one arrives without anything being run", () => {
