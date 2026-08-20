@@ -7,7 +7,10 @@ import {
   DOCTRINE_DIR,
   DOCTRINE_SEPARATOR,
   branchHeading,
+  isABranchName,
 } from "./config.ts";
+
+export { isABranchName };
 
 export type ProjectHalf =
   | { readonly kind: "absent" }
@@ -55,15 +58,6 @@ export function listBranches(root: string): readonly string[] {
 export type BranchLookup =
   | { readonly kind: "nowhere" }
   | { readonly kind: "found"; readonly text: string; readonly halves: readonly string[] };
-
-const A_SEGMENT = "[A-Za-z0-9][A-Za-z0-9._-]*";
-const A_FILE_STEM = new RegExp(`^${A_SEGMENT}(/${A_SEGMENT})*$`);
-
-export function isABranchName(name: string): boolean {
-  if (!A_FILE_STEM.test(name)) return false;
-  if (name.includes("\\")) return false;
-  return !name.includes("..");
-}
 
 export function readProjectBranch(root: string, name: string): ProjectHalf {
   if (!isABranchName(name)) return { kind: "absent" };

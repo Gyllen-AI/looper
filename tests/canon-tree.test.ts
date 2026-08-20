@@ -1,9 +1,9 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
+import { existsSync, readFileSync, readdirSync, rmSync, statSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 
-import { canonBranchNames, canonGoverns, pulledByName } from "../src/canon.ts";
+import { canonBranch, canonBranchNames, canonGoverns, pulledByName } from "../src/canon.ts";
 import { branchIndex, isABranchName, listBranches } from "../src/doctrine.ts";
 
 const CANON = join(import.meta.dirname, "..", "src", "canon");
@@ -111,4 +111,29 @@ test("the index is bounded, because it is paid on every single message", () => {
     size <= 2200,
     `the branch index is ${size} chars. Past the ceiling it collapses each group to a count, and past that it is cheaper to stop naming leaves at all`,
   );
+});
+
+test("a canon branch on disk is served even when this build's list has never heard of it", () => {
+  const path = join(ROOT, "src", "canon", "added-after-this-process-started.md");
+  writeFileSync(path, "A branch added after this process started.\n\n- **Served from disk.**\n");
+  try {
+    assert.equal(
+      canonBranchNames().includes("added-after-this-process-started"),
+      false,
+      "the fixture has to be absent from the compiled list, or it proves nothing",
+    );
+    assert.equal(
+      canonBranch("added-after-this-process-started").kind,
+      "found",
+      "a long-lived server holds its branch names in a compiled constant while bodies are read from disk, so denying a branch whose file is right there tells the reader a rule does not exist when it does",
+    );
+  } finally {
+    rmSync(path, { force: true });
+  }
+});
+
+test("serving from disk did not open a path out of the canon folder", () => {
+  for (const escape of ["../../../etc/passwd", "..", "/abs", "a//b", "a\\b"]) {
+    assert.equal(canonBranch(escape).kind, "nowhere", `${escape} was served and it is a path, not a branch`);
+  }
 });

@@ -34,6 +34,15 @@ export const INJECTION_SEPARATOR = "\n\n";
 
 export const DOCTRINE_SEPARATOR = "\n\n";
 
+const A_SEGMENT = "[A-Za-z0-9][A-Za-z0-9._-]*";
+const A_FILE_STEM = new RegExp(`^${A_SEGMENT}(/${A_SEGMENT})*$`);
+
+export function isABranchName(name: string): boolean {
+  if (!A_FILE_STEM.test(name)) return false;
+  if (name.includes("\\")) return false;
+  return !name.includes("..");
+}
+
 export const CANON_DIR = "canon";
 
 export const ROUTER_PRIORITY = 0;
