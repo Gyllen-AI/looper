@@ -5,6 +5,7 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { assembleBranch } from "../src/doctrine.ts";
 
+import { ageOfOurCode } from "../src/code-age.ts";
 import { handle } from "../src/mcp.ts";
 import { registry } from "../src/registry.ts";
 import { DOCTRINE_TOOL, MCP_PROTOCOL_VERSION } from "../src/config.ts";
@@ -13,7 +14,7 @@ const ROOT = join(import.meta.dirname, "..");
 const FIXTURE = join(import.meta.dirname, "fixtures", "project");
 
 function askIn(body: unknown, root: string): Record<string, unknown> {
-  const reply = handle(registry(), root, JSON.stringify(body));
+  const reply = handle(registry(), root, JSON.stringify(body), ageOfOurCode());
   assert.equal(reply.kind, "message");
   if (reply.kind !== "message") throw new Error("unreachable");
   const parsed: unknown = JSON.parse(reply.text);
@@ -127,10 +128,10 @@ test("an unknown method is refused without killing the server", () => {
 
 test("a notification gets no reply, and unparseable input is discarded", () => {
   assert.equal(
-    handle(registry(), ROOT, JSON.stringify({ jsonrpc: "2.0", method: "ping" })).kind,
+    handle(registry(), ROOT, JSON.stringify({ jsonrpc: "2.0", method: "ping" }), ageOfOurCode()).kind,
     "none",
   );
-  const bad = handle(registry(), ROOT, "{ not json");
+  const bad = handle(registry(), ROOT, "{ not json", ageOfOurCode());
   assert.equal(bad.kind, "unreadable");
 });
 

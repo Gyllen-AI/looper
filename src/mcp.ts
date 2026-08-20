@@ -5,6 +5,7 @@ import {
   SERVER_VERSION,
 } from "./config.ts";
 import type { Capability, ToolResult } from "./capability.ts";
+import { ageOfOurCode, agingSaid, type Age } from "./code-age.ts";
 import { reasonFrom } from "./fields.ts";
 
 export type Request = {
@@ -93,11 +94,11 @@ function toolList(capabilities: readonly Capability[]): unknown {
   return { tools };
 }
 
-function content(result: ToolResult): unknown {
+function content(result: ToolResult, aging: string): unknown {
   if (result.kind === "unknown-tool") {
     return {
       content: [
-        { type: "text", text: `looper has no tool called "${result.asked}".` },
+        { type: "text", text: `${aging}${aging === "" ? "" : "\n\n"}looper has no tool called "${result.asked}".` },
       ],
       isError: true,
     };
@@ -105,7 +106,7 @@ function content(result: ToolResult): unknown {
   if (result.kind === "shown") {
     return {
       content: [
-        { type: "text", text: result.said },
+        { type: "text", text: `${aging}${aging === "" ? "" : "\n\n"}${result.said}` },
         ...result.images.map((held) => ({
           type: "image",
           data: held.base64,
@@ -114,13 +115,14 @@ function content(result: ToolResult): unknown {
       ],
     };
   }
-  return { content: [{ type: "text", text: result.text }] };
+  return { content: [{ type: "text", text: `${aging}${aging === "" ? "" : "\n\n"}${result.text}` }] };
 }
 
 function invoke(
   capabilities: readonly Capability[],
   root: string,
   request: Request,
+  loaded: Age,
 ): unknown {
   const asked = request.toolName;
   if (asked === null) {
@@ -131,15 +133,16 @@ function invoke(
   }
   for (const capability of capabilities) {
     if (!capability.tools().some((tool) => tool.name === asked)) continue;
-    return content(capability.call({ root, tool: asked, args: request.args }));
+    return content(capability.call({ root, tool: asked, args: request.args }), agingSaid(loaded));
   }
-  return content({ kind: "unknown-tool", asked });
+  return content({ kind: "unknown-tool", asked }, agingSaid(loaded));
 }
 
 export function respond(
   capabilities: readonly Capability[],
   root: string,
   request: Request,
+  loaded: Age,
 ): Reply {
   const id = request.id;
   if (id === null) return { kind: "none" };
@@ -159,7 +162,7 @@ export function respond(
     return { kind: "message", text: envelope(id, toolList(capabilities)) };
   }
   if (request.method === "tools/call") {
-    return { kind: "message", text: envelope(id, invoke(capabilities, root, request)) };
+    return { kind: "message", text: envelope(id, invoke(capabilities, root, request, loaded)) };
   }
   return {
     kind: "message",
@@ -171,10 +174,11 @@ export function handle(
   capabilities: readonly Capability[],
   root: string,
   line: string,
+  loaded: Age,
 ): Reply {
   const incoming = parseRequest(line);
   if (incoming.kind === "unreadable") {
     return { kind: "unreadable", detail: incoming.detail };
   }
-  return respond(capabilities, root, incoming.request);
+  return respond(capabilities, root, incoming.request, loaded);
 }
