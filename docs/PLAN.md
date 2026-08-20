@@ -6555,3 +6555,17 @@ A gate that is right costs a minute. A gate that is wrong costs a turn, and a
 turn is two orders of magnitude more than the 65 ms. **Precision is the
 performance work here**, which is what `doctrine:law` already says — *only
 imprecision burns turns* — and it now has numbers under it.
+
+### Match the ceremony to the change
+
+Measured on 2026-08-20, across 27 commits in one day: **1,822 lines of source,
+1,036 of tests, and 1,271 of this document** — about seventy lines of essay per
+hundred lines of code, at roughly 47 lines a commit whether the commit moved a
+security boundary or fixed a typo. Every change also paid the same eleven
+operations: branch, edit, test, law, commit, push, open, watch, sync, delete
+twice.
+
+The rules had no notion of proportion. Every one fired at full strength on the
+smallest change, and *build the stricter one without asking* pointed only
+upward. `process` now carries the line that points the other way. This entry is
+four paragraphs because the change is one line, which is the rule working.
