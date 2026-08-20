@@ -6592,3 +6592,47 @@ call, every turn, and delivered nothing.
 Three named at most, then *and N more*. Without the cap it becomes wallpaper
 again as soon as a project has learned twenty things, and a test holds it at
 twelve notes.
+
+### A baseline shrank on a survey that could not read half the project
+
+The baseline is the list of problems that were already there when looper arrived.
+Its own header says it can only get shorter, and it shortens by itself: every
+turn, `shrinkBaseline` surveys the project and removes anything it no longer
+finds, on the reasoning that somebody must have fixed it.
+
+An adopting project lost the C# half of its baseline three times in one day.
+Each time, 195 lines vanished in a commit about something else entirely, every
+comment in every Oxide plugin became a blocking refusal, and the next person to
+touch a plugin file was told about 205 problems on lines they had not written.
+Each time it was repaired by hand, as a union of both sides, and each time it
+came back.
+
+The cause is one line, and it is the failure this project exists to prevent.
+`shrinkToward` asked `current.get(file)` for each recorded file and treated
+`undefined` as nought:
+
+    const now = nowInFile === undefined ? 0 : countIn(nowInFile, ruleId);
+
+A file with no violations reported and a file that was never read produce
+exactly the same answer there. `judgeCsharpIn` is not vague about which one
+happened: when its engine will not start it returns no violations AND an
+`unreadable` entry naming how many files it could not judge. The survey carries
+that entry all the way up. The shrink was handed only the violation counts and
+never looked.
+
+So a contributor whose machine could not run the C# half surveyed the project,
+found no C# problems because none could be looked for, and looper wrote a
+baseline saying the work was done. The commit that carried it was about
+scheduled announcements.
+
+**A shrink now refuses on an incomplete survey**, whole rather than per file. If
+anything at all could not be read this run, the baseline is left exactly as it
+was and looper says so, naming the first three. Per-file would be more precise
+and is not available: `unreadable` entries are prose, and the C# failure names a
+count rather than paths, so there is nothing reliable to match on. Whole is also
+the safer default, because the cost of being conservative is a baseline that
+shrinks one turn later, and the cost of being wrong is real debt deleted and a
+project unable to commit.
+
+The rule this belongs to was already written down for reading a single file: a
+file that cannot be read is never called clean. This applies it to the survey.
