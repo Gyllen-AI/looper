@@ -596,9 +596,21 @@ The constitution named no branch at all, so the seven that route by no path coul
 only be reached by a reader who already knew they existed. The fix is not a list
 written into the file. It is the file becoming the list.
 
-`constitution.md` now holds a header and three absolutes: never invent data,
-report what happened with the proof, end with what changed and what is next.
-Those are true of a message with no code in it, so they cannot be a branch.
+`constitution.md` now holds a header and four absolutes: run the loop, never
+invent data, report what happened with the proof, end with what changed and what
+is next. Those are true of a message with no code in it, so they cannot be a
+branch.
+
+The loop is first because it is what the predecessor put first, and for the same
+reason. Its constitution opened with "No network in the dependency tree, ever,
+`just check` stays green. This is the one invariant the whole product rests on",
+and that rule had teeth: `just check` ran a `deps-invariant` recipe that failed
+the build if a named crate appeared in the resolved tree. The general shape is
+"name the thing this rests on, and one command that proves it", and this tool
+already ships the command. `looper loop` reads `.looper/loop.toml`, runs what the
+project declared, and answers `ok`, `broken` or `blind`. A fresh adopter has
+declared nothing, so the rule reads as an instruction to declare it, which is the
+right first thing to ask of them.
 Everything else moved into one, and `branchIndex(root)` builds the rest at
 injection time from `listBranches`, which merges the canon's names with whatever
 the adopter has written:
