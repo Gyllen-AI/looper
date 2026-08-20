@@ -1,4 +1,4 @@
-import { execFileSync } from "node:child_process";
+import { execFileSync, spawnSync } from "node:child_process";
 import { existsSync } from "node:fs";
 import { join } from "node:path";
 
@@ -267,4 +267,71 @@ export function changedPaths(root: string): Changed {
     }
   }
   return { kind: "paths", paths: [...seen] };
+}
+
+export type Moved = {
+  readonly path: string;
+  readonly to: string;
+};
+
+export type Pins =
+  | { readonly kind: "unavailable"; readonly detail: string }
+  | { readonly kind: "moved"; readonly moved: readonly Moved[] };
+
+const GITLINK = "160000";
+
+const RAW_LINE = /^:(\d{6}) (\d{6}) ([0-9a-f]+) ([0-9a-f]+) ([A-Z])\t(.+)$/;
+
+const A_PIN_ARRIVING: readonly string[] = ["A", "M"];
+
+export function stagedPins(root: string): Pins {
+  try {
+    const moved: Moved[] = [];
+    for (const line of ask(root, ["diff", "--cached", "--raw", "--no-renames"])) {
+      const held = RAW_LINE.exec(line);
+      if (held === null) continue;
+      const [, , mode, , to, status, path] = held;
+      if (mode !== GITLINK) continue;
+      if (status === undefined || !A_PIN_ARRIVING.includes(status)) continue;
+      if (to === undefined || path === undefined) continue;
+      moved.push({ path, to });
+    }
+    return { kind: "moved", moved };
+  } catch (cause) {
+    return { kind: "unavailable", detail: reasonFrom(cause) };
+  }
+}
+
+export type Ancestry =
+  | { readonly kind: "cannot-tell"; readonly why: string }
+  | { readonly kind: "yes" }
+  | { readonly kind: "no" };
+
+export function isAncestorIn(root: string, earlier: string, later: string): Ancestry {
+  const answered = spawnSync("git", ["merge-base", "--is-ancestor", earlier, later], {
+    cwd: root,
+    encoding: "utf8",
+    timeout: GIT_TIMEOUT_MS,
+    stdio: ["ignore", "ignore", "pipe"],
+  });
+  if (answered.error !== undefined) {
+    return { kind: "cannot-tell", why: reasonFrom(answered.error) };
+  }
+  if (answered.status === 0) return { kind: "yes" };
+  if (answered.status === 1) return { kind: "no" };
+  const said = typeof answered.stderr === "string" ? answered.stderr.trim() : "";
+  const why = said.length > 0 ? said : `git answered with ${String(answered.status)}`;
+  return { kind: "cannot-tell", why };
+}
+
+export type Naming =
+  | { readonly kind: "cannot-tell"; readonly why: string }
+  | { readonly kind: "names"; readonly names: readonly string[] };
+
+export function tagsPointingAt(root: string, commit: string): Naming {
+  try {
+    return { kind: "names", names: ask(root, ["tag", "--points-at", commit]) };
+  } catch (cause) {
+    return { kind: "cannot-tell", why: reasonFrom(cause) };
+  }
 }
