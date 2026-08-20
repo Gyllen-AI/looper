@@ -88,6 +88,7 @@ export class Loop implements Capability {
         {
           source: this.name,
           priority: LOOP_PRIORITY,
+          notice: false,
           text: NO_CHECKS_EVER,
           required: false,
         },
@@ -99,6 +100,7 @@ export class Loop implements Capability {
         {
           source: this.name,
           priority: LOOP_PRIORITY,
+          notice: false,
           text: `looper: this project declares checks and the loop has never been asked, so nothing here has been proven to build or pass. Run looper loop.`,
           required: false,
         },
@@ -109,6 +111,7 @@ export class Loop implements Capability {
         {
           source: this.name,
           priority: LOOP_PRIORITY,
+          notice: false,
           text: `looper: this project's last loop answer could not be read (${read.why}). Run looper loop to ask again.`,
           required: false,
         },
@@ -119,6 +122,7 @@ export class Loop implements Capability {
       {
         source: this.name,
         priority: LOOP_PRIORITY,
+          notice: false,
         text: saidAbout(read.kept, Date.now()),
         required: false,
       },

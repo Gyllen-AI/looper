@@ -101,7 +101,8 @@ export class Decisions implements Capability {
         {
           source: this.name,
           priority: DECISIONS_PRIORITY,
-        required: false,
+          required: false,
+          notice: true,
           text: `looper: ${found.length} decision(s) taken here with a known cost:\n${shown.map((one) => `  ${one.decision.summary}`).join("\n")}${more}\nRead one with the \`decisions\` tool before crossing that same line again.`,
         },
       ];
@@ -111,6 +112,7 @@ export class Decisions implements Capability {
         source: this.name,
         priority: DECISIONS_PRIORITY,
         required: false,
+        notice: true,
         text: `looper: ${stale.length} of this project's ${found.length} recorded decision(s) rest on files that have changed since anyone read them. Call the \`decisions\` tool: an entry whose ground moved may no longer be true, and it was written because nobody could answer it.`,
       },
     ];

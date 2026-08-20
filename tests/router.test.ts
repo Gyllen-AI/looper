@@ -1,4 +1,6 @@
 import { test } from "node:test";
+import { NO_TURN } from "../src/capability.ts";
+import { NEVER_SAID } from "../src/said.ts";
 import assert from "node:assert/strict";
 import { mkdtempSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -31,7 +33,7 @@ test("a clean tree signals nothing, whatever the last commit touched", () => {
   const root = committed();
   try {
     assert.deepEqual([...new Router().signalled(root)], []);
-    const injected = new Router().inject({ root, budget: INJECTION_BUDGET });
+    const injected = new Router().inject({ root, budget: INJECTION_BUDGET, turn: NO_TURN, said: NEVER_SAID });
     assert.equal(injected.length, 1, "only the constitution and the index, which are one contribution");
     assert.ok(first(injected).required);
   } finally {
@@ -46,7 +48,7 @@ test("what is being edited raises its branches, the project's own first, and the
     writeFileSync(join(root, "src", "main.rs"), "fn main() { let x = 1; }\n");
     assert.deepEqual([...new Router().signalled(root)], ["game", "csharp", "rust"]);
 
-    const injected = new Router().inject({ root, budget: INJECTION_BUDGET });
+    const injected = new Router().inject({ root, budget: INJECTION_BUDGET, turn: NO_TURN, said: NEVER_SAID });
     const branches = injected.filter((one) => one.source.startsWith("doctrine:"));
     assert.deepEqual(
       branches.map((one) => [one.source, one.required]),
@@ -76,7 +78,20 @@ test("outside a repository the constitution says the branches could not be loade
   const root = mkdtempSync(join(tmpdir(), "looper-nogit-"));
   try {
     assert.deepEqual([...new Router().signalled(root)], []);
-    assert.match(new Router().unreachable(root), /were not loaded/);
+    assert.match(new Router().unreachable(root, { kind: "from-git" }), /were not loaded/);
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test("asked about paths not in hand, the router answers for them without touching the tree", () => {
+  const root = committed();
+  try {
+    assert.deepEqual(
+      [...new Router().signalledBy(root, { kind: "given", paths: ["game/Plugin.cs"] })],
+      ["game", "csharp"],
+    );
+    assert.deepEqual([...new Router().signalled(root)], [], "the tree itself is still clean");
   } finally {
     rmSync(root, { recursive: true, force: true });
   }

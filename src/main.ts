@@ -27,7 +27,7 @@ function run(argv: readonly string[]): number {
   if (command === "init") return init(rest, out);
   if (command === "inject") return inject(out);
   if (command === "hook") return hook(rest, out);
-  if (command === "status") return status(out);
+  if (command === "status") return status(out, rest);
   if (command === "serve") return serve(out);
   if (command === "law") return law(rest, out);
   if (command === "loop") return loop(rest, out);

@@ -1,6 +1,8 @@
 import type { Out } from "./out.ts";
 import { allocate, type Allocation, type Weighed } from "./allocator.ts";
 import { DEV, INJECTION_BUDGET, namedProject, projectRoot, searchPath, whereTheUserLives, type Invocation } from "./config.ts";
+import { NO_TURN, type Turn } from "./capability.ts";
+import { NEVER_SAID, SaidInSession, troubleWith, type Said } from "./said.ts";
 import { NO_SESSION_EVER, lastRun, noteRun, sayWhenHooksRan, worthSayingAtCommit } from "./seen.ts";
 import { dispatchHook, registry } from "./registry.ts";
 import { reasonFrom } from "./fields.ts";
@@ -22,10 +24,27 @@ export function remember(event: string, out: Out): void {
   }
 }
 
+function saidFor(root: string, turn: Turn): Said {
+  if (turn.session.kind === "unknown") return NEVER_SAID;
+  return { kind: "session", store: new SaidInSession(root, whereTheUserLives(), turn.session.id) };
+}
+
 export function currentAllocation(out: Out): Allocation {
+  return allocationFor(out, NO_TURN);
+}
+
+export function allocationFor(out: Out, turn: Turn): Allocation {
+  const root = here();
+  const said = saidFor(root, turn);
+  const trouble = troubleWith(said);
+  if (trouble.length > 0) {
+    out.warn(`looper: what this session was already told could not be read (${trouble}); notices will repeat`);
+  }
   const run = allocate(registry(), {
-    root: here(),
+    root,
     budget: INJECTION_BUDGET,
+    turn,
+    said,
   });
   for (const complaint of run.complaints) {
     out.warn(

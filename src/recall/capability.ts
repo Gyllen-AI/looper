@@ -11,6 +11,8 @@ import type {
   ToolResult,
 } from "../capability.ts";
 import { forget, matching, readNotes, remember, type Note } from "./store.ts";
+import { asked, mostRelevant } from "./relevance.ts";
+import { pathsInHand } from "../git.ts";
 
 const NO_EVENTS: readonly HookEvent[] = [];
 
@@ -47,7 +49,12 @@ function listed(notes: readonly Note[]): string {
     .join("\n\n");
 }
 
-const NAMED_AT_ONCE = 3;
+function inHandPaths(context: InjectContext): readonly string[] {
+  const inHand = context.turn.inHand;
+  if (inHand.kind === "given") return inHand.paths;
+  const held = pathsInHand(context.root);
+  return held.kind === "paths" ? held.paths : [];
+}
 
 export class Recall implements Capability {
   readonly name = "recall";
@@ -55,15 +62,25 @@ export class Recall implements Capability {
   inject(context: InjectContext): readonly Injection[] {
     const notes = readNotes(context.root);
     if (notes.length === 0) return SILENT;
-    const shown = notes.slice(0, NAMED_AT_ONCE);
-    const rest = notes.length - shown.length;
-    const more = rest <= 0 ? "" : `\n  and ${rest} more, by name from the tool.`;
+    const hits = mostRelevant(notes, asked(context.turn.prompt, inHandPaths(context)));
+    if (hits.length === 0) {
+      return [
+        {
+          source: this.name,
+          priority: RECALL_PRIORITY,
+          required: false,
+          notice: true,
+          text: `looper: this project has written down ${notes.length} thing(s) it worked out before. When a topic comes up, ask the \`recall\` tool by name; nothing here matched this prompt.`,
+        },
+      ];
+    }
     return [
       {
         source: this.name,
         priority: RECALL_PRIORITY,
         required: false,
-        text: `looper: ${notes.length} thing(s) this project worked out before, so you do not have to again:\n${shown.map((one) => `  ${one.summary}`).join("\n")}${more}\nPull one with the \`recall\` tool if it touches what you are doing; if none does, it costs you nothing.`,
+        notice: true,
+        text: `looper: ${hits.length} of this project's ${notes.length} notes touch what you asked:\n${hits.map((one) => `  ${one.summary}`).join("\n")}\nRead one with the \`recall\` tool before working it out again.`,
       },
     ];
   }

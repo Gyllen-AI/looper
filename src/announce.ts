@@ -152,7 +152,8 @@ export function halvesOf(root: string, source: string): string {
 
 export function costLines(root: string, weighed: readonly Weighed[]): readonly string[] {
   return weighed.map(
-    (held) => `    ${String(held.chars).padStart(6)}  ${held.source}${halvesOf(root, held.source)}`,
+    (held) =>
+      `    ${String(held.chars).padStart(6)}  ${held.source}${halvesOf(root, held.source)}${held.notice ? "   a notice, said once per session" : ""}`,
   );
 }
 

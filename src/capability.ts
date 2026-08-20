@@ -1,3 +1,5 @@
+import type { Said } from "./said.ts";
+
 export type HookEvent =
   | "PostToolUse"
   | "PreToolUse"
@@ -14,7 +16,28 @@ export type Injection = {
   readonly priority: number;
   readonly text: string;
   readonly required: boolean;
+  readonly notice: boolean;
   readonly summary?: string;
+};
+
+export type InHand =
+  | { readonly kind: "from-git" }
+  | { readonly kind: "given"; readonly paths: readonly string[] };
+
+export type Session =
+  | { readonly kind: "known"; readonly id: string }
+  | { readonly kind: "unknown" };
+
+export type Turn = {
+  readonly session: Session;
+  readonly prompt: string;
+  readonly inHand: InHand;
+};
+
+export const NO_TURN: Turn = {
+  session: { kind: "unknown" },
+  prompt: "",
+  inHand: { kind: "from-git" },
 };
 
 export type Outcome =
@@ -25,6 +48,8 @@ export type Outcome =
 export type InjectContext = {
   readonly root: string;
   readonly budget: number;
+  readonly turn: Turn;
+  readonly said: Said;
 };
 
 export type HookContext = {

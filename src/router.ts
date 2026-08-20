@@ -15,6 +15,7 @@ import {
   SILENT,
   type Capability,
   type HookEvent,
+  type InHand,
   type InjectContext,
   type Injection,
   type Outcome,
@@ -60,21 +61,23 @@ export class Router implements Capability {
         priority: ROUTER_PRIORITY,
         text: `${constitution.text}\n\n${index}`,
         required: true,
+        notice: false,
       },
     ];
 
-    const unreachable = this.unreachable(context.root);
+    const unreachable = this.unreachable(context.root, context.turn.inHand);
     if (unreachable.length > 0) {
       injections.push({
         source: this.name,
         priority: ROUTER_PRIORITY,
         text: unreachable,
         required: true,
+        notice: false,
       });
     }
 
     let raisedFirst = true;
-    for (const name of this.signalled(context.root)) {
+    for (const name of this.signalledBy(context.root, context.turn.inHand)) {
       const branch = assembleBranch(context.root, name);
       if (branch.kind === "nowhere") continue;
       injections.push({
@@ -82,6 +85,7 @@ export class Router implements Capability {
         priority: BRANCH_PRIORITY,
         text: branch.text,
         required: raisedFirst,
+        notice: false,
         summary: firstSentenceOf(branch.text),
       });
       raisedFirst = false;
@@ -90,19 +94,26 @@ export class Router implements Capability {
     return injections;
   }
 
-  unreachable(root: string): string {
+  unreachable(root: string, inHand: InHand): string {
+    if (inHand.kind === "given") return "";
     const held = pathsInHand(root);
     if (held.kind !== "unavailable") return "";
     return `looper: the rule sets tied to what you are editing were not loaded (${held.detail}). Only the constitution below is in force, which is a fraction of this project's rules.`;
   }
 
   signalled(root: string): readonly string[] {
+    return this.signalledBy(root, { kind: "from-git" });
+  }
+
+  signalledBy(root: string, inHand: InHand): readonly string[] {
     const map = readMap(root);
     const project = map.kind === "absent" ? EMPTY_MAP : map.governs;
+    const own = new Set(project.keys());
+    const governs = withCanonDefaults(project, canonGoverns());
+    if (inHand.kind === "given") return branchesFor(governs, inHand.paths, own);
     const held = pathsInHand(root);
     if (held.kind === "unavailable") return NO_BRANCHES;
-    const own = new Set(project.keys());
-    return branchesFor(withCanonDefaults(project, canonGoverns()), held.paths, own);
+    return branchesFor(governs, held.paths, own);
   }
 
   hooks(): readonly HookEvent[] {

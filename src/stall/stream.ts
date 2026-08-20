@@ -14,6 +14,7 @@ export type Reached = {
   readonly at: number;
   readonly tool: string;
   readonly shape: string;
+  readonly session: string;
 };
 
 export type Stream =
@@ -26,13 +27,12 @@ export function streamPath(root: string, home: string): string {
   return join(home, STREAM_DIR, `${basename(root)}-${print}.reached`);
 }
 
-const A_WORD = /[A-Za-z0-9_./-]+/g;
+const SHAPE_WIDTH = 160;
 
 export function shapeOf(tool: string, detail: string): string {
-  if (tool !== "Bash") return detail;
-  const words = detail.match(A_WORD);
-  if (words === null) return tool;
-  return words.slice(0, 2).join(" ");
+  const flat = detail.replace(/\s+/g, " ").trim();
+  if (flat.length === 0) return tool;
+  return flat.slice(0, SHAPE_WIDTH);
 }
 
 export type Noted =
@@ -43,14 +43,17 @@ export function note(root: string, home: string, one: Reached): Noted {
   const path = streamPath(root, home);
   try {
     mkdirSync(dirname(path), { recursive: true });
-    appendFileSync(path, `${one.at}\t${one.tool}\t${one.shape.replace(/[\t\n]/g, " ")}\n`);
+    appendFileSync(
+      path,
+      `${one.at}\t${one.tool}\t${one.shape.replace(/[\t\n]/g, " ")}\t${one.session.replace(/[\t\n]/g, " ")}\n`,
+    );
     return { kind: "noted" };
   } catch (cause) {
     return { kind: "not-noted", why: reasonFrom(cause) };
   }
 }
 
-export function reachedFor(root: string, home: string): Stream {
+export function reachedFor(root: string, home: string, session: string): Stream {
   const path = streamPath(root, home);
   if (!existsSync(path)) return { kind: "none" };
   let held = "";
@@ -65,8 +68,10 @@ export function reachedFor(root: string, home: string): Stream {
     const at = Number(parts[0]);
     const tool = parts[1];
     const shape = parts[2];
-    if (!Number.isFinite(at) || tool === undefined || shape === undefined) continue;
-    reached.push({ at, tool, shape });
+    const who = parts[3];
+    if (!Number.isFinite(at) || tool === undefined || shape === undefined || who === undefined) continue;
+    if (who !== session) continue;
+    reached.push({ at, tool, shape, session: who });
   }
   return { kind: "reached", reached };
 }

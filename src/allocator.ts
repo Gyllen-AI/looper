@@ -1,8 +1,14 @@
 import { HOOK_OUTPUT_CEILING, HOOK_PREVIEW_CHARS, INJECTION_SEPARATOR } from "./config.ts";
 import type { Capability, InjectContext, Injection } from "./capability.ts";
 import { reasonFrom } from "./fields.ts";
+import { heardBefore, noteSaid } from "./said.ts";
 
-export type Weighed = { readonly source: string; readonly chars: number; readonly summary?: string };
+export type Weighed = {
+  readonly source: string;
+  readonly chars: number;
+  readonly notice: boolean;
+  readonly summary?: string;
+};
 
 export type Allocation = {
   readonly text: string;
@@ -98,11 +104,17 @@ export function allocate(
     const separator = parts.length === 0 ? 0 : INJECTION_SEPARATOR.length;
     parts.push(injection.text);
     contributors.push(injection.source);
-    weighed.push({ source: injection.source, chars: width, summary: injection.summary });
+    weighed.push({
+      source: injection.source,
+      chars: width,
+      notice: injection.notice,
+      summary: injection.summary,
+    });
     used += separator + width;
   };
 
   for (const injection of ordered) {
+    if (injection.notice && heardBefore(context.said, injection.source, injection.text)) continue;
     if (injection.required) {
       take(injection);
       continue;
@@ -115,6 +127,7 @@ export function allocate(
     dropped.push({
       source: injection.source,
       chars: injection.text.length,
+      notice: injection.notice,
       summary: injection.summary,
     });
   }
@@ -136,6 +149,11 @@ export function allocate(
     }
     used -= last.length + INJECTION_SEPARATOR.length;
     dropped.push(held);
+  }
+
+  for (const name of contributors) {
+    const spoken = ordered.find((one) => one.source === name && one.notice);
+    if (spoken !== undefined) noteSaid(context.said, spoken.source, spoken.text);
   }
 
   if (dropped.length > 0) parts.push(droppedMarker(dropped));

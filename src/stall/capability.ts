@@ -22,7 +22,7 @@ function detailIn(input: unknown): string {
 
 export function saidAbout(stalls: readonly Fingerprint[]): string {
   return [
-    `looper: ${stalls.length} shape(s) in the last forty minutes look like being stuck, not like working.`,
+    `looper: ${stalls.length} shape(s) in this session's last forty minutes look like being stuck, not like working.`,
     ...stalls.map((one) => `  ${one.shape} — ${one.times} times over ${one.minutes} minute(s): ${one.means}`),
     `Each one names a question the toolbox could not answer in a single call. The`,
     `answer to that shape is one more check, not a shorter one: the measure is least`,
@@ -35,7 +35,8 @@ export class Stall implements Capability {
   readonly name = "stall";
 
   inject(context: InjectContext): readonly Injection[] {
-    const stream = reachedFor(context.root, whereTheUserLives());
+    if (context.turn.session.kind === "unknown") return SILENT;
+    const stream = reachedFor(context.root, whereTheUserLives(), context.turn.session.id);
     if (stream.kind !== "reached") return SILENT;
     const metric = metricOf(stream.reached, Date.now());
     if (metric.stalls.length === 0) return SILENT;
@@ -45,6 +46,7 @@ export class Stall implements Capability {
         priority: STALL_PRIORITY,
         text: saidAbout(metric.stalls),
         required: false,
+        notice: true,
       },
     ];
   }
@@ -66,10 +68,18 @@ export class Stall implements Capability {
     }
     const tool = fieldAt(parsed, "tool_name");
     if (typeof tool !== "string") return { kind: "pass" };
+    const who = fieldAt(parsed, "session_id");
+    if (typeof who !== "string" || who.length === 0) {
+      return {
+        kind: "mention",
+        note: "looper: this tool call carried no session id, so it was not counted toward the stall metric.",
+      };
+    }
     const noted = note(context.root, whereTheUserLives(), {
       at: Date.now(),
       tool,
       shape: shapeOf(tool, detailIn(fieldAt(parsed, "tool_input"))),
+      session: who,
     });
     if (noted.kind === "not-noted") {
       return {
