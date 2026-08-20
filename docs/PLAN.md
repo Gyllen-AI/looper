@@ -6533,17 +6533,23 @@ milliseconds. Nobody will feel it. Building it would be the thing this branch
 warns against — optimising because a number looks large in isolation.
 
 **What does cost a goal its time is imprecision, and that is measurable too.**
-Across one long session, looper's gates fired about seven times. Five were right
-and cost a minute each to satisfy. Two were wrong:
+Across one long session, looper's gates fired about seven times. **Six were
+right** and cost a minute each to satisfy. One was wrong, and one was blamed
+wrongly:
 
 - `NODE:1` read `regex.exec(parts.join(" "))` as a built shell command. Over
   1,068 files nobody here wrote it fired three times and every one was that same
   false positive. Fixing the rule cost several turns; not fixing it would have
   cost every adopter who writes a regular expression.
-- The stall capability fired on nine reads of one file inside a minute and
-  called it *acting on a guess, because looking was too expensive*. The nine
-  reads were a benchmark of the hook itself. It has fired once and been wrong
-  once.
+- ~~The stall capability fired on nine reads of one file and called it acting on
+  a guess. The nine reads were a benchmark of the hook itself.~~ **That was
+  wrong, and checking it took one command.** The benchmark drove
+  `looper hook PostToolUse` with a payload saying `"tool_name": "Edit"`, nine
+  times. `~/.looper/seen/` holds nine `Edit` rows for that file, in two bursts
+  fourteen seconds apart — the two benchmark loops. Stall recorded exactly what
+  it was told and named the shape correctly. **The false positive was
+  manufactured by the person accusing it**, which is the failure this branch
+  exists to prevent: a measurement taken without checking what produced it.
 
 A gate that is right costs a minute. A gate that is wrong costs a turn, and a
 turn is two orders of magnitude more than the 65 ms. **Precision is the
