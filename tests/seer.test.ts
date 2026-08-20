@@ -5,8 +5,8 @@ import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 
 import { SEER_CAPTURE, SEER_CONSENT, SEER_DIR, SEER_NAME_LIMIT, SEER_TOOL } from "../src/config.ts";
-import { Seer, answerFor } from "../src/seer/capability.ts";
-import { capture, captureWith, seerIsInstalled, startConsentWith } from "../src/seer/drive.ts";
+import { Seer, answerFor, saidAbout } from "../src/seer/capability.ts";
+import { capture, captureWith, seerIsInstalled, standingWith, startConsentWith } from "../src/seer/drive.ts";
 
 const A_WINDOW = "the app";
 
@@ -14,6 +14,11 @@ const ONE_PIXEL = "iVBORw0KGgoAAAANSUhEUg==";
 
 function scratch(): string {
   return mkdtempSync(join(tmpdir(), "looper-seer-"));
+}
+
+function withStatus(root: string, said: Record<string, readonly string[]>): { root: string; path: string } {
+  const path = withSeer(root, `printf '%s' '${JSON.stringify(said)}'`);
+  return { root, path };
 }
 
 function withSeer(root: string, body: string): string {
@@ -246,4 +251,23 @@ test("no message tells the person at the machine to type a command", () => {
     /starts it with|started by the person at this machine, with|start seer\/windows\/consent\.ps1 again/,
     "the only input is a sentence: a message that hands somebody a command to type is a step they have to know exists",
   );
+});
+
+test("a window nobody ticked is never named to the agent, however helpful that would be", () => {
+  const secret = "Payroll 2026 final - Excel";
+  const shell = withStatus(scratch(), { armed: ["the app"], open: ["the app", secret] });
+  try {
+    const said = saidAbout(standingWith(shell.path, shell.root));
+    const text = said.kind === "text" ? said.text : JSON.stringify(said);
+
+    assert.ok(text.length > 0, "an empty answer would pass the check below without meaning anything");
+    assert.equal(
+      text.includes(secret),
+      false,
+      "consent gates capture and must gate enumeration too: an agent that is told every window title learns what a person has open before they agreed to show it anything",
+    );
+    assert.equal(text.includes("the app"), true, "what was ticked is still named");
+  } finally {
+    rmSync(shell.root, { recursive: true, force: true });
+  }
 });

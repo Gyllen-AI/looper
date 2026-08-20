@@ -158,9 +158,9 @@ function whenNotRunning(): { readonly kind: "text"; readonly text: string } {
 function alsoSaid(window: string): string {
   const state = standing(looperRoot());
   if (state.kind !== "reachable") return "";
-  const near = nearlyNamed(window, state.open).filter((held) => held !== window);
+  const near = nearlyNamed(window, state.armed).filter((held) => held !== window);
   const nearly =
-    near.length === 0 ? "" : ` A window is open called ${near.map((held) => `"${held}"`).join(", ")}.`;
+    near.length === 0 ? "" : ` A ticked window is called ${near.map((held) => `"${held}"`).join(", ")}.`;
   const armed =
     state.armed.length === 0
       ? " Nothing at all is ticked right now."
@@ -193,12 +193,12 @@ export function saidAbout(state: Standing): ToolResult {
       ? "nothing is ticked, so nothing can be looked at yet"
       : `ticked, and able to be looked at: ${state.armed.map((held) => `"${held}"`).join(", ")}`;
   const open =
-    state.open.length === 0
-      ? ""
-      : `\n\nEvery window open right now:\n${state.open.map((held) => `  ${held}`).join("\n")}`;
+    state.armed.length === 0
+      ? "\n\nWhat else is open on this machine is not looper's to know: the consent window lists it to the person, and only what they tick is named here."
+      : "";
   return {
     kind: "text",
-    text: `the consent window is running and ${armed}. Ask for a title exactly as it is written below.${open}`,
+    text: `the consent window is running and ${armed}. Ask for one of those titles exactly as it is written here.${open}`,
   };
 }
 

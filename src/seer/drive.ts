@@ -44,7 +44,7 @@ export type Standing =
   | { readonly kind: "unavailable"; readonly detail: string }
   | { readonly kind: "unreachable" }
   | { readonly kind: "too-old" }
-  | { readonly kind: "reachable"; readonly armed: readonly string[]; readonly open: readonly string[] };
+  | { readonly kind: "reachable"; readonly armed: readonly string[] };
 
 const DISARMED = 5;
 
@@ -139,7 +139,7 @@ export function standingWith(shell: string, looperRoot: string): Standing {
   } catch (cause) {
     return { kind: "unavailable", detail: `it did not answer in JSON (${reasonFrom(cause)})` };
   }
-  return { kind: "reachable", armed: titlesIn(payload, "armed"), open: titlesIn(payload, "open") };
+  return { kind: "reachable", armed: titlesIn(payload, "armed") };
 }
 
 export function standing(looperRoot: string): Standing {
