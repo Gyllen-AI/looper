@@ -5,6 +5,8 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 
 import { countsOf, readBaseline, shrinkToward, totalIn } from "../src/law/baseline.ts";
+
+const NOTHING_UNREAD: readonly string[] = [];
 import { Law } from "../src/law/capability.ts";
 import { law } from "../src/commands/law.ts";
 import { gitIn as git, first } from "./helpers.ts";
@@ -124,7 +126,7 @@ test("a baseline only ever shrinks, and reports by how much", () => {
 
   const fewer = countsOf([at("a.ts", 1)]);
 
-  const shrink = shrinkToward(recorded, fewer);
+  const shrink = shrinkToward(recorded, fewer, NOTHING_UNREAD);
   assert.equal(shrink.kind, "shrunk");
   if (shrink.kind !== "shrunk") return;
   assert.equal(shrink.by, 2);
@@ -135,7 +137,7 @@ test("a baseline never grows on its own", () => {
   const recorded = countsOf([at("a.ts", 1)]);
   const more = countsOf([at("a.ts", 1), at("a.ts", 9)]);
 
-  assert.equal(shrinkToward(recorded, more).kind, "unchanged");
+  assert.equal(shrinkToward(recorded, more, NOTHING_UNREAD).kind, "unchanged");
   assert.equal(totalIn(recorded), 1);
 });
 
@@ -209,4 +211,37 @@ test("a recorded count larger than what is in the file changes no verdict", () =
     process.chdir(wasIn);
     rmSync(root, { recursive: true, force: true });
   }
+});
+
+test("a file the survey could not read keeps every problem recorded against it", () => {
+  const recorded = new Map([
+    ["Contoso.Widgets/Plugins/OrderSync.cs", new Map([["CS-DEAD:2", 205]])],
+    ["src/a.ts", new Map([["TS-LOG:1", 2]])],
+  ]);
+  const readNothingCsharp = new Map([["src/a.ts", new Map([["TS-LOG:1", 2]])]]);
+
+  const shrink = shrinkToward(recorded, readNothingCsharp, [
+    "51 C# files (the C# half would not start)",
+  ]);
+
+  assert.equal(
+    shrink.kind,
+    "not-all-read",
+    "a survey that could not read the C# half must not conclude the C# problems were fixed",
+  );
+});
+
+test("with nothing unread the same survey does shrink", () => {
+  const recorded = new Map([
+    ["Contoso.Widgets/Plugins/OrderSync.cs", new Map([["CS-DEAD:2", 205]])],
+    ["src/a.ts", new Map([["TS-LOG:1", 2]])],
+  ]);
+  const readEverything = new Map([["src/a.ts", new Map([["TS-LOG:1", 2]])]]);
+
+  const shrink = shrinkToward(recorded, readEverything, NOTHING_UNREAD);
+
+  assert.equal(shrink.kind, "shrunk");
+  if (shrink.kind !== "shrunk") return;
+  assert.equal(shrink.by, 205);
+  assert.equal(shrink.baseline.has("Contoso.Widgets/Plugins/OrderSync.cs"), false);
 });
