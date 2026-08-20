@@ -6046,3 +6046,69 @@ this makes the tool stop lying in the meantime.
 reach it without importing each other, which is a cycle that has broken looper
 twice. The traversal guard is unchanged and tested at the new call site:
 `../../../etc/passwd`, `..`, `/abs`, `a//b` and `a\b` are all refused.
+
+## What a frame costs, and why only a live process can make it cheap
+
+Measured 2026-08-20 on one workstation, WSL2 beside Windows, a 1536x864 screen,
+against `seer/windows/capture.ps1` as it stands. Every number below is a stage
+of **one** `see` call, because every `see` call starts a new PowerShell:
+
+| stage | cost |
+|---|---|
+| `powershell.exe` start, warm | 126-135 ms |
+| `Add-Type` of the inline C# helper | **170 ms** |
+| `Get-Process \| Where-Object` to find the window | **47-117 ms** |
+| `Add-Type -AssemblyName System.Drawing` | 19 ms |
+| grab, PNG encode, base64 | 60-80 ms |
+| the blank-detection `GetPixel` scan | 18 ms |
+| **a frame** | **~500-600 ms** |
+| `standing()` while the consent window is closed | **2,188 ms**, a pipe timeout |
+
+**Roughly 440 of those milliseconds are setup that is thrown away and paid
+again on the next frame.** The work itself — grab, encode, decide whether the
+window rendered — is about 80.
+
+Two things are cheap to fix and one is not. `Get-Process` materialises every
+process to read one title; `EnumWindows` through the helper that is already
+loaded answers in **2 ms**, twenty to fifty times faster. The `GetPixel` scan was
+the suspect and is innocent at 18 ms.
+
+**The 170 ms compile cannot be cached where the tree lives.** Compiling the
+helper once with `-OutputAssembly` and loading it with `Add-Type -Path` is the
+obvious move, and .NET refuses it:
+
+```
+Could not load file or assembly 'file://\\wsl.localhost\Ubuntu-24.04\...\seerwin.dll'
+Operation is not supported. (Exception from HRESULT: 0x80131515)
+```
+
+An assembly on a UNC path is a remote assembly, and Windows will not load one.
+Putting the DLL on the Windows filesystem would mean the install reaching out of
+the tree it was installed into, which is a worse trade than the 170 ms.
+
+**So the only way to stop paying setup per frame is to stop starting a process
+per frame.** That is also what an adopter asked for in their own words: arm once,
+because arming is the human's decision and belongs to them, and then have a frame
+be something the agent can take at any moment while it edits, hot-reloads and
+looks again.
+
+**What that must not change.** Consent is asked per capture, over the pipe the
+consent window serves, and a live capturer must keep asking per capture rather
+than once at start — otherwise a window that stops being ticked keeps being
+visible. Closing the consent window still disarms everything, so the capturer
+must die with it. A process that holds the screen open and captures on a timer is
+a different thing from one that captures when asked, and it is not what anybody
+consented to.
+
+**The obstacle, stated rather than solved.** `Capability.call` returns
+`ToolResult`, not a promise, so the tool boundary is synchronous and cannot hold
+a conversation with a living child over its stdio. A live capturer therefore
+needs a protocol the synchronous side can complete in one step — a request file
+and a frame file, or a second named pipe — and that is the design decision this
+entry stops in front of rather than guessing at.
+
+**Not measured yet, and it matters:** what the frame costs after it arrives. A
+full-screen PNG is 90 KB here and reaches the model as base64. Half-size JPEG of
+the same screen is 79 KB, and the gap widens on a larger display. Nothing has
+been measured about what either costs the reader in tokens or in latency, so
+nothing here claims it.
