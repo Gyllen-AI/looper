@@ -264,3 +264,25 @@ test("patience comes from the check, and a malformed one is complained about rat
     rmSync(root, { recursive: true, force: true });
   }
 });
+
+test("a project that declares nothing is told so on every prompt", () => {
+  const root = project(null);
+  const home = mkdtempSync(join(tmpdir(), "looper-home-"));
+  const said = new Loop(home).inject({ root, budget: 9800 });
+  assert.equal(said.length, 1);
+  const first = said[0];
+  assert.match(first === undefined ? "" : first.text, /declares no checks/);
+  rmSync(root, { recursive: true, force: true });
+  rmSync(home, { recursive: true, force: true });
+});
+
+test("declared checks that were never asked are not silence either", () => {
+  const root = project(`[loop.one]\nreach = "internal"\nrun = "true"\n`);
+  const home = mkdtempSync(join(tmpdir(), "looper-home-"));
+  const said = new Loop(home).inject({ root, budget: 9800 });
+  assert.equal(said.length, 1);
+  const first = said[0];
+  assert.match(first === undefined ? "" : first.text, /never been asked/);
+  rmSync(root, { recursive: true, force: true });
+  rmSync(home, { recursive: true, force: true });
+});

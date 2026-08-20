@@ -6220,3 +6220,45 @@ rule: sharpen it rather than soften it.
 **Sharpening a consent guard to let a feature through is not a change to make
 quietly**, and it is not one the measurement decides. The capturer is here,
 proven, and unused until that is settled.
+||||||| parent of b415348 (A project that declared no checks was never told, and the design said it would be)
+### A project that declared no checks was never told, and the design said it would be
+
+An adopting .NET codebase installed looper on 2026-08-19 and worked in it for a
+day. It never wrote `.looper/loop.toml`. Nothing said so, at any point:
+
+`looper init` names eight files in its output and that one is not among them.
+`looper loop` with no file prints *"no checks declared"* and **exits 0**, the
+code for fine. And `Loop.inject` returned `SILENT` when the loop had never been
+asked, so no prompt in that day carried a word about it.
+
+This page already knew. Under *"Nobody will write the checks, so looper proposes
+them"* it says an empty `.looper/loop.toml` **"is indistinguishable from a
+healthy project"**, and promises a project declaring nothing still gets *"an
+external count of zero rather than a silence"*. The silence was the part that
+shipped.
+
+The adopter found it only because they pulled a newer looper, and the
+constitution it injects now names the file. The checks turned out to be already
+written down — they were sitting in a CI workflow and three project files, so
+authoring them was copying, not deciding. The first run answered `ok=1 broken=3
+blind=0`: two test projects had stopped compiling against the code they test,
+and neither was in the solution file, so nothing had built them in a long time.
+That is precisely the report the loop exists to produce, and a day of governed
+work had gone by without it.
+
+**Saying it is not the same as refusing it.** A project that declares no checks
+is still never refused a commit — that decision stands, and the test that pins
+it is untouched. What changed is that the loop no longer says nothing. With no
+checks declared it says so on every prompt, and with checks declared but never
+asked it says that instead.
+
+`a loop nobody has asked says nothing, rather than guessing it is healthy`
+became `a loop nobody has asked invents no counts, and is never read as
+healthy`. The guarantee it was written to hold is the real one and it still
+holds: no verdict is invented, and the text carries no `ok=`, `broken=` or
+`blind=` it did not earn. Silence was never that guarantee. Silence was a
+project being told, once a turn, that there was nothing to say.
+
+The half of the design this does not build is the half that matters most —
+looper proposing the checks from what the agent reached for. This only makes the
+gap audible.
