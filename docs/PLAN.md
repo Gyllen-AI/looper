@@ -590,6 +590,48 @@ and costs nothing new, because the parse has happened either way. A file with a
 lock in it should raise `runtime/concurrency`; no path expression will ever say
 that.
 
+### The constitution became the index, and the index is generated
+
+The constitution named no branch at all, so the seven that route by no path could
+only be reached by a reader who already knew they existed. The fix is not a list
+written into the file. It is the file becoming the list.
+
+`constitution.md` now holds a header and three absolutes: never invent data,
+report what happened with the proof, end with what changed and what is next.
+Those are true of a message with no code in it, so they cannot be a branch.
+Everything else moved into one, and `branchIndex(root)` builds the rest at
+injection time from `listBranches`, which merges the canon's names with whatever
+the adopter has written:
+
+```
+- architecture  State has one home and that home is the truth.
+- deps          Nothing enters unread, unpinned or unowned.
+- rust          No comments.
+- game          game/ is game-server operations: Oxide plugins in C#, ...
+- data/         indexing migrations queries schema
+```
+
+The rule quoted is the branch's own first bullet, preferring its bolded lead,
+which is where every canon branch already states its hardest rule in one
+sentence. Nothing is stored. A branch added here appears in every adopter's
+constitution at the next pin; a branch the adopter writes appears on their next
+message; and neither requires anyone to keep a list.
+
+**Five branches were missing and were found by probing rather than by opinion.**
+Searching the canon for `third-party`, `supply`, `speculative`, `propagate`,
+`vanish`, `outcome` and `commit only` returned nothing, so: `structure` (deciding
+the shape), `discipline` (writing code once the shape is decided), `authority`
+(who decides, and what an assumption costs), `voice` (anything a person reads)
+and `deps` (taking on code you did not write). The last is the serious one: a
+canon with rules about indexes and migrations had nothing about what you are
+allowed to depend on.
+
+**The cap had to change with it.** `tests/budget.test.ts` counted bullets, capped
+at 14, and twenty-seven one-line index entries are not twenty-seven rules. It now
+measures the always-on tier in characters, capped at 5,200, because characters
+are what the budget actually spends. The index has its own ceiling of 2,200, past
+which each group collapses from its leaf names to a count.
+
 **Push an index, pull the body.** The constitution already instructs the reader
 to pull the branches their task touches, so pushing whole branches is the
 fallback that spends the budget. Inverted, the per-turn cost stops growing with

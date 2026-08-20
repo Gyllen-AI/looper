@@ -11,3 +11,9 @@ Writing the rules this project runs under.
 - **A line that only matters during one kind of work belongs in that work's
   branch**, and a branch too broad to be selective is two branches. The
   constitution is paid on every single message.
+- **A rule states intent and stops nothing.** What must not happen belongs in a
+  gate: impossible beats gated beats told, and anything told is a suggestion.
+  Never describe a barrier that is not wired as though it were one.
+- **A branch opens with one line saying what it is for**, before any rule. That
+  line is quoted as the branch's entry in the constitution and in the drop
+  marker, so a branch that opens with a rule instead gets quoted mid-sentence.

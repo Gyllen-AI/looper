@@ -4,9 +4,10 @@ import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
 import { join } from "node:path";
 
 import { canonBranchNames, canonGoverns, pulledByName } from "../src/canon.ts";
-import { isABranchName } from "../src/doctrine.ts";
+import { branchIndex, isABranchName, listBranches } from "../src/doctrine.ts";
 
 const CANON = join(import.meta.dirname, "..", "src", "canon");
+const ROOT = join(import.meta.dirname, "..");
 
 function everyCanonFile(dir: string, prefix: string): string[] {
   const found: string[] = [];
@@ -78,4 +79,36 @@ test("a branch name is still a name and never a way out of the doctrine folder",
   for (const fine of ["frontend", "ui/state", "data/schema", "work/deploy"]) {
     assert.equal(isABranchName(fine), true, `${fine} is a branch name and was refused`);
   }
+});
+
+test("the constitution's index names every branch the project has, canon and its own alike", () => {
+  const index = branchIndex(ROOT);
+  const missing = listBranches(ROOT).filter((name) => {
+    const cut = name.indexOf("/");
+    return cut < 0 ? !index.includes(`- ${name} `) : !index.includes(`- ${name.slice(0, cut)}/`);
+  });
+  assert.deepEqual(
+    missing,
+    [],
+    "a branch that exists and is not named in the constitution is one the reader never learns about, which is the same as not shipping it",
+  );
+});
+
+test("every canon branch gives the index a rule to quote", () => {
+  const index = branchIndex(ROOT);
+  for (const name of canonBranchNames()) {
+    if (name.includes("/")) continue;
+    assert.ok(
+      index.includes(`- ${name.padEnd(14)}`) && !index.includes(`- ${name.padEnd(14)}\n`),
+      `${name} contributes an empty line to the constitution. Its first bullet is what gets quoted, so it needs one`,
+    );
+  }
+});
+
+test("the index is bounded, because it is paid on every single message", () => {
+  const size = branchIndex(ROOT).length;
+  assert.ok(
+    size <= 2200,
+    `the branch index is ${size} chars. Past the ceiling it collapses each group to a count, and past that it is cheaper to stop naming leaves at all`,
+  );
 });

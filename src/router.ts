@@ -2,6 +2,7 @@ import { BRANCH_PRIORITY, DOCTRINE_TOOL, ROUTER_PRIORITY } from "./config.ts";
 import {
   assembleBranch,
   assembleConstitution,
+  branchIndex,
   listBranches,
   readProjectConstitution,
 } from "./doctrine.ts";
@@ -32,11 +33,12 @@ export class Router implements Capability {
 
   inject(context: InjectContext): readonly Injection[] {
     const constitution = assembleConstitution(readProjectConstitution(context.root));
+    const index = branchIndex(context.root);
     const injections: Injection[] = [
       {
         source: this.name,
         priority: ROUTER_PRIORITY,
-        text: constitution.text,
+        text: `${constitution.text}\n\n${index}`,
         required: true,
       },
     ];

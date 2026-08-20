@@ -8,6 +8,7 @@ import { HOOK_OUTPUT_CEILING, INJECTION_BUDGET } from "../src/config.ts";
 import {
   assembleBranch,
   assembleConstitution,
+  branchIndex,
   readProjectConstitution,
 } from "../src/doctrine.ts";
 import { readMap } from "../src/map.ts";
@@ -119,20 +120,19 @@ const ALWAYS_ON: readonly string[] = [
   ".looper/doctrine/constitution.md",
 ];
 
-const MOST_RULES_READ_EVERY_TURN = 14;
+const MOST_CHARS_READ_EVERY_TURN = 5200;
 
-function bulletsIn(path: string): number {
-  return readFileSync(join(ROOT, path), "utf8")
-    .split("\n")
-    .filter((line) => line.startsWith("- ")).length;
+function charsIn(path: string): number {
+  return readFileSync(join(ROOT, path), "utf8").length;
 }
 
 test("the always-on tier cannot grow quietly", () => {
-  const total = ALWAYS_ON.reduce((held, path) => held + bulletsIn(path), 0);
+  const total =
+    ALWAYS_ON.reduce((held, path) => held + charsIn(path), 0) + branchIndex(ROOT).length;
 
   assert.ok(
-    total <= MOST_RULES_READ_EVERY_TURN,
-    `${total} rules are read on every single turn, against a cap of ${MOST_RULES_READ_EVERY_TURN}. This cap does not find a rule said twice — prose cannot be checked for that, and five duplicates here shared no phrase at all. What it does is make adding one cost a deletion, so every new line has to answer what it replaces.`,
+    total <= MOST_CHARS_READ_EVERY_TURN,
+    `${total} characters are read on every single turn, against a cap of ${MOST_CHARS_READ_EVERY_TURN}. Counting bullets stopped working when the branch index became one line per branch: twenty-seven short lines are not twenty-seven rules. Characters are what the budget actually spends, and this cap makes adding one cost a deletion.`,
   );
 });
 

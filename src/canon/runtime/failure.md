@@ -15,3 +15,6 @@ What happens when something you depend on is down.
 - **Say what you will do when the dependency is gone, before you add it.** A
   dependency with no answer to that question is a single point of failure that
   nobody has agreed to.
+- **An error propagates, crashes, or is observed. None of them vanish.** A
+  swallowed error is a failure that already happened and that nobody will ever be
+  told about.
