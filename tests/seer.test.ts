@@ -1,12 +1,12 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { chmodSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
-import { tmpdir } from "node:os";
+import { homedir, tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 
 import { SEER_CAPTURE, SEER_CONSENT, SEER_DIR, SEER_NAME_LIMIT, SEER_TOOL } from "../src/config.ts";
 import { Seer, answerFor, saidAbout } from "../src/seer/capability.ts";
-import { capture, captureWith, seerIsInstalled, standingWith, startConsentWith } from "../src/seer/drive.ts";
+import { capture, captureWith, exchangeAt, seerIsInstalled, standingWith, startConsentWith } from "../src/seer/drive.ts";
 
 const A_WINDOW = "the app";
 
@@ -270,4 +270,15 @@ test("a window nobody ticked is never named to the agent, however helpful that w
   } finally {
     rmSync(shell.root, { recursive: true, force: true });
   }
+});
+
+test("a frame is traded outside the repository, because a picture of a screen is not project state", () => {
+  const where = exchangeAt();
+
+  assert.equal(
+    where.startsWith(join(import.meta.dirname, "..")),
+    false,
+    `the live capturer trades frames through ${where}, which is inside the repository: a picture of somebody's screen would sit in a working tree, one careless git add from being committed`,
+  );
+  assert.equal(where.startsWith(homedir()), true, "the exchange belongs to the person whose screen it is");
 });
