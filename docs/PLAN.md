@@ -6317,3 +6317,71 @@ project being told, once a turn, that there was nothing to say.
 The half of the design this does not build is the half that matters most —
 looper proposing the checks from what the agent reached for. This only makes the
 gap audible.
+
+### A pin moved twice, and the only thing watching was a sentence
+
+A submodule pin is a forty-character hash in a tree. It is the one line every
+other machine obeys, and in a diff it looks exactly like every other line of its
+kind.
+
+On 2026-08-20 an adopting project moved its `vendor/looper` pin twice without
+anybody deciding to. Both times a `git add -A` in a commit about something else
+found the submodule sitting on a working branch and staged it. The second landed
+`cd1281c`, the head of a pull request that was closed rather than merged, inside
+a commit whose subject was about frame decoding. Between the two the project
+spent a day pinned to a looper that upstream did not have.
+
+Doctrine already carried the rule, written after the first drift: the pin is a
+commit on upstream main, never a branch head, so check ancestry before a bump.
+It did not stop the second one, because at no point was anybody bumping. A rule
+addressed to the deliberate act is not read during the accidental one. Told is
+the weakest rank there is, and this is what it looks like when it fails.
+
+**What it costs, measured rather than assumed.** Two throwaway parents were
+built and cloned, because the severity was not obvious from the outside:
+
+- A pin the remote still serves that no branch names, which is what a closed
+  pull request leaves behind on GitHub: `git submodule update --init` succeeds.
+  No error, no warning, and the clone is running something nobody merged.
+- A pin that was never pushed at all: `fatal: remote error: upload-pack: not our
+  ref`, and the clone is unusable until a person fixes the pin by hand.
+
+The quiet one is the one that happened. It is also the one no amount of care at
+commit time catches by reading, because a hash carries no evidence of where it
+came from.
+
+**Local, because looper has no network.** The authoritative check is `git
+ls-remote`, which would be looper's first outbound connection, and
+`tests/no-network.test.ts` exists to stop exactly that arriving by accident. So
+the gate reads what is already on disk: the submodule's own remote-tracking
+refs. That costs nothing in the workflow that matters, because to pin a
+submodule to a new upstream commit you must first fetch that commit, and
+fetching is what makes the remote-tracking ref current. A pin anyone can
+legitimately make is a pin the local refs already know about.
+
+**On the default branch, or a tag.** Reachable-from-any-ref was the first
+formulation and it is too weak: at the moment of the second drift the closed
+branch was still in `refs/remotes`, so it would have passed. What catches both
+real cases while still allowing deliberate off-main pinning is the default
+remote-tracking branch, or an exact tag. A tag is how pinning to a release is
+said out loud, and it is checkable without asking anybody.
+
+What is refused and what is not. A pin arriving or moving, at `PreCommit`. A
+submodule leaving is not looper's business. A submodule whose default branch
+cannot be worked out, because `origin/HEAD` is unset and the branch is called
+neither `main` nor `master`, is refused with that as the reason, and `git remote
+set-head origin -a` is the fix rather than a bypass. A submodule that is not
+checked out is refused rather than assumed, on the same principle that has the
+edit gate refuse a file it could not read.
+
+**The rule leaves doctrine.** It was a line in an adopting project's doctrine,
+ranked told, and it behaved like it. It is now gated, and it is general: nothing
+in it carries that project's shape. No canon line replaces it, because a rule
+the machine enforces is a line the prompt no longer has to carry.
+
+Evidence. Six cases in `tests/pins.test.ts`, built as real repositories against
+a bare remote: a pin onto main, a pin never pushed, a pin the remote serves that
+no branch names, a pin onto a tag off main, a commit that moves no pin, and a
+submodule that is not checked out. Then against the real thing, not a fixture: a
+parent pinned at `cd1281c` fetched from the real remote is refused with exit 2,
+and the same parent moved to `6b835d0` on main is allowed with exit 0.
