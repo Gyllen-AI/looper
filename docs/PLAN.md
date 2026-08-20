@@ -5951,3 +5951,73 @@ under `observe/` would have cost the same and delivered nothing until pulled.
 
 It routes by no path, like `discipline` and `authority`, because the work it
 governs is an activity rather than a directory.
+
+## A check killed for being slow was reported as a service that was down
+
+Reported from an adopting project, 2026-08-20, with times: a types-and-imports
+check at **1.96s**, a contract check making nine live HTTP calls at **32.2s**,
+and a headless-browser tour at **~90s**. `looper loop` gave every check 30
+seconds and `.looper/loop.toml` had no way to say otherwise.
+
+Past that limit `spawnSync` sets `error`, `verdictOf` sees `answered === false`,
+and an external check becomes **blind** — which the vocabulary defines as *a
+layer that could not be asked*. The tour exits 0 and prints its five sections,
+and was reported as though the service were unreachable. Worse, the 32.2s check
+sits either side of the limit depending on how warm a cache is, and **a check
+that changes verdict without the code changing is one people learn to ignore.**
+
+Two things follow, and the second is the one that matters here. `blind` does not
+refuse a commit — that is deliberate, from the gate in #139 — so a declared
+check that hangs stops gating without saying so.
+
+`patience` is now a per-check number of seconds in `loop.toml`, default 30:
+
+```toml
+[loop.console-tour]
+reach = "external"
+patience = 180
+run = "npm run --silent tour"
+```
+
+Raising the constant was rejected for the reason the report gives: it trades one
+arbitrary number for another, and only the check's author knows what it waits
+for. A malformed `patience` is complained about and the check still runs at 30,
+because a check that does not run guards nothing.
+
+`Seen` carries `timedOut`, and the detail says so rather than leaving the reader
+to look at a healthy service:
+
+```
+blind   loop.tour   timed out after 2s, so this says nothing about the thing it
+                    checks — raise patience in .looper/loop.toml if it needs longer
+```
+
+The blind/broken split itself is unchanged. A timeout on an external check may
+still be the world being slow, and refusing the commit for it is how a gate gets
+turned off.
+
+## The constitution named branches the tool then denied existed
+
+Reported the same day: the index names 22 sub-branches and tells the reader to
+pull each one, and `mcp__looper__doctrine` answered *"there is no rule set called
+`observe/logging`"* — for the very branch the `law` set defers its logging rules
+to. The reporter was writing structured logging at the time and followed the
+one-line summary instead, which is the failure the index warns about.
+
+**It reproduces only across processes, which is why it looked impossible.**
+Branch *bodies* are read from disk on every call; branch *names* are the compiled
+`BRANCH_NAMES` constant. The injection hook is a fresh process on every prompt,
+so its constitution is always current. The MCP server is one long-lived process,
+so its names are frozen at whenever it started. A server started before a branch
+existed denies a file it could read perfectly well — and the reporter's error
+listed the ten pre-#128 names while their repo was at `300eaf1`.
+
+So `canonBranch` no longer treats the compiled list as the authority on what
+exists. A name absent from it is served anyway if `isABranchName` accepts it and
+the file is there. Restarting the server is still the fix for a stale tool list;
+this makes the tool stop lying in the meantime.
+
+`isABranchName` moved to `src/config.ts` so both `canon.ts` and `doctrine.ts`
+reach it without importing each other, which is a cycle that has broken looper
+twice. The traversal guard is unchanged and tested at the new call site:
+`../../../etc/passwd`, `..`, `/abs`, `a//b` and `a\b` are all refused.

@@ -1,8 +1,8 @@
 import { spawnSync, type SpawnSyncReturns } from "node:child_process";
 
 import { A_READER_MAY_ANSWER_WITH } from "../config.ts";
-import { reasonFrom } from "../fields.ts";
-import type { Check, Reach } from "./checks.ts";
+import { fieldAt, reasonFrom } from "../fields.ts";
+import { LOOP_FILE, type Check, type Reach } from "./checks.ts";
 
 export type Verdict = "ok" | "broken" | "blind";
 
@@ -12,6 +12,7 @@ export type Seen = {
   readonly verdict: Verdict;
   readonly detail: string;
   readonly millis: number;
+  readonly timedOut: boolean;
 };
 
 export type Tally = {
@@ -26,6 +27,10 @@ export type Tally = {
 export const BLIND_EXIT = 3;
 
 const NO_DETAIL = "no detail";
+
+function tooSlow(check: Check): string {
+  return `timed out after ${check.patience}s, so this says nothing about the thing it checks — raise patience in ${LOOP_FILE} if it needs longer`;
+}
 
 function firstLine(raw: string): string {
   for (const line of raw.split("\n")) {
@@ -53,18 +58,19 @@ export function verdictOf(status: number | null, reach: Reach, answered: boolean
   return "broken";
 }
 
-export function ask(check: Check, root: string, seconds: number): Seen {
+export function ask(check: Check, root: string): Seen {
   const began = Date.now();
   const answered = spawnSync("sh", ["-c", check.run], {
     cwd: root,
     encoding: "utf8",
-    timeout: seconds * 1000,
+    timeout: check.patience * 1000,
     maxBuffer: A_READER_MAY_ANSWER_WITH,
   });
   const millis = Date.now() - began;
-  const said = whatItSaid(answered);
+  const timedOut = fieldAt(answered.error, "code") === "ETIMEDOUT";
+  const said = timedOut ? tooSlow(check) : firstLine(whatItSaid(answered));
   const verdict = verdictOf(answered.status, check.reach, answered.error === undefined);
-  return { label: check.label, reach: check.reach, verdict, detail: firstLine(said), millis };
+  return { label: check.label, reach: check.reach, verdict, detail: said, millis, timedOut };
 }
 
 export function tallyOf(seen: readonly Seen[]): Tally {

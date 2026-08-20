@@ -5,8 +5,6 @@ import { LOOP_FILE, declaredIn } from "../loop/checks.ts";
 import { keep } from "../loop/cache.ts";
 import { ask, tallyOf, type Seen } from "../loop/run.ts";
 
-const PATIENCE_SECONDS = 30;
-
 function wanted(argv: readonly string[], flag: string): boolean {
   for (const one of argv) if (one === flag) return true;
   return false;
@@ -38,7 +36,7 @@ export function loop(argv: readonly string[], out: Out): number {
   }
 
   const seen: Seen[] = [];
-  for (const check of declared.checks) seen.push(ask(check, root, PATIENCE_SECONDS));
+  for (const check of declared.checks) seen.push(ask(check, root));
   const tally = tallyOf(seen);
   keep(root, whereTheUserLives(), {
     at: new Date().toISOString(),

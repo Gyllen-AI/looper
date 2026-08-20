@@ -4,7 +4,7 @@ import { chmodSync, mkdtempSync, mkdirSync, rmSync, writeFileSync } from "node:f
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
-import { declaredIn, LOOP_FILE } from "../src/loop/checks.ts";
+import { declaredIn, LOOP_FILE, PATIENCE_SECONDS } from "../src/loop/checks.ts";
 import { ask, tallyOf, verdictOf, BLIND_EXIT, type Seen } from "../src/loop/run.ts";
 import { Loop } from "../src/loop/capability.ts";
 import { keep } from "../src/loop/cache.ts";
@@ -44,7 +44,7 @@ test("a check with no reach is refused rather than guessed at", () => {
 
 test("exit zero is ok and its first line of output is the detail", () => {
   const root = project(null);
-  const seen = ask({ label: "loop.t", reach: "internal", run: "echo all good" }, root, 10);
+  const seen = ask({ label: "loop.t", reach: "internal", run: "echo all good", patience: 10 }, root);
   assert.equal(seen.verdict, "ok");
   assert.equal(seen.detail, "all good");
   rmSync(root, { recursive: true, force: true });
@@ -52,21 +52,21 @@ test("exit zero is ok and its first line of output is the detail", () => {
 
 test("a non-zero exit is broken", () => {
   const root = project(null);
-  const seen = ask({ label: "loop.t", reach: "internal", run: "echo went wrong; exit 1" }, root, 10);
+  const seen = ask({ label: "loop.t", reach: "internal", run: "echo went wrong; exit 1", patience: 10 }, root);
   assert.equal(seen.verdict, "broken");
   rmSync(root, { recursive: true, force: true });
 });
 
 test("an external check can say it could not be asked, and that is blind", () => {
   const root = project(null);
-  const seen = ask({ label: "loop.t", reach: "external", run: `echo host is down; exit ${BLIND_EXIT}` }, root, 10);
+  const seen = ask({ label: "loop.t", reach: "external", run: `echo host is down; exit ${BLIND_EXIT}`, patience: 10 }, root);
   assert.equal(seen.verdict, "blind");
   rmSync(root, { recursive: true, force: true });
 });
 
 test("an internal check cannot be blind, because nothing it needs can be unreachable", () => {
   const root = project(null);
-  const seen = ask({ label: "loop.t", reach: "internal", run: `exit ${BLIND_EXIT}` }, root, 10);
+  const seen = ask({ label: "loop.t", reach: "internal", run: `exit ${BLIND_EXIT}`, patience: 10 }, root);
   assert.equal(seen.verdict, "broken");
   rmSync(root, { recursive: true, force: true });
 });
@@ -105,7 +105,7 @@ test("a loop file that cannot be read is a complaint, not an empty project", () 
 test("a check that says nothing says why it said nothing", () => {
   const root = project(null);
   try {
-    const seen = ask({ label: "loop.t", reach: "external", run: "sleep 5" }, root, 1);
+    const seen = ask({ label: "loop.t", reach: "external", run: "sleep 5", patience: 1 }, root);
     assert.notEqual(seen.verdict, "ok");
     assert.notEqual(
       seen.detail,
@@ -120,7 +120,7 @@ test("a check that says nothing says why it said nothing", () => {
 test("a check that did not answer is never ok, whatever exit code came with it", () => {
   const root = project(null);
   try {
-    const seen = ask({ label: "loop.slow", reach: "external", run: "sleep 5" }, root, 1);
+    const seen = ask({ label: "loop.slow", reach: "external", run: "sleep 5", patience: 1 }, root);
     assert.notEqual(
       seen.verdict,
       "ok",
@@ -135,7 +135,7 @@ test("a check that did not answer is never ok, whatever exit code came with it",
 test("the same failure on an internal check is broken, because nothing it needs is unreachable", () => {
   const root = project(null);
   try {
-    assert.equal(ask({ label: "loop.i", reach: "internal", run: "sleep 5" }, root, 1).verdict, "broken");
+    assert.equal(ask({ label: "loop.i", reach: "internal", run: "sleep 5", patience: 1 }, root).verdict, "broken");
   } finally {
     rmSync(root, { recursive: true, force: true });
   }
@@ -219,4 +219,48 @@ test("a blind check is never named as broken, because that is the report this de
     "the refusal named a blind check among the broken ones. It did exactly this on its first real firing: one broken, one blind, and a message that said 1 broken and listed both",
   );
   rmSync(root, { recursive: true, force: true });
+});
+
+test("a check killed for being slow says so, and does not read as a service that was unreachable", () => {
+  const root = project(null);
+  try {
+    const seen = ask({ label: "loop.tour", reach: "external", run: "sleep 5", patience: 1 }, root);
+
+    assert.equal(seen.timedOut, true);
+    assert.match(seen.detail, /timed out after 1s/);
+    assert.match(
+      seen.detail,
+      /patience/,
+      "a check reported blind for being slow sends the reader to look at a healthy service; the report has to name the timeout and the knob that raises it",
+    );
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test("a check that really could not be asked is not marked as having timed out", () => {
+  const root = project(null);
+  try {
+    const seen = ask({ label: "loop.t", reach: "external", run: `exit ${BLIND_EXIT}`, patience: 10 }, root);
+
+    assert.equal(seen.verdict, "blind");
+    assert.equal(seen.timedOut, false);
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test("patience comes from the check, and a malformed one is complained about rather than guessed", () => {
+  const root = project(`[loop.slow]\nreach = "external"\npatience = 180\nrun = "true"\n\n[loop.bad]\nreach = "internal"\npatience = "180"\nrun = "true"\n`);
+  try {
+    const declared = declaredIn(root);
+    const slow = declared.checks.find((one) => one.label === "loop.slow");
+
+    assert.equal(slow?.patience, 180);
+    assert.equal(declared.checks.find((one) => one.label === "loop.bad")?.patience, PATIENCE_SECONDS);
+    assert.equal(declared.complaints.length, 1);
+    assert.match(declared.complaints.join(" "), /patience/);
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
 });

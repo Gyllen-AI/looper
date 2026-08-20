@@ -1,7 +1,7 @@
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 
-import { CANON_DIR, DOCTRINE_DIR } from "./config.ts";
+import { CANON_DIR, DOCTRINE_DIR, isABranchName } from "./config.ts";
 
 export type CanonBranch = {
   readonly name: string;
@@ -97,7 +97,7 @@ export function canonGoverns(): ReadonlyMap<string, readonly string[]> {
 }
 
 function read(name: string): string {
-  return readFileSync(join(import.meta.dirname, CANON_DIR, `${name}.md`), "utf8").trim();
+  return readFileSync(fileFor(name), "utf8").trim();
 }
 
 
@@ -127,7 +127,12 @@ export type CanonLookup =
   | { readonly kind: "nowhere" }
   | { readonly kind: "found"; readonly body: string };
 
+function fileFor(name: string): string {
+  return join(import.meta.dirname, CANON_DIR, `${name}.md`);
+}
+
 export function canonBranch(name: string): CanonLookup {
-  if (!BRANCH_NAMES.includes(name)) return { kind: "nowhere" };
+  if (BRANCH_NAMES.includes(name)) return { kind: "found", body: read(name) };
+  if (!isABranchName(name) || !existsSync(fileFor(name))) return { kind: "nowhere" };
   return { kind: "found", body: read(name) };
 }
