@@ -52,6 +52,8 @@ export const DOCTRINE_DIR = ".looper/doctrine";
 
 export const FRESHNESS_BYPASS = "Doctrine-freshness:";
 
+export const LOOP_BYPASS = "Loop-broken:";
+
 export const FRESHNESS_SECTION = "freshness";
 
 export const GOVERNS_SECTION = "governs";

@@ -6,6 +6,9 @@ import { join } from "node:path";
 
 import { declaredIn, LOOP_FILE } from "../src/loop/checks.ts";
 import { ask, tallyOf, verdictOf, BLIND_EXIT, type Seen } from "../src/loop/run.ts";
+import { Loop } from "../src/loop/capability.ts";
+import { keep } from "../src/loop/cache.ts";
+import type { Outcome } from "../src/capability.ts";
 
 function project(loopToml: string | null): string {
   const root = mkdtempSync(join(tmpdir(), "looper-loop-"));
@@ -147,4 +150,73 @@ test("a check that reported an error is never ok, even with a zero exit status",
   assert.equal(verdictOf(0, "internal", false), "broken");
   assert.equal(verdictOf(0, "external", true), "ok");
   assert.equal(verdictOf(0, "internal", true), "ok");
+});
+
+function commit(root: string, message: string): Outcome {
+  return new Loop(root).onHook({
+    event: "CommitMessage",
+    root,
+    payload: { kind: "text", text: message },
+  });
+}
+
+test("a project that declares no checks is never refused a commit over them", () => {
+  const root = project(null);
+  keep(root, root, { at: "2026-08-20T00:00:00Z", ok: 0, broken: 3, blind: 0, failing: ["a", "b", "c"], brokenNames: ["a", "b", "c"], blindNames: [] });
+  assert.equal(
+    commit(root, "anything").kind,
+    "pass",
+    "a project with an empty loop.toml declared nothing, so there is nothing of theirs to be broken and refusing would be refusing over somebody else's stale file",
+  );
+  rmSync(root, { recursive: true, force: true });
+});
+
+test("a broken check refuses the commit, and the refusal names which", () => {
+  const root = project(`[loop.build]\nreach = "internal"\nrun = "true"\n`);
+  keep(root, root, { at: "2026-08-20T00:00:00Z", ok: 1, broken: 1, blind: 0, failing: ["loop.build"], brokenNames: ["loop.build"], blindNames: [] });
+  const said = commit(root, "a commit");
+  assert.equal(said.kind, "block");
+  assert.match(said.kind === "block" ? said.reason : "", /loop\.build/);
+  rmSync(root, { recursive: true, force: true });
+});
+
+test("blind is said and never refused, because a gate that blocks on the weather gets turned off", () => {
+  const root = project(`[loop.box]\nreach = "external"\nrun = "true"\n`);
+  keep(root, root, { at: "2026-08-20T00:00:00Z", ok: 1, broken: 0, blind: 1, failing: ["loop.box"], brokenNames: [], blindNames: ["loop.box"] });
+  assert.equal(
+    commit(root, "a commit").kind,
+    "mention",
+    "blind is a fact about the world rather than about this commit. Refusing it means a commit cannot be made while a remote box is down, which is how a gate gets disabled",
+  );
+  rmSync(root, { recursive: true, force: true });
+});
+
+test("a departure is available and has to be written down", () => {
+  const root = project(`[loop.build]\nreach = "internal"\nrun = "true"\n`);
+  keep(root, root, { at: "2026-08-20T00:00:00Z", ok: 0, broken: 1, blind: 0, failing: ["loop.build"], brokenNames: ["loop.build"], blindNames: [] });
+  assert.equal(commit(root, "a commit\n\nLoop-broken: the box is being rebuilt, tracked in decisions").kind, "pass");
+  assert.equal(commit(root, "a commit").kind, "block", "the bypass must be the only way past, never the default");
+  rmSync(root, { recursive: true, force: true });
+});
+
+test("a blind check is never named as broken, because that is the report this design exists to refuse", () => {
+  const root = project(`[loop.a]\nreach = "internal"\nrun = "true"\n`);
+  keep(root, root, {
+    at: "2026-08-20T00:00:00Z",
+    ok: 6,
+    broken: 1,
+    blind: 1,
+    failing: ["loop.drift", "loop.box"],
+    brokenNames: ["loop.drift"],
+    blindNames: ["loop.box"],
+  });
+  const said = commit(root, "a commit");
+  const reason = said.kind === "block" ? said.reason : "";
+  assert.match(reason, /loop\.drift/);
+  assert.doesNotMatch(
+    reason,
+    /loop\.box/,
+    "the refusal named a blind check among the broken ones. It did exactly this on its first real firing: one broken, one blind, and a message that said 1 broken and listed both",
+  );
+  rmSync(root, { recursive: true, force: true });
 });

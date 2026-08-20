@@ -6,6 +6,7 @@ import { Secrets } from "./secrets/capability.ts";
 import { Seer } from "./seer/capability.ts";
 import type { Capability, HookContext, Outcome } from "./capability.ts";
 import { reasonFrom } from "./fields.ts";
+import { whereTheUserLives } from "./config.ts";
 import { Loop } from "./loop/capability.ts";
 import { Stall } from "./stall/capability.ts";
 
@@ -38,7 +39,7 @@ export function registry(): readonly Capability[] {
     new Recall(),
     new Decisions(),
     new Seer(),
-    new Loop(),
+    new Loop(whereTheUserLives()),
     new Stall(),
   ];
 }

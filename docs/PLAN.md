@@ -590,6 +590,42 @@ and costs nothing new, because the parse has happened either way. A file with a
 lock in it should raise `runtime/concurrency`; no path expression will ever say
 that.
 
+### The loop grew teeth, and lied on its first firing
+
+The constitution's first rule now names `looper loop`, and a rule that names a
+command is still told. `Loop` becomes a `CommitMessage` gate.
+
+**Broken refuses the commit. Blind does not.** Broken is a fact about the code in
+front of you; blind is a fact about the world, and a gate that refuses your
+commit because a remote box is down is a gate somebody turns off. Blind is stated
+and not refused, and every prompt still says it is not ok.
+
+Three more refusals it does not make. A project that declared no checks is never
+refused over them, because an empty `loop.toml` means there is nothing of theirs
+to be broken. A cache that cannot be read passes rather than blocks, because
+looper's own failure is not the committer's. And the departure is available in
+the message, `Loop-broken: <why>`, which is the constitution's own rule about
+saying a departure out loud, once, applied to itself.
+
+It reads the answer `looper loop` last wrote rather than running anything. A gate
+that takes minutes is a gate that gets bypassed, and the loop here takes about
+twenty seconds across eight checks. The consequence is that a stale broken answer
+still refuses, which is correct: re-running clears it, and that is the behaviour
+you want a gate to provoke.
+
+**Fired against the adopting project on the first try and produced a lie:**
+
+```
+looper: 1 check(s) this project declared are broken: loop.drift.git, loop.plugin.kinds.
+```
+
+One broken and two named, because `Kept.failing` merged broken with blind and
+`loop.plugin.kinds` was blind. Naming a blind check as broken is the exact report
+this vocabulary exists to make impossible, produced by the gate built to enforce
+it. `Tally` and `Kept` now carry `brokenNames` and `blindNames` separately, a
+cache written before this says "run looper loop to see which" rather than
+guessing, and a test pins it with the real firing in its message.
+
 ### The constitution became the index, and the index is generated
 
 The constitution named no branch at all, so the seven that route by no path could
