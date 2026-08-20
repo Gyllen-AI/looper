@@ -6470,3 +6470,40 @@ the loop is whole: ok=4 broken=0 blind=0
 
 And the prompt went quiet: the loop capability injects nothing at all now, which
 is what it does for a project that proves itself.
+
+### The rules arrived for the work you had just put down
+
+`changedPaths` unioned three questions, and the third was `diff-tree HEAD` — the
+files of the **last commit**. Unconditionally. So the moment you committed, the
+rules for what you had just finished became the rules you were handed for what
+you were about to start, and they stayed there until you touched something.
+
+Measured on this repo, 2026-08-20, on a turn spent answering a question about
+performance: `doctrine:evidence` and `doctrine:process` arrived — **1,774
+characters, 28% of that turn's injection** — for a commit that was already
+merged. The turn touched neither.
+
+The three questions are not the same kind of thing. Two of them ask what is *in
+hand*: the working tree against `HEAD`, and untracked files. The third asks what
+was *just put down*. Unioning them treats a memory as a fact.
+
+**In hand outranks just put down.** Live paths route on their own; the last
+commit is a fallback for a clean tree, where continuing what you were doing is
+the likeliest thing and there is nothing better to go on.
+
+Demonstrated, holding `starting.ts` one commit after `finished.ts`:
+
+```
+  [
+    'starting.ts',
++   'finished.ts'      <- before: the rules were for this
+  ]
+```
+
+And on the turn that built it, with `src/git.ts` and a test in hand, what arrived
+was `doctrine:law` and `doctrine:work/testing` — TypeScript and testing, which is
+exactly the work.
+
+**A fixture caught itself being wrong.** The first version of the test passed
+before the fix, because `diff-tree HEAD` on a root commit has no parent and shows
+nothing. A base commit was added so the fixture exercises the thing it names.
