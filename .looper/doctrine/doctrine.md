@@ -5,6 +5,9 @@ Changing the canon, this tree, or the machinery that delivers them.
   `tests/plan-is-true.test.ts` hold the two halves of that.
 - **A number inherited is a number unmeasured.** Measure against this repo,
   write the number and the date down, and gate it with a test.
+- **A leaf under a group is only a name in the index; a top-level branch is a
+  name and its hardest rule.** Placement decides whether a rule arrives at all,
+  so one that has to be seen before anyone thinks to ask for it goes top-level.
 - **A branch's opening line and its first bullet are both read on every
   message** — the line as the drop marker's entry, the bullet as the branch's
   entry in the constitution index. Write the line as the answer to "when would I

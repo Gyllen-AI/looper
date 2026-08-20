@@ -5919,3 +5919,35 @@ a.ts:5  childProcess.exec(`ls ${dir}`);
 
 Four cases in `audit/cases.ts` hold it, one of them the nested-namespace shape
 the corpus supplied.
+
+## The branch for chasing a fault, and why logging was not its home
+
+An agent finished a run by reporting that an intermittent failure was **"now
+rare rather than fixed"**, said it had not found the cause, and offered to keep
+chasing it. The answer it got was to chase it — *and add the logging you need
+first, so you do not chase blind.*
+
+**Neither half of that was anywhere in the canon.** `observe/logging` is about
+writing down what happened for whoever asks later: fields, boundaries, a request
+id, no secrets. That is production observability, written for a reader who does
+not exist yet. Instrumenting a path *before* hunting is a different act with a
+different reader — you, in ten minutes, holding a hypothesis. And `discipline`
+says fix the cause rather than the symptom, which names the goal and says
+nothing about how to see one.
+
+So `src/canon/debugging.md`, opening "Chasing a fault you cannot yet see."
+
+**Rare is not fixed** came out of the same sentence and is the sharper half. A
+fault that got less frequent with no cause named is the same fault with worse
+odds of being caught, and an agent that reports it as *rare* without also
+reporting the cause as *unknown* has handed over something that reads as closed.
+The report in question did say both, which is why it was worth keeping.
+
+**It is a top-level branch because that is what reaches anyone.** The index
+quotes a top-level branch's first bullet on every message; a leaf under a group
+shows only its name. `- debugging  Add the logging before you chase the fault.`
+is 60 characters and takes the index to 1,794 of 2,200. Placing the same rule
+under `observe/` would have cost the same and delivered nothing until pulled.
+
+It routes by no path, like `discipline` and `authority`, because the work it
+governs is an activity rather than a directory.
