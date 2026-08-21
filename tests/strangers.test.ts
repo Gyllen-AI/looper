@@ -9,6 +9,7 @@ import { dispatchHook } from "../src/registry.ts";
 import { intentOf } from "../src/law/commit-command.ts";
 import { everyWordAt } from "../src/git.ts";
 import { strangers } from "../src/commands/strangers.ts";
+import { saidAboutStrangers, strangersLeaving } from "../src/secrets/strangers.ts";
 import { gitIn as git } from "./helpers.ts";
 
 function repoWithARemote(): string {
@@ -173,4 +174,41 @@ test("the command names a stranger, its file and its line", () => {
     rmSync(root, { recursive: true, force: true });
     rmSync(bare, { recursive: true, force: true });
   }
+});
+
+test("a directory the project says is generated is not vocabulary and is not searched", () => {
+  const root = repoWithARemote();
+  try {
+    writeFileSync(join(root, "law.toml"), 'generated = ["dist"]\n');
+    mkdirSync(join(root, "dist"), { recursive: true });
+    writeFileSync(join(root, "dist/page.html"), "<p>zqxwvu</p>\n");
+    git(root, "add", "-A");
+    git(root, "commit", "-qm", "build output");
+    git(root, "push", "-q", "origin", "HEAD");
+    writeFileSync(join(root, "docs/plan.md"), "The gate reads zqxwvu now.\n");
+    git(root, "add", "-A");
+    git(root, "commit", "-qm", "about to be pushed");
+
+    const swept = strangersLeaving(root);
+
+    assert.equal(swept.kind, "swept");
+    assert.equal(
+      swept.kind === "swept" && swept.strangers.some((one) => one.word === "zqxwvu"),
+      true,
+      "a word that appears only in committed build output was treated as known, so a genuinely new word walked past the check because a generator had happened to emit it",
+    );
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test("a scan that ran out of time says what it was doing and what would fix it", () => {
+  const said = saidAboutStrangers({ kind: "cannot-tell", why: "spawnSync git ETIMEDOUT" });
+
+  assert.match(said, /generated/i);
+  assert.match(
+    said,
+    /law\.toml/,
+    "an adopter told only 'spawnSync git ETIMEDOUT' has no way to reach the fix; the sentence has to name what timed out and where to say so",
+  );
 });
