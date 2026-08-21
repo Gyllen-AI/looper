@@ -6750,3 +6750,25 @@ its own cause and where to answer it, rather than reporting an errno:
 > That scan reads every word this repository already holds, so it runs out of
 > time when a large generated tree is committed: name those directories as
 > `generated` in law.toml and it will not read them.
+
+### A key you could only find by reading looper's own diff
+
+The adopter who reported the timeout came back: the fix worked — 3.42s to 0.07s,
+vocabulary 74,667 words to 16,260, and the check named 21 words, all genuinely
+new. Then the real remark: *"init doesn't create a law.toml, so there's nowhere
+obvious to put `generated` on a fresh project. I only found the key by reading
+your diff."*
+
+That is the constitution's own rule failing — **the only input is a sentence** —
+and `generated` was the smallest instance of it. `law.toml` has nine keys and not
+one of them appeared anywhere a reader would look.
+
+`init` now scaffolds `law.toml` alongside the four stubs it already writes, and
+every line in it is a comment. A test holds both halves: each key is named, and
+`readConcessions` of a scaffolded project equals one without the file, because a
+scaffold that is live on arrival changes every project that runs `init`.
+
+**looper stopped judging while this was written**, and said so: the stub was
+wired into `src/init.ts` before `LAW_PATH` was imported, so its own code would
+not load. *"Nothing is being checked — not the rules, not the edits, not the
+commit."* Fail open, never fail silent, working on the person who broke it.

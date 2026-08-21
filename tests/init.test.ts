@@ -8,6 +8,8 @@ import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync, mkdirSync
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
+import { readConcessions } from "../src/law/concessions.ts";
+import { LAW_PATH } from "../src/config.ts";
 import { runInit } from "../src/init.ts";
 
 const NO_PATH: readonly string[] = [];
@@ -29,7 +31,7 @@ test("a fresh project gets a doctrine tree it can actually use", () => {
     const report = runInit(root, INSTALLED, NO_PATH);
     const made = pathsOf(report.steps, "scaffolded");
 
-    assert.equal(made.length, 5);
+    assert.equal(made.length, 6);
     for (const tail of ["constitution.md", "map.toml", "README.md", "secrets.allow", "CURRENTSTACK.md"]) {
       assert.ok(made.some((path) => path.endsWith(tail)), `${tail} was not created`);
     }
@@ -120,7 +122,7 @@ test("twice is indistinguishable from once", () => {
     const second = runInit(root, INSTALLED, NO_PATH);
 
     assert.deepEqual([...pathsOf(second.steps, "scaffolded")], []);
-    assert.equal(pathsOf(second.steps, "yours-already").length, 5);
+    assert.equal(pathsOf(second.steps, "yours-already").length, 6);
     assert.equal(pathsOf(second.steps, "already-wired").length, 2);
   } finally {
     rmSync(root, { recursive: true, force: true });
@@ -443,6 +445,30 @@ test("a project with no agent folder above it is not warned about one", () => {
       report.steps.filter((step) => step.kind === "outer-agent-project"),
       [],
       "every ordinary project would carry a warning about a folder that does not exist",
+    );
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test("init leaves the knobs where somebody can find them, and changes nothing by doing it", () => {
+  const root = scratch();
+  try {
+    runInit(root, DEV, []);
+    const written = readFileSync(join(root, LAW_PATH), "utf8");
+
+    for (const key of ["generated", "max_loc", "sanctum", "env_files", "trace_symbols", "loggers", "[entry]", "[exempt]"]) {
+      assert.ok(
+        written.includes(key),
+        `${key} can be set in law.toml and appears nowhere a reader would look, so it is found only by reading looper's own diff`,
+      );
+    }
+    const withScaffold = readConcessions(root);
+    const without = readConcessions(scratch());
+    assert.deepEqual(
+      { ...withScaffold, projectRoot: "" },
+      { ...without, projectRoot: "" },
+      "the scaffold has to be inert: a line that is live on arrival changes every project that runs init",
     );
   } finally {
     rmSync(root, { recursive: true, force: true });
