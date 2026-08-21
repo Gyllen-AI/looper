@@ -9,7 +9,7 @@ import { dispatchHook } from "../src/registry.ts";
 import { intentOf } from "../src/law/commit-command.ts";
 import { everyWordAt } from "../src/git.ts";
 import { strangers } from "../src/commands/strangers.ts";
-import { saidAboutStrangers, strangersAgainst } from "../src/secrets/strangers.ts";
+import { saidAboutStrangers, strangersLeaving } from "../src/secrets/strangers.ts";
 import { gitIn as git } from "./helpers.ts";
 
 function repoWithARemote(): string {
@@ -189,7 +189,7 @@ test("a directory the project says is generated is not vocabulary and is not sea
     git(root, "add", "-A");
     git(root, "commit", "-qm", "about to be pushed");
 
-    const swept = strangersAgainst(root, "origin/main");
+    const swept = strangersLeaving(root);
 
     assert.equal(swept.kind, "swept");
     assert.equal(
