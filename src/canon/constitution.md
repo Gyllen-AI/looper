@@ -7,4 +7,7 @@ said out loud, once, not a silent departure.
 - Never invent data. A row exists because something happened. An empty screen is
   the honest answer.
 - Report what actually happened, with the output that proves it. Never "should work".
-- End every reply with what changed, what it means, the next step.
+- End every reply with three lines, in this order and no others:
+      What changed:
+      What it means:
+      Next steps:
