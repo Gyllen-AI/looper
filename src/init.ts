@@ -1,4 +1,5 @@
-import { CONSTITUTION_STUB, DOCTRINE_README_STUB, MAP_STUB, SECRETS_ALLOW_STUB } from "./stubs.ts";
+import { CONSTITUTION_STUB, DOCTRINE_README_STUB, MAP_STUB, SECRETS_ALLOW_STUB,
+  LAW_STUB } from "./stubs.ts";
 import { chmodSync, existsSync, readFileSync, readdirSync } from "node:fs";
 import { dirname, join } from "node:path";
 
@@ -40,6 +41,7 @@ import { countsOf, totalIn, writeBaseline } from "./law/baseline.ts";
 import { surveyProject } from "./law/project.ts";
 import {
   BASELINE_PATH,
+  LAW_PATH,
   STACK_PATH,
 } from "./config.ts";
 import { stackOf } from "./stack/read.ts";
@@ -105,6 +107,7 @@ const STUBS: readonly Stub[] = [
   { path: MAP_PATH, body: MAP_STUB },
   { path: DOCTRINE_README_PATH, body: DOCTRINE_README_STUB },
   { path: SECRETS_ALLOW_PATH, body: SECRETS_ALLOW_STUB },
+  { path: LAW_PATH, body: LAW_STUB },
 ];
 
 function readExisting(path: string): Existing {

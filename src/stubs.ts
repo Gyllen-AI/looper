@@ -111,3 +111,36 @@ Each entry names the files it rests on and the hash of those files when somebody
 last read it, so this document is never trusted to be current: looper recomputes
 them and says which entries the code has moved out from under. It never edits the
 prose, because what an entry says is a judgement and no tool refreshes a judgement.`;
+
+export const LAW_STUB = `# What this project concedes to looper, and nothing else. Every line here is
+# commented out: looper behaves identically whether this file exists or not, and
+# a key only does something once you uncomment it and mean it.
+#
+# generated — directories whose contents nobody wrote. Committed build output
+# belongs here. looper reads every word the repository already holds to decide
+# which words in a push are new, and a generated tree makes that scan slow and,
+# worse, teaches it that machine-made tokens are known words.
+# generated = ["dist"]
+#
+# max_loc — how long a file may be before looper says so.
+# max_loc = 500
+#
+# [entry] files — the files that start the program, where printing is its job.
+# [entry]
+# files = ["src/main.ts"]
+#
+# [ts] sanctum — the one file allowed to turn a missing setting into a default.
+# [ts] env_files — files that may read the environment directly.
+# [ts] trace_symbols — your logger's calls, so writing a failure down counts.
+# [ts] loggers — the names your logger is reached by.
+# [ts]
+# sanctum = "src/config.ts"
+#
+# [exempt] — one file, one rule, one reason. A pardon is read in a diff.
+# [exempt]
+# "src/legacy.ts" = ["TS-TYPE:3"]
+#
+# [rules] — a rule turned off for this project, which is rarer than it looks.
+# [rules]
+# disabled = []
+`;
