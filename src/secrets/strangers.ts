@@ -1,4 +1,5 @@
 import { additionsAgainst, everyWordAt, whatTheRemoteAlreadyHas } from "../git.ts";
+import { readConcessions } from "../law/concessions.ts";
 import { wordsIn } from "../report/write.ts";
 
 export type Stranger = {
@@ -21,8 +22,9 @@ export function strangersLeaving(root: string): Sweep {
 
 export function strangersAgainst(root: string, revision: string): Sweep {
   const against = { revision };
+  const unwritten = [...NOBODY_ELSE_WROTE_THESE, ...readConcessions(root).generated];
 
-  const known = everyWordAt(root, against.revision, NOBODY_ELSE_WROTE_THESE);
+  const known = everyWordAt(root, against.revision, unwritten);
   if (known.kind === "cannot-tell") return { kind: "cannot-tell", why: known.why };
 
   const going = additionsAgainst(root, against.revision);
@@ -31,8 +33,8 @@ export function strangersAgainst(root: string, revision: string): Sweep {
   const seen = new Set<string>();
   const strangers: Stranger[] = [];
   for (const added of going.added) {
-    if (NOBODY_ELSE_WROTE_THESE.some((part) => added.file.split("/").includes(part))) continue;
-    if (NOBODY_ELSE_WROTE_THESE.includes(added.file)) continue;
+    if (unwritten.some((part) => added.file.split("/").includes(part))) continue;
+    if (unwritten.includes(added.file)) continue;
     for (const word of wordsIn(added.text)) {
       if (known.words.has(word) || seen.has(word)) continue;
       seen.add(word);
@@ -44,7 +46,7 @@ export function strangersAgainst(root: string, revision: string): Sweep {
 
 export function saidAboutStrangers(sweep: Sweep): string {
   if (sweep.kind === "cannot-tell") {
-    return `looper: the words about to leave this machine were not checked, because ${sweep.why}. Nothing is blocked, and nothing here is a verdict on them.`;
+    return `looper: the words about to leave this machine were not checked, because ${sweep.why}. That scan reads every word this repository already holds, so it runs out of time when a large generated tree is committed: name those directories as \`generated\` in law.toml and it will not read them. Nothing is blocked, and nothing here is a verdict on them.`;
   }
   if (sweep.strangers.length === 0) return "";
   const named = sweep.strangers.map(

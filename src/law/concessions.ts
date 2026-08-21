@@ -43,6 +43,7 @@ export type Concessions = {
   readonly entryFiles: readonly string[];
   readonly traceSymbols: readonly string[];
   readonly loggers: readonly string[];
+  readonly generated: readonly string[];
 };
 
 export const CONCEDING_NOTHING: Concessions = {
@@ -53,6 +54,7 @@ export const CONCEDING_NOTHING: Concessions = {
   sanctum: SANCTUM_DEFAULT,
   envFiles: [SANCTUM_DEFAULT],
   entryFiles: [],
+  generated: [],
   traceSymbols: TRACE_SYMBOLS,
   loggers: [],
 };
@@ -136,6 +138,7 @@ export function readConcessions(root: string): Concessions {
     entryFiles: orElse(stringsAt(tableIn(document, ENTRY_SECTION), "files", LAW_PATH), entries),
     traceSymbols: orElse(eitherWay("trace_symbols"), TRACE_SYMBOLS),
     loggers: eitherWay("loggers"),
+    generated: stringsAt(tableIn(document, ROOT_SECTION), "generated", LAW_PATH),
   };
 }
 

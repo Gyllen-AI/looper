@@ -6707,3 +6707,46 @@ project unable to commit.
 
 The rule this belongs to was already written down for reading a single file: a
 file that cannot be read is never called clean. This applies it to the survey.
+
+### A vocabulary of four million words is not a vocabulary
+
+Reported by an adopting project on 2026-08-21: the stranger check never ran on
+one machine, four pushes out of four, saying only *"the words about to leave this
+machine were not checked, because spawnSync git ETIMEDOUT"*. They instrumented
+`src/git.ts` and found the call: `everyWordAt` grepping every word at
+`origin/main`, excluding only `vendor` and `package-lock.json`, over a repository
+with a large committed build output. 3.1-3.4 seconds against a 3,000 ms limit —
+missing by 150-400 ms, so it failed every time there and would fail
+intermittently on a faster machine, which is worse.
+
+**Reproduced here** with 800 committed generated files, and the second number is
+the one that matters more than the first:
+
+| | time | vocabulary |
+|---|---|---|
+| vendor and package-lock excluded only | 5,137 ms | **4,768,965 words** |
+| plus what the project declared generated | 42 ms | 3,690 words |
+
+A vocabulary of nearly five million tokens does not tell anyone that a word is
+known. It hides every new word behind machine-made noise, so the check was not
+merely slow — where it did complete, it was answering yes to almost everything.
+The reporter measured that too: excluding their generated tree found three
+strangers it had been masking across nine commits.
+
+**Two other shapes were measured and rejected.** Scoping to judged extensions is
+automatic but cannot work here, because the generated tree is HTML and people
+write HTML by hand — no rule on a file's name separates the two. Asking only
+about the words in the diff, rather than building the dictionary, is worse at
+scale: 200 candidate words cost 2,654 ms against 476 for the whole grep, because
+`git grep -o` still prints every occurrence of every match.
+
+So only the project knows, and it now says: `generated = ["dist"]` in `law.toml`,
+feeding the same list that already held `vendor` and `package-lock.json`, and
+skipped as vocabulary and as diff both.
+
+**A declaration nobody knows about is worse than none**, so the refusal now names
+its own cause and where to answer it, rather than reporting an errno:
+
+> That scan reads every word this repository already holds, so it runs out of
+> time when a large generated tree is committed: name those directories as
+> `generated` in law.toml and it will not read them.
